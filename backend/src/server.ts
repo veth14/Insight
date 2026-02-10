@@ -24,16 +24,9 @@ app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:19006'];
+// For development, allow all origins or specifically your mobile dev setup
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl)
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: true, // Reflects the request origin
     credentials: true,
 }));
 
@@ -75,7 +68,7 @@ const startServer = async () => {
         app.listen(PORT, () => {
             console.log(`🚀 Server running on port ${PORT}`);
             console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-            console.log(`🌍 CORS enabled for: ${allowedOrigins.join(', ')}`);
+            console.log(`🌍 CORS enabled`);
         });
     } catch (error) {
         console.error('Failed to start server:', error);

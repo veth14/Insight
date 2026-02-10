@@ -8,7 +8,9 @@ export const connectDB = async (): Promise<void> => {
             throw new Error('MONGODB_URI is not defined in environment variables');
         }
 
-        await mongoose.connect(uri);
+        await mongoose.connect(uri, {
+            family: 4,
+        });
 
         console.log('✅ MongoDB connected successfully');
 
@@ -23,6 +25,8 @@ export const connectDB = async (): Promise<void> => {
 
     } catch (error) {
         console.error('Failed to connect to MongoDB:', error);
+        console.error('⚠️  SSL ERROR: Your IP address is likely not whitelisted in MongoDB Atlas.');
+        console.error('👉 ACTION: Go to MongoDB Atlas > Network Access > Add IP Address > "Add Current IP Address".');
         process.exit(1);
     }
 };

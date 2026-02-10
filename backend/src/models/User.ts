@@ -56,7 +56,6 @@ const UserSchema: Schema = new Schema(
 );
 
 // Indexes for efficient querying
-UserSchema.index({ email: 1 });
 UserSchema.index({ role: 1 });
 
 export default mongoose.model<IUser>('User', UserSchema);
