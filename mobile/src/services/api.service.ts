@@ -1,5 +1,5 @@
 import axios from 'axios';
-import authService from './auth.service';
+import { auth } from '../config/firebase';
 
 /**
  * Axios API client instance
@@ -19,8 +19,9 @@ const api = axios.create({
  */
 api.interceptors.request.use(
     async (config) => {
-        const token = await authService.getIdToken();
-        if (token) {
+        const user = auth.currentUser;
+        if (user) {
+            const token = await user.getIdToken();
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;

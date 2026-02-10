@@ -17,6 +17,7 @@ class AuthService {
     /**
      * Register new user with email and password
      * Creates Firebase account and syncs user data with backend
+     * Includes ROLLBACK mechanism: Deletes Firebase user if Backend sync fails.
      */
     async register(
         email: string,
@@ -24,94 +25,96 @@ class AuthService {
         displayName: string,
         yearLevel: number
     ): Promise<User> {
+        let userCredential;
         try {
-            // Create Firebase user
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // 1. Create Firebase User
+            console.log('Creating Firebase user...');
+            userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const firebaseUser = userCredential.user;
+            console.log('Firebase user created:', firebaseUser.uid);
 
-            // Get Firebase ID token for backend authentication
-            const idToken = await firebaseUser.getIdToken();
+            try {
+                // 2. Sync with Backend
+                console.log('Getting ID token...');
+                const idToken = await firebaseUser.getIdToken();
+                console.log('Token retrieved. Calling backend...');
 
-            // Determine role based on year level
-            let role: UserRole;
-            if (yearLevel >= 1 && yearLevel <= 3) {
-                role = UserRole.STUDENT_1ST_TO_3RD;
-            } else if (yearLevel === 4) {
-                role = UserRole.STUDENT_4TH;
-            } else {
-                role = UserRole.ADMIN;
+                // Determine role based on year level
+                let role: UserRole;
+                if (yearLevel >= 1 && yearLevel <= 3) {
+                    role = UserRole.STUDENT_1ST_TO_3RD;
+                } else if (yearLevel === 4) {
+                    role = UserRole.STUDENT_4TH;
+                } else {
+                    role = UserRole.ADMIN;
+                }
+
+                // Create user in backend database
+                const response = await api.post('/auth/register', {
+                    uid: firebaseUser.uid,
+                    email,
+                    displayName,
+                    role,
+                    yearLevel,
+                });
+
+                console.log('Backend registration successful');
+                return response.data.user;
+
+            } catch (backendError: any) {
+                // 3. Rollback: Delete Firebase user if backend fails
+                console.error('Backend registration failed. Rolling back Firebase user.', backendError);
+                console.error('Error details:', backendError.response?.data || backendError.message);
+                
+                try {
+                    await firebaseUser.delete();
+                    console.log('Rollback successful: Firebase user deleted.');
+                } catch (deleteError) {
+                    console.error('CRITICAL: Failed to rollback Firebase user.', deleteError);
+                }
+
+                // Throw a user-friendly error
+                if (backendError.response) {
+                    throw new Error(`Server Error: ${backendError.response.data.message || 'Registration failed'}`);
+                } else if (backendError.request) {
+                    throw new Error('Network Error: Could not connect to the server. Please check your internet connection.');
+                } else {
+                    throw new Error('Registration failed. Please try again.');
+                }
             }
 
-            // Create user in backend database
-            const response = await api.post('/auth/register', {
-                uid: firebaseUser.uid,
-                email,
-                displayName,
-                role,
-                yearLevel
-            }, {
-                headers: {
-                    Authorization: `Bearer ${idToken}`
-                }
-            });
-
-            return response.data.user;
         } catch (error: any) {
-            throw new Error(error.response?.data?.message || error.message);
+            console.error('Registration error:', error.message);
+            throw error;
         }
     }
 
     /**
-     * Sign in with email and password
+     * Login with email and password
      */
-    async login(email: string, password: string): Promise<User> {
+    async login(email: string, password: string): Promise<void> {
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const firebaseUser = userCredential.user;
-            const idToken = await firebaseUser.getIdToken();
-
-            // Fetch user data from backend
-            const response = await api.get('/auth/me', {
-                headers: {
-                    Authorization: `Bearer ${idToken}`
-                }
-            });
-
-            return response.data.user;
-        } catch (error: any) {
-            throw new Error(error.response?.data?.message || error.message);
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
         }
     }
 
     /**
-     * Sign out current user
+     * Logout
      */
     async logout(): Promise<void> {
         try {
             await signOut(auth);
-        } catch (error: any) {
-            throw new Error(error.message);
+        } catch (error) {
+            console.error('Logout error:', error);
+            throw error;
         }
     }
 
     /**
-     * Get current Firebase user
-     */
-    getCurrentFirebaseUser(): FirebaseUser | null {
-        return auth.currentUser;
-    }
-
-    /**
-     * Get Firebase ID token for API requests
-     */
-    async getIdToken(): Promise<string | null> {
-        const user = this.getCurrentFirebaseUser();
-        if (!user) return null;
-        return await user.getIdToken();
-    }
-
-    /**
-     * Listen to authentication state changes
+     * Auth state change listener
      */
     onAuthStateChanged(callback: (user: FirebaseUser | null) => void) {
         return onAuthStateChanged(auth, callback);

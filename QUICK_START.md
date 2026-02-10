@@ -1,23 +1,26 @@
 # 🚀 Quick Start Setup Guide
 
-## ✅ Configured
+## ✅ Status
 
-### Firebase
-- ✅ Project: **qcuresearchapp**
-- ✅ Mobile app connected
-- ❌ **Backend needs Firebase Admin credentials** (see below)
+- **Firebase**: ✅ Configured & Connected
+- **MongoDB**: ✅ Connected
+- **Supabase**: ✅ Configured
+- **Mobile**: ✅ Configured (Expo SDK 54)
+- **Backend**: ✅ Running on Port 3000
 
-### Supabase
-- ✅ URL: `https://vsxebuwhddyotyvuqqxl.supabase.co`
-- ✅ Anon key configured
-- ⚠️ **Service role key needed for file uploads** (see SUPABASE_SETUP.md)
+## 🏃 How to Run
 
-### MongoDB
-- ❌ **Not configured yet**
+I have set up **VS Code Tasks** to make this easy:
+
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac).
+2. Type `Run Task` and select it.
+3. Choose:
+   - **Start Backend Server** (Wait for "Connected to MongoDB")
+   - **Start Mobile App** (Scan QR code or press 'a' for Android emulator)
 
 ---
 
-## 🔴 Required Before Running
+## 🔴 Previous Setup Notes
 
 ### 1. Firebase Admin SDK (Backend)
 
