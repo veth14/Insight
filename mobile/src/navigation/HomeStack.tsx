@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../types';
 import DashboardScreen from '../screens/main/DashboardScreen';
 import PDFReaderScreen from '../screens/main/PDFReaderScreen';
+import StudyDetailScreen from '../screens/main/StudyDetailScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -12,11 +13,14 @@ const Stack = createNativeStackNavigator<HomeStackParamList>();
  */
 const HomeStack: React.FC = () => {
     return (
-        <Stack.Navigator>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen
                 name="Dashboard"
                 component={DashboardScreen}
-                options={{ title: 'Insight' }}
+            />
+            <Stack.Screen
+                name="StudyDetail"
+                component={StudyDetailScreen}
             />
             <Stack.Screen
                 name="PDFReader"

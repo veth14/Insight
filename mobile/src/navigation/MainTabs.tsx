@@ -3,8 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../types';
 import HomeStack from './HomeStack';
 import SearchScreen from '../screens/main/SearchScreen';
-import BookmarksScreen from '../screens/main/BookmarksScreen';
+import LibraryScreen from '../screens/main/LibraryScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import { COLORS } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons'; // Assuming Expo
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -15,17 +17,43 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const MainTabs: React.FC = () => {
     return (
         <Tab.Navigator
-            screenOptions={{
+            screenOptions={({ route }) => ({
                 headerShown: false,
-                tabBarActiveTintColor: '#007AFF',
-                tabBarInactiveTintColor: '#8E8E93',
-            }}
+                tabBarActiveTintColor: COLORS.accent, // Updated to Accent Teal
+                tabBarInactiveTintColor: COLORS.text.secondary,
+                tabBarStyle: {
+                    backgroundColor: COLORS.card,
+                    borderTopColor: COLORS.border,
+                    height: 60,
+                    paddingBottom: 8,
+                    paddingTop: 8,
+                },
+                tabBarLabelStyle: {
+                    fontSize: 12,
+                    fontFamily: 'Roboto', // Or system font
+                },
+                tabBarIcon: ({ focused, color, size }) => {
+                    let iconName: keyof typeof Ionicons.glyphMap = 'home';
+
+                    if (route.name === 'Home') {
+                        iconName = focused ? 'home' : 'home-outline';
+                    } else if (route.name === 'Search') {
+                        iconName = focused ? 'search' : 'search-outline';
+                    } else if (route.name === 'Library') {
+                        iconName = focused ? 'library' : 'library-outline';
+                    } else if (route.name === 'Profile') {
+                        iconName = focused ? 'person' : 'person-outline';
+                    }
+
+                    return <Ionicons name={iconName} size={size} color={color} />;
+                },
+            })}
         >
             <Tab.Screen
                 name="Home"
                 component={HomeStack}
                 options={{
-                    tabBarLabel: 'Home',
+                    tabBarLabel: 'Dashboard',
                 }}
             />
             <Tab.Screen
@@ -36,10 +64,10 @@ const MainTabs: React.FC = () => {
                 }}
             />
             <Tab.Screen
-                name="Bookmarks"
-                component={BookmarksScreen}
+                name="Library"
+                component={LibraryScreen}
                 options={{
-                    tabBarLabel: 'Bookmarks',
+                    tabBarLabel: 'Library',
                 }}
             />
             <Tab.Screen

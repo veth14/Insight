@@ -81,11 +81,12 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
     Home: undefined;
     Search: undefined;
-    Bookmarks: undefined;
+    Library: undefined;
     Profile: undefined;
 };
 
 export type HomeStackParamList = {
     Dashboard: undefined;
+    StudyDetail: { studyId: string };
     PDFReader: { studyId: string };
 };

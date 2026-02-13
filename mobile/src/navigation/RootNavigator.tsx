@@ -6,6 +6,7 @@ import { RootStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
+import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -20,7 +21,7 @@ const RootNavigator: React.FC = () => {
     if (loading) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
         );
     }
