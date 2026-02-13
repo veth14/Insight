@@ -9,12 +9,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList, UserRole, AcademicProgram } from '../../types';
 import * as DocumentPicker from 'expo-document-picker';
 
-// Mock Data for Design
 const MOCK_STUDIES = Array(5).fill(0).map((_, i) => ({
     _id: `study-${i}`,
     title: `Machine Learning in Education: A Case Study ${i + 1}`,
     authors: ['Valmores, I.', 'Doe, J.'],
-    category: 'BSCS', // Program specific
+    category: 'BSCS', 
     program: AcademicProgram.BSCS, 
     yearPublished: 2024,
     abstract: 'This is a sample abstract for the study. It discusses the implications of AI in modern classrooms...',
@@ -27,7 +26,7 @@ const MOCK_GAPS = Array(3).fill(0).map((_, i) => ({
     _id: `gap-${i}`,
     title: `Unexplored Areas in Quantum Computing Security ${i + 1}`,
     authors: ['Smith, A.'],
-    category: 'BSIT', // Program specific
+    category: 'BSIT', 
     program: AcademicProgram.BSIT,
     yearPublished: 2025,
     abstract: 'Exploring the potential vulnerabilities in post-quantum cryptography...',

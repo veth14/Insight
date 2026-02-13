@@ -149,7 +149,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
         const yearNum = parseInt(yearLevel);
         if (isNaN(yearNum) || yearNum < 1 || yearNum > 5) {
-            Alert.alert('Invalid Year', 'Please select a valid year level (1-5).');
+            Alert.alert('Invalid Year', 'Please select a valid year level (1-4).');
             return;
         }
 
@@ -231,7 +231,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                         {/* Year Level Selection */}
                         <Text style={styles.sectionLabel}>Year Level</Text>
                         <View style={styles.yearRow}>
-                            {[1, 2, 3, 4, 5].map((y) => (
+                            {[1, 2, 3, 4].map((y) => (
                                 <TouchableOpacity
                                     key={y}
                                     style={[
