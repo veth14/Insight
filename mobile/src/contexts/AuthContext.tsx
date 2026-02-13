@@ -16,6 +16,8 @@ interface AuthContextType {
     logout: () => Promise<void>;
 }
 
+import { Alert } from 'react-native';
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
@@ -42,8 +44,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     });
                     setUser(response.data.user);
-                } catch (error) {
-                    console.error('Error fetching user data:', error);
+                } catch (error: any) {
+                    // Handle 404 Not Found (User exists in Firebase but not Backend)
+                    if (error.response && error.response.status === 404) {
+                        // Check if user was just created (Race condition handling)
+                        const creationTime = fbUser.metadata.creationTime 
+                            ? new Date(fbUser.metadata.creationTime).getTime() 
+                            : 0;
+                        const isNewUser = (Date.now() - creationTime) < 10000; // 10s buffer
+
+                        if (isNewUser) {
+                             console.log('User is new, waiting for backend registration to complete...');
+                             // Don't log error, don't logout. 
+                             // The register() function will handle setting the user state.
+                        } else {
+                            console.error('Error fetching user data:', error);
+                            Alert.alert(
+                                "Account Error", 
+                                "Your user profile was not found. Please contact support or try registering again with a different email."
+                            );
+                            // Sign out to prevent stuck state
+                            authService.logout();
+                        }
+                    } else {
+                        // For other errors, log them
+                        console.error('Error fetching user data:', error);
+                    }
                     setUser(null);
                 }
             } else {
@@ -61,8 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const userData = await authService.login(email, password);
-            setUser(userData);
+            await authService.login(email, password);
+             // User state is updated via the onAuthStateChanged listener
         } catch (error) {
             throw error;
         } finally {
