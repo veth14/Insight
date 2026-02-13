@@ -6,7 +6,7 @@ import StudyCard from '../../components/StudyCard';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HomeStackParamList, UserRole } from '../../types';
+import { HomeStackParamList, UserRole, AcademicProgram } from '../../types';
 import * as DocumentPicker from 'expo-document-picker';
 
 // Mock Data for Design
@@ -14,7 +14,8 @@ const MOCK_STUDIES = Array(5).fill(0).map((_, i) => ({
     _id: `study-${i}`,
     title: `Machine Learning in Education: A Case Study ${i + 1}`,
     authors: ['Valmores, I.', 'Doe, J.'],
-    category: 'Artificial Intelligence',
+    category: 'BSCS', // Program specific
+    program: AcademicProgram.BSCS, 
     yearPublished: 2024,
     abstract: 'This is a sample abstract for the study. It discusses the implications of AI in modern classrooms...',
     keywords: ['AI', 'Education', 'Machine Learning'],
@@ -26,7 +27,8 @@ const MOCK_GAPS = Array(3).fill(0).map((_, i) => ({
     _id: `gap-${i}`,
     title: `Unexplored Areas in Quantum Computing Security ${i + 1}`,
     authors: ['Smith, A.'],
-    category: 'Cybersecurity',
+    category: 'BSIT', // Program specific
+    program: AcademicProgram.BSIT,
     yearPublished: 2025,
     abstract: 'Exploring the potential vulnerabilities in post-quantum cryptography...',
     keywords: ['Quantum', 'Security', 'Cryptography'],
@@ -46,12 +48,18 @@ const DashboardScreen: React.FC = () => {
         title: '',
         authors: '',
         category: '',
+        program: user?.program || AcademicProgram.BSCS,
         keywords: '',
         tools: '',
         gap: '',
         abstract: ''
     });
     const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+
+    // Filter content based on user program
+    // In a real app, this would happen on the backend query
+    const recommendedStudies = MOCK_STUDIES; // Placeholder for logic
+    const userProgram = user?.program || AcademicProgram.BSCS;
 
     const handlePickDocument = async () => {
         try {
@@ -98,7 +106,16 @@ const DashboardScreen: React.FC = () => {
     };
 
     const resetForm = () => {
-        setFormData({ title: '', authors: '', category: '', keywords: '', tools: '', gap: '', abstract: '' });
+        setFormData({ 
+            title: '', 
+            authors: '', 
+            category: '', 
+            program: user?.program || AcademicProgram.BSCS,
+            keywords: '', 
+            tools: '', 
+            gap: '', 
+            abstract: '' 
+        });
         setSelectedFile(null);
     };
 
@@ -151,11 +168,11 @@ const DashboardScreen: React.FC = () => {
                 </ScrollView>
 
                 {/* Recommended This Week (Horizontal) */}
-                {renderSectionHeader('Recommended This Week', 'Curated based on your interests')}
+                {renderSectionHeader(`Recommended for ${userProgram}`, 'Curated based on your program')}
                 <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    data={MOCK_STUDIES}
+                    data={recommendedStudies}
                     renderItem={({ item }) => (
                         <StudyCard 
                             study={item} 
@@ -243,6 +260,35 @@ const DashboardScreen: React.FC = () => {
                                         />
                                     </View>
                                     <View style={[styles.column, { marginLeft: 8 }]}>
+                                        <Text style={styles.label}>Program</Text>
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
+                                            {[AcademicProgram.BSIS, AcademicProgram.BSIT, AcademicProgram.BSCS].map((prog) => (
+                                                <TouchableOpacity
+                                                    key={prog}
+                                                    onPress={() => setFormData({...formData, program: prog})}
+                                                    style={{
+                                                        backgroundColor: formData.program === prog ? COLORS.primary : COLORS.card,
+                                                        borderWidth: 1,
+                                                        borderColor: formData.program === prog ? COLORS.primary : COLORS.border,
+                                                        borderRadius: 16,
+                                                        paddingVertical: 4,
+                                                        paddingHorizontal: 10,
+                                                        marginRight: 6,
+                                                        marginBottom: 6
+                                                    }}
+                                                >
+                                                    <Text style={{ 
+                                                        color: formData.program === prog ? COLORS.white : COLORS.text.secondary,
+                                                        fontSize: 10,
+                                                        fontWeight: '600'
+                                                    }}>{prog}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </View>
+                                <View style={styles.row}>
+                                    <View style={[styles.column]}>
                                         <Text style={styles.label}>Keywords</Text>
                                         <TextInput
                                             style={styles.input}

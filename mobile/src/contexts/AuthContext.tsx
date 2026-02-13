@@ -12,7 +12,7 @@ interface AuthContextType {
     firebaseUser: FirebaseUser | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, displayName: string, yearLevel: number) => Promise<void>;
+    register: (email: string, password: string, displayName: string, yearLevel: number, program: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
@@ -100,12 +100,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: string,
         password: string,
         displayName: string,
-        yearLevel: number
+        yearLevel: number,
+        program: string
     ) => {
         setLoading(true);
         try {
-            const userData = await authService.register(email, password, displayName, yearLevel);
-            setUser(userData);
+            const user = await authService.register(email, password, displayName, yearLevel, program); // Pass program
+            setUser(user);
         } catch (error) {
             throw error;
         } finally {

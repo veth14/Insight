@@ -9,6 +9,15 @@ export enum UserRole {
 }
 
 /**
+ * CCS Programs
+ */
+export enum AcademicProgram {
+    BSIS = 'BSIS',
+    BSIT = 'BSIT',
+    BSCS = 'BSCS'
+}
+
+/**
  * User interface matching backend schema
  */
 export interface User {
@@ -16,6 +25,7 @@ export interface User {
     email: string;
     displayName: string;
     role: UserRole;
+    program?: AcademicProgram; // Added Program field
     yearLevel?: number;
     createdAt: Date;
     updatedAt: Date;
@@ -29,6 +39,7 @@ export interface AcademicStudy {
     title: string;
     authors: string[];
     abstract: string;
+    program: AcademicProgram; // Added Program field
     keywords: string[];
     category: string;
     yearPublished: number;

@@ -16,7 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../../types';
+import { AuthStackParamList, AcademicProgram } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -104,6 +104,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [yearLevel, setYearLevel] = useState('');
+    const [program, setProgram] = useState<AcademicProgram | null>(null);
     const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
     
     // UI State
@@ -131,8 +132,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     };
 
     const handleRegister = async () => {
-        if (!email || !password || !confirmPassword || !displayName || !yearLevel) {
-            Alert.alert('Missing Fields', 'Please fill in all required fields.');
+        if (!email || !password || !confirmPassword || !displayName || !yearLevel || !program) {
+            Alert.alert('Missing Fields', 'Please fill in all required fields including Program.');
             return;
         }
 
@@ -154,7 +155,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
         setLoading(true);
         try {
-            await register(email, password, displayName, yearNum);
+            await register(email, password, displayName, yearNum, program);
         } catch (error: any) {
             Alert.alert('Registration Failed', error.message);
         } finally {
@@ -206,6 +207,26 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                             onChangeText={setEmail}
                             keyboardType="email-address"
                         />
+
+                        {/* Program Selection */}
+                        <Text style={styles.sectionLabel}>Program</Text>
+                        <View style={styles.programRow}>
+                            {Object.values(AcademicProgram).map((prog) => (
+                                <TouchableOpacity
+                                    key={prog}
+                                    style={[
+                                        styles.programOption,
+                                        program === prog && styles.programOptionSelected
+                                    ]}
+                                    onPress={() => setProgram(prog)}
+                                >
+                                    <Text style={[
+                                        styles.programText,
+                                        program === prog && styles.programTextSelected
+                                    ]}>{prog}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
                         {/* Year Level Selection */}
                         <Text style={styles.sectionLabel}>Year Level</Text>
@@ -373,6 +394,33 @@ const styles = StyleSheet.create({
         color: COLORS.text.secondary,
         marginBottom: SPACING.s,
         marginTop: SPACING.s,
+    },
+    programRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: SPACING.m,
+    },
+    programOption: {
+        flex: 1,
+        padding: SPACING.s,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: BORDER_RADIUS.s,
+        marginHorizontal: 4,
+        backgroundColor: COLORS.card,
+    },
+    programOptionSelected: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    programText: {
+        fontWeight: '600',
+        color: COLORS.text.primary,
+        fontSize: 12,
+    },
+    programTextSelected: {
+        color: COLORS.white,
     },
     yearRow: {
         flexDirection: 'row',
