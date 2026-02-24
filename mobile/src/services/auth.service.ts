@@ -24,7 +24,9 @@ class AuthService {
         password: string,
         displayName: string,
         yearLevel: number,
-        program: string
+        program: string,
+        studentNumber: string,
+        phoneNumber: string
     ): Promise<User> {
         let userCredential;
         try {
@@ -57,7 +59,9 @@ class AuthService {
                     displayName,
                     role,
                     yearLevel,
-                    program, // Added program
+                    program,
+                    studentNumber,
+                    phoneNumber
                 });
 
                 console.log('Backend registration successful');

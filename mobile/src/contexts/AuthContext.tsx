@@ -12,7 +12,7 @@ interface AuthContextType {
     firebaseUser: FirebaseUser | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, displayName: string, yearLevel: number, program: string) => Promise<void>;
+    register: (email: string, password: string, displayName: string, yearLevel: number, program: string, studentNumber: string, phoneNumber: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
@@ -85,14 +85,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const login = async (email: string, password: string) => {
-        setLoading(true);
+        // Do not set global loading here to prevent navigation reset
         try {
             await authService.login(email, password);
              // User state is updated via the onAuthStateChanged listener
         } catch (error) {
             throw error;
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -101,16 +99,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: string,
         displayName: string,
         yearLevel: number,
-        program: string
+        program: string,
+        studentNumber: string,
+        phoneNumber: string
     ) => {
-        setLoading(true);
+        // Do not set global loading here to prevent navigation reset
         try {
-            const user = await authService.register(email, password, displayName, yearLevel, program); // Pass program
+            const user = await authService.register(email, password, displayName, yearLevel, program, studentNumber, phoneNumber);
             setUser(user);
         } catch (error) {
             throw error;
-        } finally {
-            setLoading(false);
         }
     };
 

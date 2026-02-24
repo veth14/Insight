@@ -6,10 +6,10 @@ import {
     StyleSheet, 
     Alert, 
     ScrollView, 
-    SafeAreaView, 
     Platform, 
     StatusBar 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';

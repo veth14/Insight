@@ -7,10 +7,10 @@ import {
     TouchableOpacity, 
     FlatList, 
     Modal, 
-    SafeAreaView,
     Platform,
     StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 import StudyCard from '../../components/StudyCard';

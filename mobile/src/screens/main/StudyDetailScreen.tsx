@@ -5,12 +5,12 @@ import {
     StyleSheet, 
     ScrollView, 
     TouchableOpacity, 
-    SafeAreaView, 
     Platform, 
     StatusBar,
     Animated,
     LayoutAnimation,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 import { useNavigation, useRoute } from '@react-navigation/native';

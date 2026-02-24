@@ -23,7 +23,9 @@ export enum AcademicProgram {
 export interface User {
     uid: string;
     email: string;
+    studentNumber: string;
     displayName: string;
+    phoneNumber: string;
     role: UserRole;
     program?: AcademicProgram; // Added Program field
     yearLevel?: number;
@@ -85,6 +87,7 @@ export type RootStackParamList = {
 };
 
 export type AuthStackParamList = {
+    Onboarding: undefined;
     Login: undefined;
     Register: undefined;
 };

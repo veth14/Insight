@@ -12,7 +12,11 @@ import {
     Animated,
     StatusBar,
     Modal,
+    Image,
+    Dimensions,
 } from 'react-native';
+
+const { width } = Dimensions.get('window');
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,89 +35,26 @@ const INTERESTS_LIST = [
     'Mobile Dev', 'Cybersecurity', 'IoT', 'Business', 'Mathematics'
 ];
 
-const FloatingLabelInput = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    secureTextEntry, 
-    onToggleSecure,
-    isPassword,
-    keyboardType = 'default'
-}: any) => {
-    const [isFocused, setIsFocused] = useState(false);
-    const animatedLabel = useRef(new Animated.Value(value ? 1 : 0)).current;
-
-    useEffect(() => {
-        Animated.timing(animatedLabel, {
-            toValue: (isFocused || value) ? 1 : 0,
-            duration: 200,
-            useNativeDriver: false,
-        }).start();
-    }, [isFocused, value]);
-
-    const labelStyle = {
-        top: animatedLabel.interpolate({
-            inputRange: [0, 1],
-            outputRange: [18, 6],
-        }),
-        fontSize: animatedLabel.interpolate({
-            inputRange: [0, 1],
-            outputRange: [16, 12],
-        }),
-        color: animatedLabel.interpolate({
-            inputRange: [0, 1],
-            outputRange: [COLORS.text.secondary, COLORS.primary],
-        }),
-    };
-
-    return (
-        <View style={styles.inputContainer}>
-            <Animated.Text style={[styles.floatingLabel, labelStyle]}>
-                {label}
-            </Animated.Text>
-            <TextInput
-                style={[
-                    styles.input, 
-                    isFocused && styles.inputFocused,
-                    { paddingRight: isPassword ? 50 : SPACING.m }
-                ]}
-                value={value}
-                onChangeText={onChangeText}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                secureTextEntry={secureTextEntry}
-                autoCapitalize="none"
-                keyboardType={keyboardType}
-            />
-            {isPassword && (
-                <TouchableOpacity onPress={onToggleSecure} style={styles.eyeIcon}>
-                    <Ionicons 
-                        name={secureTextEntry ? "eye-off-outline" : "eye-outline"} 
-                        size={24} 
-                        color={COLORS.text.secondary} 
-                    />
-                </TouchableOpacity>
-            )}
-        </View>
-    );
-};
 
 const RegisterScreen: React.FC<Props> = ({ navigation }) => {
+    // Form State
+    const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [displayName, setDisplayName] = useState('');
+    const [studentNumber, setStudentNumber] = useState('');
     const [yearLevel, setYearLevel] = useState('');
-    const [program, setProgram] = useState<AcademicProgram | null>(null);
-    const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+    const [program, setProgram] = useState<AcademicProgram | ''>('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [password, setPassword] = useState('');
     
     // UI State
     const [isSecure, setIsSecure] = useState(true);
-    const [isConfirmSecure, setIsConfirmSecure] = useState(true);
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
     
-    const { register } = useAuth();
+    // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    const { register } = useAuth();
 
     useEffect(() => {
         Animated.timing(fadeAnim, {
@@ -123,177 +64,159 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         }).start();
     }, []);
 
-    const toggleInterest = (interest: string) => {
-        if (selectedInterests.includes(interest)) {
-            setSelectedInterests(selectedInterests.filter(i => i !== interest));
-        } else {
-            setSelectedInterests([...selectedInterests, interest]);
-        }
-    };
-
     const handleRegister = async () => {
-        if (!email || !password || !confirmPassword || !displayName || !yearLevel || !program) {
-            Alert.alert('Missing Fields', 'Please fill in all required fields including Program.');
+        if (!fullName || !email || !studentNumber || !yearLevel || !program || !phoneNumber || !password) {
+            Alert.alert('Missing Fields', 'Please fill in all fields completely.');
             return;
         }
-
-        if (password !== confirmPassword) {
-            Alert.alert('Mismatch', 'Passwords do not match.');
-            return;
-        }
-
-        if (password.length < 6) {
-            Alert.alert('Weak Password', 'Password must be at least 6 characters.');
-            return;
-        }
-
-        const yearNum = parseInt(yearLevel);
-        if (isNaN(yearNum) || yearNum < 1 || yearNum > 5) {
-            Alert.alert('Invalid Year', 'Please select a valid year level (1-4).');
+        
+        if (!termsAccepted) {
+            Alert.alert('Terms & Conditions', 'Please accept the terms and conditions to continue.');
             return;
         }
 
         setLoading(true);
         try {
-            await register(email, password, displayName, yearNum, program);
+            await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, phoneNumber);
         } catch (error: any) {
-            Alert.alert('Registration Failed', error.message);
+             Alert.alert('Registration Failed', error.message || 'An error occurred during registration.');
         } finally {
             setLoading(false);
         }
     };
 
-    const getPasswordStrength = () => {
-        if (password.length === 0) return 0;
-        if (password.length < 6) return 1;
-        if (password.length < 10) return 2;
-        return 3;
-    };
-
-    const strength = getPasswordStrength();
-    const strengthColor = ['#E2E8F0', '#EF4444', '#F59E0B', '#10B981'][strength];
-
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" />
-            <LinearGradient
-                colors={[COLORS.primary, '#2E5090']}
-                style={styles.background}
-            />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
             
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardView}
             >
-                <ScrollView 
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
-                        <View style={styles.header}>
-                            <Text style={styles.title}>Create Account</Text>
-                            <Text style={styles.subtitle}>Join the academic community</Text>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    
+                    {/* Illustration Area */}
+                    <Animated.View style={[styles.illustrationContainer, { opacity: fadeAnim, alignItems: 'center' }]}>
+                        <Image 
+                            source={require('../../../assets/images/register-illustration.png')}
+                            style={{ width: width * 0.85, height: width * 0.55, resizeMode: 'contain' }}
+                        />
+                    </Animated.View>
+
+                    <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
+                        
+                        {/* Full Name */}
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Full name"
+                                placeholderTextColor="#999"
+                                value={fullName}
+                                onChangeText={setFullName}
+                            />
                         </View>
 
-                        <FloatingLabelInput
-                            label="Full Name"
-                            value={displayName}
-                            onChangeText={setDisplayName}
-                        />
-
-                        <FloatingLabelInput
-                            label="University Email"
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                        />
-
-                        {/* Program Selection */}
-                        <Text style={styles.sectionLabel}>Program</Text>
-                        <View style={styles.programRow}>
-                            {Object.values(AcademicProgram).map((prog) => (
-                                <TouchableOpacity
-                                    key={prog}
-                                    style={[
-                                        styles.programOption,
-                                        program === prog && styles.programOptionSelected
-                                    ]}
-                                    onPress={() => setProgram(prog)}
-                                >
-                                    <Text style={[
-                                        styles.programText,
-                                        program === prog && styles.programTextSelected
-                                    ]}>{prog}</Text>
-                                </TouchableOpacity>
-                            ))}
+                         {/* Email */}
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Valid email"
+                                placeholderTextColor="#999"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
                         </View>
 
-                        {/* Year Level Selection */}
-                        <Text style={styles.sectionLabel}>Year Level</Text>
-                        <View style={styles.yearRow}>
-                            {[1, 2, 3, 4].map((y) => (
-                                <TouchableOpacity
-                                    key={y}
-                                    style={[
-                                        styles.yearOption,
-                                        yearLevel === y.toString() && styles.yearOptionSelected
-                                    ]}
-                                    onPress={() => setYearLevel(y.toString())}
-                                >
-                                    <Text style={[
-                                        styles.yearText,
-                                        yearLevel === y.toString() && styles.yearTextSelected
-                                    ]}>{y}</Text>
-                                </TouchableOpacity>
-                            ))}
+                         {/* Student Number */}
+                         <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Student number"
+                                placeholderTextColor="#999"
+                                value={studentNumber}
+                                onChangeText={setStudentNumber}
+                            />
                         </View>
 
-                        <FloatingLabelInput
-                            label="Password"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={isSecure}
-                            onToggleSecure={() => setIsSecure(!isSecure)}
-                            isPassword
-                        />
+                         {/* Year Level */}
+                         <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Year Level (1-4)"
+                                placeholderTextColor="#999"
+                                value={yearLevel}
+                                onChangeText={setYearLevel}
+                                keyboardType="numeric"
+                            />
+                        </View>
 
-                        {/* Password Strength Indicator */}
-                        {password.length > 0 && (
-                            <View style={styles.strengthContainer}>
-                                <View style={[styles.strengthBar, { flex: strength >= 1 ? 1 : 0, backgroundColor: strength >= 1 ? strengthColor : '#E2E8F0' }]} />
-                                <View style={[styles.strengthBar, { flex: strength >= 2 ? 1 : 0, backgroundColor: strength >= 2 ? strengthColor : '#E2E8F0' }]} />
-                                <View style={[styles.strengthBar, { flex: strength >= 3 ? 1 : 0, backgroundColor: strength >= 3 ? strengthColor : '#E2E8F0' }]} />
+                         {/* Program Selector */}
+                        <View style={styles.programContainer}>
+                            <Text style={styles.label}>Program</Text>
+                            <View style={styles.programRow}>
+                                {[AcademicProgram.BSIS, AcademicProgram.BSIT, AcademicProgram.BSCS].map((p) => (
+                                    <TouchableOpacity 
+                                        key={p} 
+                                        style={[styles.programChip, program === p && styles.programChipSelected]}
+                                        onPress={() => setProgram(p)}
+                                    >
+                                        <Text style={[styles.programChipText, program === p && styles.programChipTextSelected]}>{p}</Text>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
-                        )}
-
-                        <FloatingLabelInput
-                            label="Confirm Password"
-                            value={confirmPassword}
-                            onChangeText={setConfirmPassword}
-                            secureTextEntry={isConfirmSecure}
-                            onToggleSecure={() => setIsConfirmSecure(!isConfirmSecure)}
-                            isPassword
-                        />
-
-                        <Text style={styles.sectionLabel}>Academic Interests</Text>
-                        <View style={styles.chipsContainer}>
-                            {INTERESTS_LIST.map((interest) => (
-                                <TouchableOpacity
-                                    key={interest}
-                                    style={[
-                                        styles.chip,
-                                        selectedInterests.includes(interest) && styles.chipSelected
-                                    ]}
-                                    onPress={() => toggleInterest(interest)}
-                                >
-                                    <Text style={[
-                                        styles.chipText,
-                                        selectedInterests.includes(interest) && styles.chipTextSelected
-                                    ]}>{interest}</Text>
-                                </TouchableOpacity>
-                            ))}
                         </View>
 
+                         {/* Phone Number */}
+                         <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Phone number"
+                                placeholderTextColor="#999"
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
+                                keyboardType="phone-pad"
+                            />
+                        </View>
+
+                        {/* Password */}
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Strong Password"
+                                placeholderTextColor="#999"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={isSecure}
+                                autoCapitalize="none"
+                            />
+                            <TouchableOpacity 
+                                onPress={() => setIsSecure(!isSecure)} 
+                                style={styles.eyeIcon}
+                            >
+                                <Ionicons 
+                                    name={isSecure ? "lock-closed-outline" : "lock-open-outline"} 
+                                    size={20} 
+                                    color={COLORS.text.secondary} 
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Terms Checkbox */}
+                        <TouchableOpacity 
+                            style={styles.termsRow} 
+                            onPress={() => setTermsAccepted(!termsAccepted)}
+                        >
+                            <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+                                {termsAccepted && <Ionicons name="checkmark" size={12} color="white" />}
+                            </View>
+                            <Text style={styles.termsText}>
+                                By checking the box you agree to our <Text style={styles.linkText}>Terms and Conditions</Text>
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Register Button */}
                         <TouchableOpacity
                             style={styles.registerButton}
                             onPress={handleRegister}
@@ -302,217 +225,183 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                             {loading ? (
                                 <Text style={styles.registerButtonText}>Creating Account...</Text>
                             ) : (
-                                <Text style={styles.registerButtonText}>Register</Text>
+                                <Text style={styles.registerButtonText}>Next &gt;</Text>
                             )}
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.loginLink}>
-                            <Text style={styles.loginLinkText}>
-                                Already have an account? <Text style={styles.loginLinkHighlight}>Login</Text>
-                            </Text>
-                        </TouchableOpacity>
+                        {/* Footer */}
+                        <View style={styles.footerContainer}>
+                            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                                <Text style={styles.footerText}>Already a member? <Text style={styles.linkText}>Log in</Text></Text>
+                            </TouchableOpacity>
+                        </View>
+
                     </Animated.View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </View>
-    );
+    );    
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.primary,
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        height: '100%',
+        backgroundColor: '#FFF',
     },
     keyboardView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
+        justifyContent: 'center', // Centers vertically if form fits screen
+        paddingHorizontal: SPACING.xl,
+        paddingBottom: SPACING.xl,
+        paddingTop: SPACING.xl, // Start lower down
+    },
+    illustrationContainer: {
         justifyContent: 'center',
-        padding: SPACING.l,
-        paddingTop: 60,
-    },
-    card: {
-        backgroundColor: '#FFF',
-        borderRadius: BORDER_RADIUS.l,
-        padding: SPACING.l,
-        ...SHADOWS.medium,
-        marginBottom: SPACING.xl, // for scrolling buffer
-    },
-    header: {
         alignItems: 'center',
+        marginBottom: SPACING.l, // Space below image
+    },
+    illustrationPlaceholder: {
+        width: 100,
+        height: 80,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    formContainer: {
+        flex: 1,
+    },
+    headerContainer: {
         marginBottom: SPACING.l,
+        alignItems: 'center',
     },
-    title: {
-        ...TYPOGRAPHY.h2,
-        color: COLORS.primary,
-        marginBottom: SPACING.xs,
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#000',
+        marginBottom: 4,
     },
-    subtitle: {
-        ...TYPOGRAPHY.body,
+    headerSubtitle: {
+        fontSize: 14,
         color: COLORS.text.secondary,
+        textAlign: 'center',
     },
-    inputContainer: {
-        marginBottom: SPACING.l,
+    inputWrapper: {
+        marginBottom: SPACING.s + 4,
         position: 'relative',
     },
     input: {
-        height: 56,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: BORDER_RADIUS.m,
+        backgroundColor: '#F5F5F5',
+        borderRadius: BORDER_RADIUS.s,
         paddingHorizontal: SPACING.m,
-        paddingTop: SPACING.s,
-        fontSize: 16,
+        paddingVertical: 14,
+        fontSize: 14,
         color: COLORS.text.primary,
-        backgroundColor: '#FAFAFA',
-    },
-    inputFocused: {
-        borderColor: COLORS.primary,
-        backgroundColor: '#FFF',
-    },
-    floatingLabel: {
-        position: 'absolute',
-        left: SPACING.m,
-        zIndex: 1,
+        borderWidth: 1,
+        borderColor: 'transparent',
     },
     eyeIcon: {
         position: 'absolute',
         right: SPACING.m,
-        top: 16,
+        top: 14,
     },
-    sectionLabel: {
-        ...TYPOGRAPHY.h3,
-        fontSize: 14,
+    label: {
+        fontSize: 12,
         color: COLORS.text.secondary,
-        marginBottom: SPACING.s,
-        marginTop: SPACING.s,
+        marginBottom: 4,
+        marginLeft: 4
+    },
+    programContainer: {
+        marginBottom: SPACING.m,
     },
     programRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: SPACING.m,
     },
-    programOption: {
+    programChip: {
         flex: 1,
-        padding: SPACING.s,
+        backgroundColor: '#F5F5F5',
+        paddingVertical: 12,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: COLORS.border,
         borderRadius: BORDER_RADIUS.s,
         marginHorizontal: 4,
-        backgroundColor: COLORS.card,
+        borderWidth: 1,
+        borderColor: 'transparent',
     },
-    programOptionSelected: {
+    programChipSelected: {
         backgroundColor: COLORS.primary,
         borderColor: COLORS.primary,
     },
-    programText: {
+    programChipText: {
+        fontSize: 12,
         fontWeight: '600',
-        color: COLORS.text.primary,
-        fontSize: 12,
+        color: COLORS.text.secondary,
     },
-    programTextSelected: {
-        color: COLORS.white,
+    programChipTextSelected: {
+        color: 'white',
     },
-    yearRow: {
+    termsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        alignItems: 'flex-start',
         marginBottom: SPACING.l,
+        marginTop: SPACING.s,
     },
-    yearOption: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+    checkbox: {
+        width: 18,
+        height: 18,
+        borderRadius: 4,
         borderWidth: 1,
-        borderColor: COLORS.border,
+        borderColor: COLORS.text.secondary,
+        marginRight: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
+        marginTop: 2,
     },
-    yearOptionSelected: {
-        backgroundColor: COLORS.accent,
-        borderColor: COLORS.accent,
+    checkboxChecked: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
     },
-    yearText: {
+    termsText: {
+        fontSize: 12,
         color: COLORS.text.secondary,
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    yearTextSelected: {
-        color: '#FFF',
-    },
-    strengthContainer: {
-        flexDirection: 'row',
-        height: 4,
-        marginTop: -SPACING.m,
-        marginBottom: SPACING.m,
-        borderRadius: 2,
-        overflow: 'hidden',
-    },
-    strengthBar: {
         flex: 1,
-        marginHorizontal: 1,
+        lineHeight: 18,
     },
-    chipsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: SPACING.xl,
-    },
-    chip: {
-        paddingHorizontal: SPACING.m,
-        paddingVertical: 8,
-        borderRadius: BORDER_RADIUS.full,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        marginRight: SPACING.s,
-        marginBottom: SPACING.s,
-        backgroundColor: '#FAFAFA',
-    },
-    chipSelected: {
-        backgroundColor: COLORS.accent,
-        borderColor: COLORS.accent,
-    },
-    chipText: {
-        color: COLORS.text.secondary,
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    chipTextSelected: {
-        color: '#FFF',
-    },
-    registerButton: {
-        backgroundColor: COLORS.accent,
-        height: 56,
-        borderRadius: BORDER_RADIUS.m,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...SHADOWS.subtle,
-        marginBottom: SPACING.l,
-    },
-    registerButtonText: {
-        color: '#FFF',
-        fontSize: 18,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-    },
-    loginLink: {
-        alignItems: 'center',
-    },
-    loginLinkText: {
-        color: COLORS.text.secondary,
-    },
-    loginLinkHighlight: {
+    linkText: {
         color: COLORS.primary,
         fontWeight: 'bold',
     },
+    registerButton: {
+        backgroundColor: COLORS.primary, // Dark Blue
+        height: 52,
+        borderRadius: BORDER_RADIUS.s,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: SPACING.l,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 2,
+    },
+    registerButtonText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
+    footerContainer: {
+        alignItems: 'center',
+        marginBottom: SPACING.m,
+    },
+    footerText: {
+        fontSize: 14,
+        color: COLORS.text.secondary,
+    }
 });
 
 export default RegisterScreen;

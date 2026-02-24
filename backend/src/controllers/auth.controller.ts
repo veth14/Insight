@@ -9,7 +9,7 @@ import { AuthRequest } from '../types';
 export const register = async (req: Request, res: Response): Promise<void> => {
     try {
         const authReq = req as AuthRequest;
-        const { uid, email, displayName, role, yearLevel } = req.body;
+        const { uid, email, displayName, role, yearLevel, studentNumber, phoneNumber, program } = req.body;
 
         // Verify the authenticated user matches the user being registered
         if (authReq.user?.uid !== uid) {
@@ -28,9 +28,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         const user = new User({
             uid,
             email,
+            studentNumber,
             displayName,
+            phoneNumber,
             role,
             yearLevel,
+            program
         });
 
         await user.save();
@@ -40,7 +43,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             user: {
                 uid: user.uid,
                 email: user.email,
+                studentNumber: user.studentNumber,
                 displayName: user.displayName,
+                phoneNumber: user.phoneNumber,
+                program: user.program,
                 role: user.role,
                 yearLevel: user.yearLevel,
             },

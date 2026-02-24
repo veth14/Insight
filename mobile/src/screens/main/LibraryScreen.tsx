@@ -4,11 +4,11 @@ import {
     Text, 
     StyleSheet, 
     TouchableOpacity, 
-    SafeAreaView, 
     FlatList,
     StatusBar,
     ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 import StudyCard from '../../components/StudyCard';

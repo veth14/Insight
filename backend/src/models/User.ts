@@ -7,9 +7,12 @@ import { UserRole } from '../types';
 export interface IUser extends Document {
     uid: string; // Firebase UID
     email: string;
+    studentNumber: string;
     displayName: string;
+    phoneNumber: string;
     role: UserRole;
     yearLevel?: number;
+    program?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -33,7 +36,18 @@ const UserSchema: Schema = new Schema(
             lowercase: true,
             trim: true,
         },
+        studentNumber: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+        },
         displayName: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        phoneNumber: {
             type: String,
             required: true,
             trim: true,
@@ -48,6 +62,10 @@ const UserSchema: Schema = new Schema(
             type: Number,
             min: 1,
             max: 5,
+        },
+        program: {
+            type: String,
+            required: true,
         },
     },
     {
