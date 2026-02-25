@@ -226,8 +226,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                 <Text style={styles.registerButtonText}>Creating Account...</Text>
                             ) : (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Text style={styles.registerButtonText}>Next</Text>
-                                    <Ionicons name="chevron-forward" size={18} color="#CDDDFF" />
+                                    <Text style={styles.registerButtonText}>Register</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
@@ -393,7 +392,7 @@ const styles = StyleSheet.create({
     },
     registerButtonText: {
         color: '#FFF',
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'bold',
         letterSpacing: 0.5,
     },
