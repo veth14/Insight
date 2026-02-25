@@ -74,7 +74,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-            
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardView}
@@ -82,7 +82,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     
                     {/* Illustration Area */}
-                    <Animated.View style={[styles.illustrationContainer, { opacity: fadeAnim, alignItems: 'center' }]}>
+                    <Animated.View style={[styles.illustrationContainer, { opacity: fadeAnim }]}>
                         <Image 
                             source={require('../../../assets/images/login-illustration.png')}
                             style={{ width: width * 0.85, height: width * 0.65, resizeMode: 'contain' }}
@@ -90,7 +90,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                     </Animated.View>
 
                     <Animated.View style={[styles.formContainer, { opacity: fadeAnim }]}>
-                        
+
                         {/* Email Input */}
                         <View style={styles.inputWrapper}>
                              <TextInput
@@ -122,7 +122,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                                 <Ionicons 
                                     name={isSecure ? "eye-off-outline" : "eye-outline"} 
                                     size={20} 
-                                    color={COLORS.text.secondary} 
+                                    color="#999" 
                                 />
                             </TouchableOpacity>
                         </View>
@@ -140,7 +140,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                             </TouchableOpacity>
                             
                             <TouchableOpacity>
-                                <Text style={styles.forgotText}>Forgot password?</Text>
+                                <Text style={styles.forgotText}>Forgot password ?</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -153,7 +153,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                             {loading ? (
                                 <ActivityIndicator color="#FFF" />
                             ) : (
-                                <Text style={styles.loginButtonText}>Next &gt;</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Text style={styles.loginButtonText}>Login</Text>
+                                </View>
                             )}
                         </TouchableOpacity>
 
@@ -175,21 +177,30 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#FFF',
     },
+    topHeader: {
+        paddingTop: 50,
+        paddingHorizontal: SPACING.xl,
+        paddingBottom: SPACING.s,
+        backgroundColor: '#FFF',
+    },
+    topHeaderText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#000',
+    },
     keyboardView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
-        justifyContent: 'center', // Centers vertically if content is short
         paddingHorizontal: SPACING.xl,
         paddingBottom: SPACING.xl,
-        paddingTop: SPACING.xl, // Add some top padding to avoid hugging status bar
+        paddingTop: SPACING.xl * 5,
     },
     illustrationContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: SPACING.xl, // Increase spacing between image and form
-        marginTop: SPACING.m,
+        marginBottom: SPACING.m,
     },
     illustrationPlaceholder: {
         width: 200,
@@ -205,13 +216,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     welcomeText: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: 'bold',
         color: '#000',
-        marginBottom: SPACING.xs,
+        marginBottom: 4,
     },
     subtitleText: {
-        fontSize: 14,
+        fontSize: 13,
         color: COLORS.text.secondary,
     },
     inputWrapper: {
@@ -237,7 +248,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.xl * 2, // More space before button
+        marginBottom: SPACING.xl * 2,
         paddingHorizontal: 4,
     },
     rememberRow: {
@@ -245,7 +256,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     checkbox: {
-        width: 14, // Smaller checkbox
+        width: 14,
         height: 14,
         borderRadius: 3,
         borderWidth: 1,
@@ -255,31 +266,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     checkboxChecked: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: '#0E1F43',
+        borderColor: '#0E1F43',
     },
     rememberText: {
         fontSize: 12,
-        color: '#666', // Lighter grey
+        color: '#666',
         fontWeight: '500',
     },
     forgotText: {
         fontSize: 12,
-        color: COLORS.primary, // Keep blue
+        color: '#0E1F43',
         fontWeight: '600',
     },
     loginButton: {
-        backgroundColor: COLORS.primary, // Dark Blue
+        backgroundColor: '#0E1F43',
         height: 52,
         borderRadius: BORDER_RADIUS.s,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: SPACING.xl,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 3.84,
         elevation: 2,
@@ -292,7 +300,6 @@ const styles = StyleSheet.create({
     },
     footerContainer: {
         alignItems: 'center',
-        marginTop: SPACING.m, // Changed from 'auto' to fixed spacing
         marginBottom: SPACING.m,
     },
     footerText: {
@@ -300,7 +307,7 @@ const styles = StyleSheet.create({
         color: COLORS.text.secondary,
     },
     footerLink: {
-        color: COLORS.primary,
+        color: '#0E1F43',
         fontWeight: 'bold',
     },
 });

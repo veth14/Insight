@@ -225,7 +225,10 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                             {loading ? (
                                 <Text style={styles.registerButtonText}>Creating Account...</Text>
                             ) : (
-                                <Text style={styles.registerButtonText}>Next &gt;</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Text style={styles.registerButtonText}>Next</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="#CDDDFF" />
+                                </View>
                             )}
                         </TouchableOpacity>
 
@@ -330,8 +333,8 @@ const styles = StyleSheet.create({
         borderColor: 'transparent',
     },
     programChipSelected: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: '#0E1F43',
+        borderColor: '#0E1F43',
     },
     programChipText: {
         fontSize: 12,
@@ -359,8 +362,8 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     checkboxChecked: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: '#0E1F43',
+        borderColor: '#0E1F43',
     },
     termsText: {
         fontSize: 12,
@@ -369,11 +372,11 @@ const styles = StyleSheet.create({
         lineHeight: 18,
     },
     linkText: {
-        color: COLORS.primary,
+        color: '#0E1F43',
         fontWeight: 'bold',
     },
     registerButton: {
-        backgroundColor: COLORS.primary, // Dark Blue
+        backgroundColor: '#0E1F43',
         height: 52,
         borderRadius: BORDER_RADIUS.s,
         justifyContent: 'center',
