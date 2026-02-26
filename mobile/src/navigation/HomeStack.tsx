@@ -5,6 +5,12 @@ import DashboardScreen from '../screens/main/DashboardScreen';
 import PDFReaderScreen from '../screens/main/PDFReaderScreen';
 import StudyDetailScreen from '../screens/main/StudyDetailScreen';
 import CiteGeneratorScreen from '../screens/main/CiteGeneratorScreen';
+import AccountSettingsScreen from '../screens/main/AccountSettingsScreen';
+import MyAccountScreen from '../screens/main/MyAccountScreen';
+import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
+import DownloadsScreen from '../screens/main/DownloadsScreen';
+import PrivacyPolicyScreen from '../screens/main/PrivacyPolicyScreen';
+import TermsOfUseScreen from '../screens/main/TermsOfUseScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -24,6 +30,12 @@ const HomeStack: React.FC = () => {
                 component={StudyDetailScreen}
             />
             <Stack.Screen name="CiteGenerator" component={CiteGeneratorScreen} />
+            <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
+            <Stack.Screen name="MyAccount" component={MyAccountScreen} />
+            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+            <Stack.Screen name="Downloads" component={DownloadsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+            <Stack.Screen name="TermsOfUse" component={TermsOfUseScreen} />
             <Stack.Screen
                 name="PDFReader"
                 component={PDFReaderScreen}

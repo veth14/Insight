@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, vs, ms } from '../../utils/responsive';
 
 interface Props {
     visible: boolean;
@@ -192,21 +193,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: scale(20),
+        paddingVertical: vs(12),
     },
     headerLeft: {
-        width: 32,
+        width: scale(32),
     },
     headerTitle: {
-        fontSize: 17,
+        fontSize: ms(15),
         fontWeight: '700',
         color: '#0E1F43',
         textAlign: 'center',
         flex: 1,
     },
     closeBtn: {
-        width: 32,
+        width: scale(32),
         alignItems: 'flex-end',
     },
     divider: {
@@ -217,19 +218,19 @@ const styles = StyleSheet.create({
 
     // Meta
     meta: {
-        paddingHorizontal: 24,
-        paddingTop: 16,
-        paddingBottom: 8,
+        paddingHorizontal: scale(24),
+        paddingTop: vs(10),
+        paddingBottom: vs(6),
     },
     metaApp: {
-        fontSize: 15,
+        fontSize: ms(14),
         fontWeight: '700',
         color: '#0E1F43',
     },
     metaDate: {
-        fontSize: 12,
+        fontSize: ms(12),
         color: '#999',
-        marginTop: 2,
+        marginTop: vs(2),
     },
 
     // Scroll hint
@@ -237,12 +238,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 4,
-        paddingBottom: 6,
-        paddingHorizontal: 24,
+        gap: scale(4),
+        paddingBottom: vs(6),
+        paddingHorizontal: scale(24),
     },
     scrollHintText: {
-        fontSize: 11,
+        fontSize: ms(11),
         color: '#AAA',
         fontStyle: 'italic',
     },
@@ -252,24 +253,24 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 24,
-        paddingTop: 8,
-        paddingBottom: 8,
+        paddingHorizontal: scale(24),
+        paddingTop: vs(8),
+        paddingBottom: vs(8),
     },
     section: {
-        marginBottom: 20,
+        marginBottom: vs(20),
     },
     sectionTitle: {
-        fontSize: 13,
+        fontSize: ms(13),
         fontWeight: '700',
         color: '#0E1F43',
-        marginBottom: 6,
+        marginBottom: vs(6),
         letterSpacing: 0.2,
     },
     sectionBody: {
-        fontSize: 13,
+        fontSize: ms(13),
         color: '#444',
-        lineHeight: 20,
+        lineHeight: vs(20),
     },
     sectionCentered: {
         alignItems: 'center',
@@ -284,33 +285,33 @@ const styles = StyleSheet.create({
 
     // Footer
     footer: {
-        paddingHorizontal: 24,
-        paddingTop: 12,
-        paddingBottom: 20,
+        paddingHorizontal: scale(24),
+        paddingTop: vs(10),
+        paddingBottom: vs(14),
         borderTopWidth: 1,
         borderTopColor: '#EAEDF3',
         backgroundColor: '#fff',
     },
     footerHint: {
-        fontSize: 11,
+        fontSize: ms(11),
         color: '#AAA',
         textAlign: 'center',
-        marginBottom: 10,
+        marginBottom: vs(8),
     },
     agreeBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#0E1F43',
-        height: 52,
-        borderRadius: 10,
-        marginBottom: 10,
+        height: vs(46),
+        borderRadius: ms(12),
+        marginBottom: vs(8),
     },
     agreeBtnDisabled: {
         backgroundColor: '#E8ECF4',
     },
     agreeBtnText: {
-        fontSize: 15,
+        fontSize: ms(14),
         fontWeight: '700',
         color: '#fff',
     },
@@ -319,10 +320,10 @@ const styles = StyleSheet.create({
     },
     declineBtn: {
         alignItems: 'center',
-        paddingVertical: 10,
+        paddingVertical: vs(8),
     },
     declineBtnText: {
-        fontSize: 14,
+        fontSize: ms(13),
         color: '#888',
         fontWeight: '500',
     },

@@ -19,12 +19,13 @@ import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, vs, ms } from '../../utils/responsive';
 
 type Nav = NativeStackNavigationProp<AuthStackParamList, 'ForgotPasswordOTP'>;
 type RouteP = RouteProp<AuthStackParamList, 'ForgotPasswordOTP'>;
 interface Props { navigation: Nav; route: RouteP; }
 
-const BOX_SIZE = 56;
+const BOX_SIZE = scale(44);
 const RESEND_COOLDOWN = 5 * 60;
 
 const ForgotPasswordOTPScreen: React.FC<Props> = ({ navigation, route }) => {
@@ -255,54 +256,54 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     scroll: {
         flexGrow: 1,
-        paddingHorizontal: 28,
-        paddingTop: 56,
-        paddingBottom: 40,
+        paddingHorizontal: scale(28),
+        paddingTop: vs(32),
+        paddingBottom: vs(28),
     },
     backBtn: {
-        width: 44, height: 44, borderRadius: 22,
+        width: scale(38), height: vs(38), borderRadius: ms(19),
         backgroundColor: '#0E1F43',
         alignItems: 'center', justifyContent: 'center',
-        marginBottom: 48,
+        marginBottom: vs(28),
     },
     title: {
-        fontSize: 32, fontWeight: '700', color: '#0E1F43',
-        marginBottom: 12,
+        fontSize: ms(22), fontWeight: '700', color: '#0E1F43',
+        marginBottom: vs(8),
     },
     subtitle: {
-        fontSize: 15, color: '#9AA5B8',
-        lineHeight: 22, marginBottom: 40,
+        fontSize: ms(14), color: '#9AA5B8',
+        lineHeight: vs(18), marginBottom: vs(24),
     },
     emailBold: { fontWeight: '700', color: '#0E1F43' },
     otpRow: {
         flexDirection: 'row',
-        gap: 12,
-        marginBottom: 20,
+        gap: scale(10),
+        marginBottom: vs(16),
     },
     otpBox: {
         width: BOX_SIZE, height: BOX_SIZE,
-        borderRadius: 10, borderWidth: 1.5, borderColor: '#D8DCE8',
-        fontSize: 22, fontWeight: '700', color: '#0E1F43',
+        borderRadius: ms(10), borderWidth: 1.5, borderColor: '#D8DCE8',
+        fontSize: ms(18), fontWeight: '700', color: '#0E1F43',
         backgroundColor: '#fff',
     },
     otpBoxFilled: { borderColor: '#0E1F43' },
     otpBoxError: { borderColor: '#E53935' },
-    errorText: { fontSize: 13, color: '#E53935', marginBottom: 12 },
+    errorText: { fontSize: ms(12), color: '#E53935', marginBottom: vs(10) },
     button: {
         backgroundColor: '#0E1F43',
-        height: 58, borderRadius: 10,
+        height: vs(48), borderRadius: ms(12),
         alignItems: 'center', justifyContent: 'center',
-        marginTop: 12, marginBottom: 28,
+        marginTop: vs(10), marginBottom: vs(16),
     },
     buttonDisabled: { backgroundColor: '#9AA5B8' },
-    buttonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+    buttonText: { fontSize: ms(15), fontWeight: '700', color: '#fff' },
     resendRow: {
         flexDirection: 'row', alignItems: 'center',
         justifyContent: 'center',
     },
-    resendLabel: { fontSize: 14, color: '#9AA5B8' },
-    resendLink: { fontSize: 14, fontWeight: '700', color: '#0E1F43', textDecorationLine: 'underline' },
-    resendCooldown: { fontSize: 14, fontWeight: '600', color: '#9AA5B8', textDecorationLine: 'none' },
+    resendLabel: { fontSize: ms(13), color: '#9AA5B8' },
+    resendLink: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43', textDecorationLine: 'underline' },
+    resendCooldown: { fontSize: ms(13), fontWeight: '600', color: '#9AA5B8', textDecorationLine: 'none' },
 });
 
 export default ForgotPasswordOTPScreen;

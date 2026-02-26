@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
 import { COLORS } from '../../constants/theme';
+import { ms } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'PDFReader'>;
 
@@ -85,11 +86,11 @@ const styles = StyleSheet.create({
     loadingText: {
         marginTop: 10,
         color: COLORS.text.secondary,
-        fontSize: 14,
+        fontSize: ms(14),
     },
     errorText: {
         color: COLORS.error,
-        fontSize: 16,
+        fontSize: ms(16),
     },
     webview: {
         flex: 1,

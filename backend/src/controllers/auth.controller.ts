@@ -76,6 +76,9 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
                 uid: user.uid,
                 email: user.email,
                 displayName: user.displayName,
+                phoneNumber: user.phoneNumber,
+                studentNumber: user.studentNumber,
+                program: user.program,
                 role: user.role,
                 yearLevel: user.yearLevel,
                 createdAt: user.createdAt,
@@ -85,5 +88,47 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     } catch (error) {
         console.error('Get user error:', error);
         res.status(500).json({ message: 'Failed to get user' });
+    }
+};
+
+/**
+ * Update current user profile
+ * Only displayName and phoneNumber are allowed to change
+ */
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const { displayName, phoneNumber } = req.body;
+
+        const user = await User.findOne({ uid: authReq.user?.uid });
+
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        if (displayName !== undefined) user.displayName = displayName.trim();
+        if (phoneNumber !== undefined) user.phoneNumber = phoneNumber.trim();
+
+        await user.save();
+
+        res.json({
+            message: 'Profile updated successfully',
+            user: {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                phoneNumber: user.phoneNumber,
+                studentNumber: user.studentNumber,
+                program: user.program,
+                role: user.role,
+                yearLevel: user.yearLevel,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            },
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Failed to update profile' });
     }
 };

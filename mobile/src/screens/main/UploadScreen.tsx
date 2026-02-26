@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '../../components/AppHeader';
+import { scale, vs, ms } from '../../utils/responsive';
 
 const DEPARTMENTS = ['BSIT', 'BSCS', 'BSIS'];
 const RESEARCH_TYPES = ['Quantitative', 'Qualitative', 'Mixed Methods'];
@@ -192,18 +193,18 @@ const UploadScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6FA' },
-    scroll: { padding: 16, paddingBottom: 110 },
+    scroll: { padding: scale(16), paddingBottom: vs(110) },
 
-    headerSection: { paddingBottom: 12 },
-    pageTitle: { fontSize: 22, fontWeight: '800', color: '#0E1F43' },
-    pageSub: { fontSize: 12, color: '#9AADCA', marginTop: 2 },
+    headerSection: { paddingBottom: vs(12) },
+    pageTitle: { fontSize: ms(22), fontWeight: '800', color: '#0E1F43' },
+    pageSub: { fontSize: ms(12), color: '#9AADCA', marginTop: vs(2) },
 
     // Section card
     sectionCard: {
         backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 14,
+        borderRadius: ms(16),
+        padding: scale(16),
+        marginBottom: vs(14),
         borderWidth: 1,
         borderColor: '#F0F2F8',
         shadowColor: '#0E1F43',
@@ -212,98 +213,98 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 2,
     },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginBottom: vs(14) },
     sectionIconBox: {
-        width: 28, height: 28, borderRadius: 8,
+        width: scale(28), height: vs(28), borderRadius: ms(8),
         backgroundColor: '#F0F2F8',
         justifyContent: 'center', alignItems: 'center',
     },
-    sectionTitle: { fontSize: 13, fontWeight: '700', color: '#0E1F43' },
+    sectionTitle: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
 
-    label: { fontSize: 12, fontWeight: '600', color: '#5A6A8A', marginBottom: 7 },
+    label: { fontSize: ms(12), fontWeight: '600', color: '#5A6A8A', marginBottom: vs(7) },
     req: { color: '#E53935' },
 
     input: {
         backgroundColor: '#F5F6FA',
-        borderRadius: 10,
+        borderRadius: ms(10),
         borderWidth: 1,
         borderColor: '#E0E5F0',
-        paddingHorizontal: 13,
+        paddingHorizontal: scale(13),
         paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-        fontSize: 14,
+        fontSize: ms(14),
         color: '#0E1F43',
     },
-    textarea: { minHeight: 110, paddingTop: 12 },
-    yearInput: { width: 110 },
-    charCount: { fontSize: 10, color: '#9AADCA', textAlign: 'right', marginTop: 4 },
+    textarea: { minHeight: vs(110), paddingTop: vs(12) },
+    yearInput: { width: scale(110) },
+    charCount: { fontSize: ms(10), color: '#9AADCA', textAlign: 'right', marginTop: vs(4) },
 
-    chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+    chipGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(7) },
     chip: {
         flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: 13, paddingVertical: 7,
-        borderRadius: 20,
+        paddingHorizontal: scale(13), paddingVertical: vs(7),
+        borderRadius: ms(20),
         backgroundColor: '#F5F6FA',
         borderWidth: 1.5, borderColor: '#D0D8E8',
     },
     chipActive: { backgroundColor: '#0E1F43', borderColor: '#0E1F43' },
-    chipText: { fontSize: 12, fontWeight: '600', color: '#5A6A8A' },
+    chipText: { fontSize: ms(12), fontWeight: '600', color: '#5A6A8A' },
     chipTextActive: { color: '#fff' },
 
     // File upload
     fileBox: {
-        borderRadius: 14,
+        borderRadius: ms(14),
         borderWidth: 1.5,
         borderColor: '#D0D8E8',
         borderStyle: 'dashed',
-        paddingVertical: 30,
+        paddingVertical: vs(30),
         alignItems: 'center',
-        gap: 8,
+        gap: vs(8),
         backgroundColor: '#F5F6FA',
     },
     fileBoxFilled: {
-        paddingVertical: 16,
+        paddingVertical: vs(16),
         borderStyle: 'solid',
         borderColor: '#0E1F43',
         backgroundColor: '#EEF1F8',
     },
     uploadIconCircle: {
-        width: 58, height: 58, borderRadius: 29,
+        width: scale(58), height: vs(58), borderRadius: ms(29),
         backgroundColor: '#FFF3EC',
         justifyContent: 'center', alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: vs(4),
     },
-    fileBoxTitle: { fontSize: 14, fontWeight: '700', color: '#3B4F70' },
-    fileBoxSub: { fontSize: 12, color: '#9AADCA' },
-    fileSelectedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 },
+    fileBoxTitle: { fontSize: ms(14), fontWeight: '700', color: '#3B4F70' },
+    fileBoxSub: { fontSize: ms(12), color: '#9AADCA' },
+    fileSelectedRow: { flexDirection: 'row', alignItems: 'center', gap: scale(12), paddingHorizontal: scale(4) },
     fileIconBox: {
-        width: 42, height: 42, borderRadius: 10,
+        width: scale(42), height: vs(42), borderRadius: ms(10),
         backgroundColor: '#F0F2F8',
         justifyContent: 'center', alignItems: 'center',
     },
-    fileName: { fontSize: 13, fontWeight: '700', color: '#0E1F43' },
-    fileReady: { fontSize: 11, color: '#2E7D32', marginTop: 2 },
+    fileName: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
+    fileReady: { fontSize: ms(11), color: '#2E7D32', marginTop: vs(2) },
 
     // Summary chips
-    summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 },
+    summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(6), marginBottom: vs(16) },
     summaryChip: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 9, paddingVertical: 5,
-        borderRadius: 20, backgroundColor: '#F0F2F8',
+        flexDirection: 'row', alignItems: 'center', gap: scale(4),
+        paddingHorizontal: scale(9), paddingVertical: vs(5),
+        borderRadius: ms(20), backgroundColor: '#F0F2F8',
         borderWidth: 1, borderColor: '#E0E5F0',
     },
     summaryChipDone: { backgroundColor: '#E8F5E9', borderColor: '#A5D6A7' },
-    summaryChipText: { fontSize: 10, fontWeight: '600', color: '#9AADCA' },
+    summaryChipText: { fontSize: ms(10), fontWeight: '600', color: '#9AADCA' },
     summaryChipTextDone: { color: '#2E7D32' },
 
     // Submit
     submitBtn: {
         backgroundColor: '#0E1F43',
-        borderRadius: 14,
-        height: 52,
+        borderRadius: ms(14),
+        height: vs(52),
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 9,
+        gap: scale(9),
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -311,7 +312,7 @@ const styles = StyleSheet.create({
         elevation: 6,
     },
     submitBtnDisabled: { backgroundColor: '#C5D0E0', elevation: 0, shadowOpacity: 0 },
-    submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '800', letterSpacing: 0.3 },
+    submitBtnText: { color: '#fff', fontSize: ms(15), fontWeight: '800', letterSpacing: 0.3 },
 });
 
 export default UploadScreen;

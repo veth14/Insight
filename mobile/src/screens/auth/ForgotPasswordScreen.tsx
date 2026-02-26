@@ -16,6 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, vs, ms } from '../../utils/responsive';
 
 type Nav = NativeStackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
 interface Props { navigation: Nav; }
@@ -104,45 +105,45 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     scroll: {
         flexGrow: 1,
-        paddingHorizontal: 28,
-        paddingTop: 56,
-        paddingBottom: 40,
+        paddingHorizontal: scale(28),
+        paddingTop: vs(32),
+        paddingBottom: vs(28),
     },
     backBtn: {
-        width: 44, height: 44, borderRadius: 22,
+        width: scale(38), height: vs(38), borderRadius: ms(19),
         backgroundColor: '#0E1F43',
         alignItems: 'center', justifyContent: 'center',
-        marginBottom: 48,
+        marginBottom: vs(28),
     },
     title: {
-        fontSize: 32, fontWeight: '700', color: '#0E1F43',
-        marginBottom: 12,
+        fontSize: ms(22), fontWeight: '700', color: '#0E1F43',
+        marginBottom: vs(8),
     },
     subtitle: {
-        fontSize: 15, color: '#9AA5B8',
-        lineHeight: 22, marginBottom: 48,
+        fontSize: ms(14), color: '#9AA5B8',
+        lineHeight: vs(18), marginBottom: vs(28),
     },
     label: {
-        fontSize: 14, fontWeight: '600', color: '#0E1F43',
-        marginBottom: 10,
+        fontSize: ms(13), fontWeight: '600', color: '#0E1F43',
+        marginBottom: vs(8),
     },
     input: {
         borderWidth: 1.5, borderColor: '#D8DCE8',
-        borderRadius: 10,
-        paddingHorizontal: 16, paddingVertical: 16,
-        fontSize: 15, color: '#0E1F43',
-        marginBottom: 8,
+        borderRadius: ms(10),
+        paddingHorizontal: scale(16), paddingVertical: vs(12),
+        fontSize: ms(14), color: '#0E1F43',
+        marginBottom: vs(8),
     },
     inputError: { borderColor: '#E53935' },
-    errorText: { fontSize: 13, color: '#E53935', marginBottom: 12 },
+    errorText: { fontSize: ms(12), color: '#E53935', marginBottom: vs(10) },
     button: {
         backgroundColor: '#0E1F43',
-        height: 58, borderRadius: 10,
+        height: vs(48), borderRadius: ms(12),
         alignItems: 'center', justifyContent: 'center',
-        marginTop: 28,
+        marginTop: vs(16),
     },
     buttonDisabled: { backgroundColor: '#9AA5B8' },
-    buttonText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+    buttonText: { fontSize: ms(15), fontWeight: '700', color: '#fff' },
 });
 
 export default ForgotPasswordScreen;

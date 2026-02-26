@@ -4,12 +4,14 @@ import {
     Modal, TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 
 const IMG_LOGO = require('../../assets/images/insightlogox128.png');
 
 const AppHeader: React.FC = () => {
     const { user, logout } = useAuth();
+    const navigation = useNavigation<any>();
     const [menuVisible, setMenuVisible] = useState(false);
 
     const initials = user?.displayName
@@ -44,7 +46,7 @@ const AppHeader: React.FC = () => {
                                     </View>
                                 </View>
                                 <View style={styles.menuDivider} />
-                                <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => setMenuVisible(false)}>
+                                <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => { setMenuVisible(false); navigation.navigate('AccountSettings'); }}>
                                     <Ionicons name="settings-outline" size={18} color="#0E1F43" />
                                     <Text style={styles.menuItemText}>Account Settings</Text>
                                 </TouchableOpacity>

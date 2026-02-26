@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { ms } from '../../utils/responsive';
 
 /**
  * BookmarksScreen Component
@@ -22,7 +23,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     placeholder: {
-        fontSize: 14,
+        fontSize: ms(14),
         color: '#999',
     },
 });

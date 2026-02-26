@@ -9,6 +9,7 @@ import AppHeader from '../../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
+import { scale, vs, ms, wp } from '../../utils/responsive';
 
 const { width } = Dimensions.get('window');
 
@@ -135,8 +136,8 @@ const DashboardScreen: React.FC = () => {
 };
 
 // â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const CARD_W = width * 0.62;
-const REC_W = width * 0.38;
+const CARD_W = wp(62);
+const REC_W = wp(38);
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6FA' },
@@ -148,16 +149,16 @@ const styles = StyleSheet.create({
     // Stats
     statsRow: {
         flexDirection: 'row',
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 8,
-        gap: 10,
+        paddingHorizontal: scale(16),
+        paddingTop: vs(16),
+        paddingBottom: vs(8),
+        gap: scale(10),
     },
     statCard: {
         flex: 1,
         backgroundColor: '#fff',
-        borderRadius: 14,
-        padding: 12,
+        borderRadius: ms(14),
+        padding: scale(12),
         alignItems: 'flex-start',
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
@@ -167,32 +168,32 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#F0F2F8',
     },
-    statNumber: { fontSize: 20, fontWeight: '700', color: '#0E1F43', marginTop: 6 },
-    statLabel: { fontSize: 11, color: '#888', marginTop: 1 },
-    statChange: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+    statNumber: { fontSize: ms(20), fontWeight: '700', color: '#0E1F43', marginTop: vs(6) },
+    statLabel: { fontSize: ms(11), color: '#888', marginTop: vs(1) },
+    statChange: { fontSize: ms(11), fontWeight: '600', marginTop: vs(3) },
 
     // Section header
     sectionHeader: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12,
+        paddingHorizontal: scale(20), paddingTop: vs(20), paddingBottom: vs(12),
     },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0E1F43' },
-    seeAll: { fontSize: 13, fontWeight: '600', color: '#3B82F6' },
+    sectionTitle: { fontSize: ms(16), fontWeight: '700', color: '#0E1F43' },
+    seeAll: { fontSize: ms(13), fontWeight: '600', color: '#3B82F6' },
 
-    hList: { paddingHorizontal: 20, gap: 12, paddingBottom: 4 },
+    hList: { paddingHorizontal: scale(20), gap: scale(12), paddingBottom: vs(4) },
 
     recentRow: {
         flexDirection: 'row',
-        paddingHorizontal: 20,
-        gap: 12,
-        marginBottom: 4,
+        paddingHorizontal: scale(20),
+        gap: scale(12),
+        marginBottom: vs(4),
     },
 
     // Recently Added cards
     recentCard: {
         flex: 1,
         backgroundColor: '#fff',
-        borderRadius: 14,
+        borderRadius: ms(14),
         overflow: 'hidden',
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
@@ -203,17 +204,17 @@ const styles = StyleSheet.create({
         borderColor: '#F0F2F8',
     },
     recentThumb: {
-        width: '100%', height: 130,
+        width: '100%', height: vs(130),
     },
-    recentBody: { padding: 10 },
-    cardCategory: { fontSize: 10, fontWeight: '600', color: '#888', marginBottom: 4, textTransform: 'capitalize' },
-    recentTitle: { fontSize: 12, fontWeight: '600', color: '#1A2744', lineHeight: 17 },
+    recentBody: { padding: scale(10) },
+    cardCategory: { fontSize: ms(10), fontWeight: '600', color: '#888', marginBottom: vs(4), textTransform: 'capitalize' },
+    recentTitle: { fontSize: ms(12), fontWeight: '600', color: '#1A2744', lineHeight: vs(17) },
 
     // Recommended cards
     recCard: {
         width: REC_W,
         backgroundColor: '#fff',
-        borderRadius: 14,
+        borderRadius: ms(14),
         overflow: 'hidden',
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
@@ -223,18 +224,18 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#F0F2F8',
     },
-    recThumb: { width: '100%', height: 90 },
-    recBody: { padding: 10 },
-    recTitle: { fontSize: 12, fontWeight: '600', color: '#1A2744', lineHeight: 17, marginBottom: 4 },
-    recMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 3 },
-    recViews: { fontSize: 11, color: '#888' },
+    recThumb: { width: '100%', height: vs(90) },
+    recBody: { padding: scale(10) },
+    recTitle: { fontSize: ms(12), fontWeight: '600', color: '#1A2744', lineHeight: vs(17), marginBottom: vs(4) },
+    recMeta: { flexDirection: 'row', alignItems: 'center', marginTop: vs(4), gap: scale(3) },
+    recViews: { fontSize: ms(11), color: '#888' },
 
     // Trending
-    trendingList: { paddingHorizontal: 20, gap: 12 },
+    trendingList: { paddingHorizontal: scale(20), gap: vs(12) },
     trendRow: {
         flexDirection: 'row',
         backgroundColor: '#fff',
-        borderRadius: 14,
+        borderRadius: ms(14),
         overflow: 'hidden',
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
@@ -245,11 +246,11 @@ const styles = StyleSheet.create({
         borderColor: '#F0F2F8',
     },
     trendThumb: {
-        width: 80, height: 80,
+        width: scale(80), height: vs(80),
         flexShrink: 0,
     },
-    trendBody: { flex: 1, padding: 12, justifyContent: 'center' },
-    trendTitle: { fontSize: 13, fontWeight: '600', color: '#1A2744', lineHeight: 18 },
+    trendBody: { flex: 1, padding: scale(12), justifyContent: 'center' },
+    trendTitle: { fontSize: ms(13), fontWeight: '600', color: '#1A2744', lineHeight: vs(18) },
 
 
 });

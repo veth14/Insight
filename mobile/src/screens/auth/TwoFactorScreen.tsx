@@ -20,6 +20,7 @@ import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, vs, ms, wp } from '../../utils/responsive';
 
 type TwoFactorNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'TwoFactor'>;
 type TwoFactorRouteProp = RouteProp<AuthStackParamList, 'TwoFactor'>;
@@ -281,7 +282,7 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
 export default TwoFactorScreen;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const BOX_SIZE = 80;
+const BOX_SIZE = scale(58);
 
 const styles = StyleSheet.create({
     container: {
@@ -292,8 +293,8 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 20,
+        paddingHorizontal: scale(24),
+        paddingVertical: vs(20),
     },
     inner: {
         width: '100%',
@@ -302,20 +303,20 @@ const styles = StyleSheet.create({
 
     // Logo — sits above the card
     logo: {
-        width: width * 0.80,
-        height: width * 0.55,
+        width: wp(60),
+        height: wp(40),
         marginBottom: -5,
-        marginTop: -130,
+        marginTop: vs(-80),
     },
 
     // Card
     card: {
         width: '100%',
         backgroundColor: '#fff',
-        borderRadius: 20,
-        paddingHorizontal: 24,
-        paddingTop: 32,
-        paddingBottom: 28,
+        borderRadius: ms(20),
+        paddingHorizontal: scale(24),
+        paddingTop: vs(20),
+        paddingBottom: vs(18),
         alignItems: 'center',
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
@@ -326,47 +327,47 @@ const styles = StyleSheet.create({
 
     // Icon circle
     iconCircle: {
-        width: 74,
-        height: 74,
-        borderRadius: 42,
+        width: scale(56),
+        height: vs(56),
+        borderRadius: ms(28),
         backgroundColor: '#EAECF2',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 16,
+        marginBottom: vs(12),
     },
 
     // Text
     title: {
-        fontSize: 32,
+        fontSize: ms(22),
         fontWeight: '700',
         color: '#0E1F43',
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: vs(6),
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: ms(14),
         color: '#999',
         textAlign: 'center',
-        marginBottom: 28,
-        lineHeight: 21,
+        marginBottom: vs(16),
+        lineHeight: vs(18),
     },
 
     // OTP
     otpRow: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 14,
-        marginBottom: 30,
+        gap: scale(12),
+        marginBottom: vs(20),
         width: '100%',
     },
     otpBox: {
         width: BOX_SIZE,
         height: BOX_SIZE,
-        borderRadius: 10,
+        borderRadius: ms(10),
         borderWidth: 1.5,
         borderColor: '#D8DFEE',
         backgroundColor: '#F8F9FF',
-        fontSize: 30,
+        fontSize: ms(22),
         fontWeight: '700',
         color: '#0E1F43',
         textAlign: 'center',
@@ -383,30 +384,30 @@ const styles = StyleSheet.create({
     // Error
     errorText: {
         color: '#E53935',
-        fontSize: 18,
+        fontSize: ms(12),
         textAlign: 'center',
-        marginTop: 6,
-        marginBottom: 2,
+        marginTop: vs(4),
+        marginBottom: vs(2),
     },
 
     resendRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 18,
+        marginBottom: vs(18),
     },
     resendLabel: {
-        fontSize: 13,
+        fontSize: ms(13),
         color: '#888',
     },
     resendLink: {
-        fontSize: 13,
+        fontSize: ms(13),
         fontWeight: '700',
         color: '#0E1F43',
         textDecorationLine: 'underline',
     },
     resendCooldownText: {
-        fontSize: 13,
+        fontSize: ms(13),
         fontWeight: '700',
         color: '#A0AFCC',
     },
@@ -417,19 +418,19 @@ const styles = StyleSheet.create({
     // Button
     button: {
         width: '100%',
-        height: 60,
-        borderRadius: 20,
+        height: vs(48),
+        borderRadius: ms(12),
         backgroundColor: '#0E1F43',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 20,
+        marginBottom: vs(14),
     },
     buttonDisabled: {
         backgroundColor: '#A0AFCC',
     },
     buttonText: {
         color: '#fff',
-        fontSize: 20,
+        fontSize: ms(15),
         fontWeight: '700',
         letterSpacing: 0.3,
     },
@@ -440,7 +441,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backText: {
-        fontSize: 16,
+        fontSize: ms(13),
         color: '#0E1F43',
         fontWeight: '500',
     },

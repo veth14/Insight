@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, getMe } from '../controllers/auth.controller';
+import { register, getMe, updateProfile } from '../controllers/auth.controller';
 import { sendOTP, verifyOTP } from '../controllers/otp.controller';
 import { sendResetOTP, verifyResetOTP, resetPassword } from '../controllers/reset.controller';
 import { authenticate } from '../middleware/auth.middleware';
@@ -19,6 +19,13 @@ router.post('/register', authenticate, register);
  * @access  Private
  */
 router.get('/me', authenticate, getMe);
+
+/**
+ * @route   PUT /api/auth/me
+ * @desc    Update current user profile (displayName, phoneNumber only)
+ * @access  Private
+ */
+router.put('/me', authenticate, updateProfile);
 
 /**
  * @route   POST /api/auth/send-otp

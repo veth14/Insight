@@ -5,10 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HomeStackParamList } from '../../types';
+import { HomeStackParamList, MainTabParamList } from '../../types';
 import AppHeader from '../../components/AppHeader';
+import { scale, vs, ms } from '../../utils/responsive';
 
 type LibraryTab = 'in_progress' | 'saved' | 'completed';
 
@@ -28,7 +29,10 @@ const MOCK_LIBRARY = Array(6).fill(0).map((_, i) => ({
 }));
 
 const LibraryScreen: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<LibraryTab>('in_progress');
+    const route = useRoute<RouteProp<MainTabParamList, 'Library'>>();
+    const [activeTab, setActiveTab] = useState<LibraryTab>(
+        route.params?.initialTab ?? 'in_progress'
+    );
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
     const filteredData = MOCK_LIBRARY.filter(item => item.status === activeTab);
@@ -157,9 +161,9 @@ const styles = StyleSheet.create({
 
     tabBar: {
         flexDirection: 'row',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 8,
+        paddingHorizontal: scale(16),
+        paddingVertical: vs(12),
+        gap: scale(8),
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#E0E5F0',
@@ -170,32 +174,32 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        borderRadius: 20,
+        paddingVertical: vs(8),
+        borderRadius: ms(20),
         backgroundColor: '#F0F2F8',
         borderWidth: 1,
         borderColor: '#E0E5F0',
     },
     tabBtnActive: { backgroundColor: '#0E1F43', borderColor: '#0E1F43' },
-    tabText: { fontSize: 12, fontWeight: '600', color: '#5A6A8A' },
+    tabText: { fontSize: ms(12), fontWeight: '600', color: '#5A6A8A' },
     tabTextActive: { color: '#fff' },
     tabBadge: {
-        marginLeft: 5,
+        marginLeft: scale(5),
         backgroundColor: '#E0E5F0',
-        borderRadius: 10,
-        paddingHorizontal: 6,
-        paddingVertical: 1,
+        borderRadius: ms(10),
+        paddingHorizontal: scale(6),
+        paddingVertical: vs(1),
     },
     tabBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-    tabBadgeText: { fontSize: 10, fontWeight: '700', color: '#5A6A8A' },
+    tabBadgeText: { fontSize: ms(10), fontWeight: '700', color: '#5A6A8A' },
     tabBadgeTextActive: { color: '#fff' },
 
-    listContent: { padding: 16, gap: 12, paddingBottom: 100 },
+    listContent: { padding: scale(16), gap: vs(12), paddingBottom: vs(100) },
 
     card: {
         backgroundColor: '#fff',
-        borderRadius: 14,
-        padding: 14,
+        borderRadius: ms(14),
+        padding: scale(14),
         borderWidth: 1,
         borderColor: '#F0F2F8',
         shadowColor: '#0E1F43',
@@ -204,43 +208,43 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 2,
     },
-    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-    badgeRow: { flexDirection: 'row', gap: 6, flex: 1, marginRight: 8, flexWrap: 'wrap' },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: vs(8) },
+    badgeRow: { flexDirection: 'row', gap: scale(6), flex: 1, marginRight: scale(8), flexWrap: 'wrap' },
     categoryBadge: {
         backgroundColor: '#F0F2F8',
-        paddingHorizontal: 8, paddingVertical: 3,
-        borderRadius: 6,
+        paddingHorizontal: scale(8), paddingVertical: vs(3),
+        borderRadius: ms(6),
     },
-    categoryBadgeText: { fontSize: 10, fontWeight: '600', color: '#5A6A8A' },
+    categoryBadgeText: { fontSize: ms(10), fontWeight: '600', color: '#5A6A8A' },
     typeBadge: {
         backgroundColor: '#E8F5E9',
-        paddingHorizontal: 8, paddingVertical: 3,
-        borderRadius: 6,
+        paddingHorizontal: scale(8), paddingVertical: vs(3),
+        borderRadius: ms(6),
     },
-    typeBadgeText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
-    cardTitle: { fontSize: 14, fontWeight: '700', color: '#0E1F43', lineHeight: 20, marginBottom: 4 },
-    cardAuthors: { fontSize: 11, color: '#8A97B0', marginBottom: 6 },
-    cardAbstract: { fontSize: 12, color: '#8A97B0', lineHeight: 18, marginBottom: 8 },
+    typeBadgeText: { fontSize: ms(10), fontWeight: '600', color: '#2E7D32' },
+    cardTitle: { fontSize: ms(14), fontWeight: '700', color: '#0E1F43', lineHeight: vs(20), marginBottom: vs(4) },
+    cardAuthors: { fontSize: ms(11), color: '#8A97B0', marginBottom: vs(6) },
+    cardAbstract: { fontSize: ms(12), color: '#8A97B0', lineHeight: vs(18), marginBottom: vs(8) },
 
-    progressWrapper: { marginBottom: 10 },
+    progressWrapper: { marginBottom: vs(10) },
     progressTrack: {
-        height: 5, backgroundColor: '#E8ECF4', borderRadius: 3, overflow: 'hidden',
+        height: vs(5), backgroundColor: '#E8ECF4', borderRadius: ms(3), overflow: 'hidden',
     },
-    progressFill: { height: '100%', backgroundColor: '#0E1F43', borderRadius: 3 },
-    progressLabel: { fontSize: 10, color: '#9AADCA', marginTop: 3, textAlign: 'right' },
+    progressFill: { height: '100%', backgroundColor: '#0E1F43', borderRadius: ms(3) },
+    progressLabel: { fontSize: ms(10), color: '#9AADCA', marginTop: vs(3), textAlign: 'right' },
 
-    cardMeta: { flexDirection: 'row', gap: 14, alignItems: 'center' },
-    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    metaText: { fontSize: 11, color: '#9AADCA' },
+    cardMeta: { flexDirection: 'row', gap: scale(14), alignItems: 'center' },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: scale(4) },
+    metaText: { fontSize: ms(11), color: '#9AADCA' },
     doneChip: {
-        flexDirection: 'row', alignItems: 'center', gap: 3,
+        flexDirection: 'row', alignItems: 'center', gap: scale(3),
         marginLeft: 'auto',
     },
-    doneChipText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
+    doneChipText: { fontSize: ms(10), fontWeight: '600', color: '#2E7D32' },
 
-    empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
-    emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0E1F43' },
-    emptySubtitle: { fontSize: 13, color: '#8A97B0' },
+    empty: { alignItems: 'center', paddingTop: vs(60), gap: vs(8) },
+    emptyTitle: { fontSize: ms(15), fontWeight: '700', color: '#0E1F43' },
+    emptySubtitle: { fontSize: ms(13), color: '#8A97B0' },
 });
 
 export default LibraryScreen;

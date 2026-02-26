@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, vs, ms, wp } from '../../utils/responsive';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -200,8 +201,8 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingVertical: 20,
+        paddingHorizontal: scale(24),
+        paddingVertical: vs(20),
     },
     inner: {
         width: '100%',
@@ -210,20 +211,20 @@ const styles = StyleSheet.create({
 
     // Logo — sits above the card
     logo: {
-        width: width * 0.80,
-        height: width * 0.55,
+        width: wp(60),
+        height: wp(40),
         marginBottom: -5,
-        marginTop: -130,
+        marginTop: vs(-80),
     },
 
     // Card
     card: {
         width: '100%',
         backgroundColor: '#fff',
-        borderRadius: 20,
-        paddingHorizontal: 24,
-        paddingTop: 32,
-        paddingBottom: 28,
+        borderRadius: ms(20),
+        paddingHorizontal: scale(24),
+        paddingTop: vs(32),
+        paddingBottom: vs(28),
         alignItems: 'center',
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
@@ -234,64 +235,64 @@ const styles = StyleSheet.create({
 
     // Icon circle
     iconCircle: {
-        width: 74,
-        height: 74,
-        borderRadius: 42,
+        width: scale(56),
+        height: vs(56),
+        borderRadius: ms(28),
         backgroundColor: '#EAECF2',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 16,
+        marginBottom: vs(12),
     },
 
     // Text
     title: {
-        fontSize: 32,
+        fontSize: ms(22),
         fontWeight: '700',
         color: '#0E1F43',
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: vs(6),
     },
     subtitle: {
-        fontSize: 18,
+        fontSize: ms(14),
         color: '#999',
         textAlign: 'center',
-        marginBottom: 28,
-        lineHeight: 21,
+        marginBottom: vs(20),
+        lineHeight: vs(18),
     },
 
     // Inputs
     inputWrapper: {
         width: '100%',
-        marginBottom: 14,
+        marginBottom: vs(10),
         position: 'relative',
     },
     input: {
         width: '100%',
-        height: 54,
-        borderRadius: 10,
+        height: vs(46),
+        borderRadius: ms(10),
         borderWidth: 1.5,
         borderColor: '#D8DFEE',
         backgroundColor: '#F8F9FF',
-        paddingHorizontal: 16,
-        fontSize: 15,
+        paddingHorizontal: scale(16),
+        fontSize: ms(14),
         color: '#0E1F43',
     },
     inputWithIcon: {
-        paddingRight: 46,
+        paddingRight: scale(46),
     },
     eyeIcon: {
         position: 'absolute',
-        right: 14,
-        top: 17,
+        right: scale(14),
+        top: vs(17),
     },
 
     // Error
     errorText: {
         color: '#E53935',
-        fontSize: 13,
+        fontSize: ms(13),
         textAlign: 'center',
-        marginBottom: 10,
-        marginTop: -4,
+        marginBottom: vs(10),
+        marginTop: vs(-4),
     },
 
     // Options row
@@ -300,20 +301,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
-        paddingHorizontal: 2,
+        marginBottom: vs(16),
+        paddingHorizontal: scale(2),
     },
     rememberRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     checkbox: {
-        width: 16,
-        height: 16,
-        borderRadius: 4,
+        width: scale(16),
+        height: vs(16),
+        borderRadius: ms(4),
         borderWidth: 1.5,
         borderColor: '#A0AFCC',
-        marginRight: 7,
+        marginRight: scale(7),
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -322,12 +323,12 @@ const styles = StyleSheet.create({
         borderColor: '#0E1F43',
     },
     rememberText: {
-        fontSize: 13,
+        fontSize: ms(13),
         color: '#666',
         fontWeight: '500',
     },
     forgotText: {
-        fontSize: 13,
+        fontSize: ms(13),
         color: '#0E1F43',
         fontWeight: '600',
     },
@@ -335,26 +336,26 @@ const styles = StyleSheet.create({
     // Button
     button: {
         width: '100%',
-        height: 60,
-        borderRadius: 20,
+        height: vs(48),
+        borderRadius: ms(12),
         backgroundColor: '#0E1F43',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 20,
+        marginBottom: vs(16),
     },
     buttonDisabled: {
         backgroundColor: '#A0AFCC',
     },
     buttonText: {
         color: '#fff',
-        fontSize: 20,
+        fontSize: ms(15),
         fontWeight: '700',
         letterSpacing: 0.3,
     },
 
     // Footer
     footerText: {
-        fontSize: 14,
+        fontSize: ms(13),
         color: '#888',
         textAlign: 'center',
     },

@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, vs, ms } from '../../utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
 
 type OnboardingScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Onboarding'>;
@@ -19,24 +20,24 @@ const SLIDES = [
         title: 'Where Knowledge Begins',
         description: 'Knowledge gathered, studies preserved.',
         image: require('../../../assets/images/onboarding1.png'),
-        imageHeight: height * 0.70,
-        textMarginTop: -SPACING.xl * 6,
+        imageHeight: height * 0.62,
+        textMarginTop: -SPACING.xl * 2,
     },
     {
         id: '2',
         title: 'Where Gaps Are Revealed',
         description: 'Patterns emerge. New ideas take shape.',
         image: require('../../../assets/images/onboarding2.jpg'),
-        imageHeight: height * 0.515,
-        textMarginTop: SPACING.l,
+        imageHeight: height * 0.52,
+        textMarginTop: SPACING.m,
     },
     {
         id: '3',
         title: 'Where Research Continues',
         description: 'Read with purpose. Cite with integrity.',
         image: require('../../../assets/images/onboarding3.png'),
-        imageHeight: height * 0.70,
-        textMarginTop: -SPACING.xl * 6,
+        imageHeight: height * 0.62,
+        textMarginTop: -SPACING.xl * 2,
     },
 ];
 
@@ -237,25 +238,27 @@ const OnboardingScreen: React.FC = () => {
                             <Text style={styles.title}>{item.title}</Text>
                             <Text style={styles.description}>{item.description}</Text>
                         </View>
-                        <View style={styles.footer}>
-                            <View style={styles.pagination}>
-                                {SLIDES.map((_, index) => (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.dot,
-                                            currentIndex === index && styles.activeDot,
-                                        ]}
-                                    />
-                                ))}
-                            </View>
-                            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                                <Ionicons name="chevron-forward" size={24} color="#CDDDFF" />
-                            </TouchableOpacity>
-                        </View>
                     </View>
                 )}
             />
+
+            {/* Footer is OUTSIDE FlatList — stays fixed at the bottom on every slide */}
+            <View style={styles.footer}>
+                <View style={styles.pagination}>
+                    {SLIDES.map((_, index) => (
+                        <View
+                            key={index}
+                            style={[
+                                styles.dot,
+                                currentIndex === index && styles.activeDot,
+                            ]}
+                        />
+                    ))}
+                </View>
+                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                    <Ionicons name="chevron-forward" size={24} color="#CDDDFF" />
+                </TouchableOpacity>
+            </View>
         </SafeAreaView>
     );
 };
@@ -282,18 +285,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.xl,
     },
     title: {
-        fontSize: 50,
+        fontSize: ms(30),
         fontWeight: 'bold',
         color: '#000',
         marginBottom: SPACING.s,
         textAlign: 'left',
-        lineHeight: 55,
+        lineHeight: vs(36),
     },
     description: {
-        fontSize: 22,
+        fontSize: ms(15),
         color: COLORS.text.secondary,
         textAlign: 'left',
-        lineHeight: 30,
+        lineHeight: vs(22),
     },
     footer: {
         flexDirection: 'row',
@@ -302,26 +305,26 @@ const styles = StyleSheet.create({
         width: width,
         paddingHorizontal: SPACING.xl,
         paddingBottom: SPACING.xl,
-        paddingTop: SPACING.l,
+        paddingTop: SPACING.m,
     },
     pagination: {
         flexDirection: 'row',
     },
     dot: {
-        width: 10,
-        height: 10,
-        borderRadius: 6,
+        width: scale(10),
+        height: vs(10),
+        borderRadius: ms(6),
         backgroundColor: '#E0E0E0',
-        marginRight: 6,
+        marginRight: scale(6),
     },
     activeDot: {
         backgroundColor: '#0E1F43',
-        width: 32,
+        width: scale(32),
     },
     nextButton: {
-        width: 66,
-        height: 66,
-        borderRadius: 36,
+        width: scale(66),
+        height: vs(66),
+        borderRadius: ms(36),
         backgroundColor: '#0E1F43',
         justifyContent: 'center',
         alignItems: 'center',

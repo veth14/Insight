@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
+import { scale, vs, ms } from '../../utils/responsive';
 
 /**
  * ProfileScreen Component
@@ -143,9 +144,9 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.m,
     },
     avatarContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: scale(80),
+        height: vs(80),
+        borderRadius: ms(40),
         backgroundColor: COLORS.primary,
         justifyContent: 'center',
         alignItems: 'center',
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
         ...SHADOWS.medium,
     },
     avatarText: {
-        fontSize: 32,
+        fontSize: ms(32),
         fontWeight: 'bold',
         color: '#FFF',
     },
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
     roleText: {
         color: COLORS.primary,
         fontWeight: 'bold',
-        fontSize: 12,
+        fontSize: ms(12),
     },
     statsContainer: {
         flexDirection: 'row',
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
     versionText: {
         textAlign: 'center',
         color: COLORS.text.secondary,
-        fontSize: 12,
+        fontSize: ms(12),
         marginTop: SPACING.m,
     }
 });

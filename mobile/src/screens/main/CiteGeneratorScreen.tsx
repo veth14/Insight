@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { scale, vs, ms } from '../../utils/responsive';
 
 // ─── Citation style tabs ────────────────────────────────────────────────────
 const STYLES = ['APA 7th', 'MLA 9th', 'Chicago', 'IEEE'] as const;
@@ -147,50 +148,50 @@ const styles = StyleSheet.create({
 
     topBar: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F5F6FA',
+        paddingHorizontal: scale(16), paddingVertical: vs(10), backgroundColor: '#F5F6FA',
     },
     backBtn: {
-        width: 36, height: 36, borderRadius: 10,
+        width: scale(36), height: vs(36), borderRadius: ms(10),
         backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
         borderWidth: 1, borderColor: '#E0E5F0',
         shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
     },
-    topBarTitle: { fontSize: 16, fontWeight: '800', color: '#0E1F43' },
+    topBarTitle: { fontSize: ms(16), fontWeight: '800', color: '#0E1F43' },
 
-    scroll: { padding: 16, paddingBottom: 110, gap: 14 },
+    scroll: { padding: scale(16), paddingBottom: vs(110), gap: vs(14) },
 
     // Study preview
     previewCard: {
-        backgroundColor: '#0E1F43', borderRadius: 16,
-        padding: 24, flexDirection: 'row', gap: 12, alignItems: 'flex-start',
+        backgroundColor: '#0E1F43', borderRadius: ms(16),
+        padding: scale(24), flexDirection: 'row', gap: scale(12), alignItems: 'flex-start',
     },
     quoteBox: {
-        width: 40, height: 40, borderRadius: 10,
+        width: scale(40), height: vs(40), borderRadius: ms(10),
         backgroundColor: 'rgba(255, 204, 0, 0.67)',
         justifyContent: 'center', alignItems: 'center',
     },
     quoteChar: {
-        fontSize: 62, fontWeight: '900', color: '#fff',
-        lineHeight: 72, textAlign: 'center', includeFontPadding: false,
+        fontSize: ms(62), fontWeight: '900', color: '#fff',
+        lineHeight: vs(72), textAlign: 'center', includeFontPadding: false,
     },
-    previewTitle: { fontSize: 13, fontWeight: '800', color: '#fff', lineHeight: 19, marginBottom: 6 },
-    previewAuthors: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
+    previewTitle: { fontSize: ms(13), fontWeight: '800', color: '#fff', lineHeight: vs(19), marginBottom: vs(6) },
+    previewAuthors: { fontSize: ms(11), color: 'rgba(255,255,255,0.55)' },
 
     // Style tabs
-    styleRow: { flexDirection: 'row', gap: 8 },
+    styleRow: { flexDirection: 'row', gap: scale(8) },
     styleTab: {
-        flex: 1, paddingVertical: 9, borderRadius: 20,
+        flex: 1, paddingVertical: vs(9), borderRadius: ms(20),
         borderWidth: 1.5, borderColor: '#D0D8E8',
         backgroundColor: '#fff', alignItems: 'center',
     },
     styleTabActive: { backgroundColor: '#0E1F43', borderColor: '#0E1F43' },
-    styleTabText: { fontSize: 11, fontWeight: '700', color: '#9AADCA' },
+    styleTabText: { fontSize: ms(11), fontWeight: '700', color: '#9AADCA' },
     styleTabTextActive: { color: '#fff' },
 
     // Citation card
     citationCard: {
-        backgroundColor: '#fff', borderRadius: 14,
+        backgroundColor: '#fff', borderRadius: ms(14),
         borderWidth: 1, borderColor: '#F0F2F8',
         shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
@@ -198,47 +199,47 @@ const styles = StyleSheet.create({
     },
     citationCardHead: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10,
+        paddingHorizontal: scale(14), paddingTop: vs(14), paddingBottom: vs(10),
     },
-    citationCardTitle: { fontSize: 13, fontWeight: '700', color: '#0E1F43' },
+    citationCardTitle: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
     copyBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+        flexDirection: 'row', alignItems: 'center', gap: scale(4),
+        paddingHorizontal: scale(10), paddingVertical: vs(5), borderRadius: ms(20),
         backgroundColor: '#F0F2F8', borderWidth: 1, borderColor: '#E0E5F0',
     },
     copyBtnDone: { backgroundColor: '#E8F5E9', borderColor: '#A5D6A7' },
-    copyBtnText: { fontSize: 11, fontWeight: '700', color: '#5A6A8A' },
+    copyBtnText: { fontSize: ms(11), fontWeight: '700', color: '#5A6A8A' },
     copyBtnTextDone: { color: '#2E7D32' },
     citationBox: {
-        backgroundColor: '#F5F6FA', marginHorizontal: 14, marginBottom: 14,
-        borderRadius: 10, padding: 12,
+        backgroundColor: '#F5F6FA', marginHorizontal: scale(14), marginBottom: vs(14),
+        borderRadius: ms(10), padding: scale(12),
     },
-    citationText: { fontSize: 12, color: '#3B4F70', lineHeight: 19 },
+    citationText: { fontSize: ms(12), color: '#3B4F70', lineHeight: vs(19) },
 
     // How to use
     howCard: {
-        backgroundColor: '#fff', borderRadius: 14,
+        backgroundColor: '#fff', borderRadius: ms(14),
         borderWidth: 1, borderColor: '#F0F2F8',
-        padding: 16, gap: 10,
+        padding: scale(16), gap: vs(10),
         shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
     },
-    howTitle: { fontSize: 13, fontWeight: '800', color: '#0E1F43', marginBottom: 2 },
-    stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    howTitle: { fontSize: ms(13), fontWeight: '800', color: '#0E1F43', marginBottom: vs(2) },
+    stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: scale(10) },
     stepNum: {
-        width: 20, height: 20, borderRadius: 10,
+        width: scale(20), height: vs(20), borderRadius: ms(10),
         backgroundColor: '#EEF1F8', justifyContent: 'center', alignItems: 'center',
-        marginTop: 1,
+        marginTop: vs(1),
     },
-    stepNumText: { fontSize: 11, fontWeight: '800', color: '#0E1F43' },
-    stepText: { fontSize: 12, color: '#5A6A8A', flex: 1, lineHeight: 18 },
+    stepNumText: { fontSize: ms(11), fontWeight: '800', color: '#0E1F43' },
+    stepText: { fontSize: ms(12), color: '#5A6A8A', flex: 1, lineHeight: vs(18) },
 
     noteBox: {
-        backgroundColor: 'rgba(255,191,0,0.1)', borderRadius: 10,
-        padding: 10, marginTop: 4,
+        backgroundColor: 'rgba(255,191,0,0.1)', borderRadius: ms(10),
+        padding: scale(10), marginTop: vs(4),
         borderWidth: 1, borderColor: 'rgba(255,191,0,0.25)',
     },
-    noteText: { fontSize: 11, color: '#7A5800', lineHeight: 17 },
+    noteText: { fontSize: ms(11), color: '#7A5800', lineHeight: vs(17) },
     noteBold: { fontWeight: '800' },
 });
 

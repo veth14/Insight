@@ -20,9 +20,18 @@ const RootNavigator: React.FC = () => {
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
     useEffect(() => {
-        AsyncStorage.getItem('hasSeenOnboarding').then(val => {
+        const checkOnboarding = async () => {
+            // In development, always show onboarding so the full flow can be tested.
+            // Remove the __DEV__ block before releasing to production.
+            if (__DEV__) {
+                await AsyncStorage.removeItem('hasSeenOnboarding');
+                setHasSeenOnboarding(false);
+                return;
+            }
+            const val = await AsyncStorage.getItem('hasSeenOnboarding');
             setHasSeenOnboarding(val === 'true');
-        });
+        };
+        checkOnboarding();
     }, []);
 
     // Show loading spinner while checking auth state or onboarding flag
@@ -37,14 +46,14 @@ const RootNavigator: React.FC = () => {
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {!hasSeenOnboarding ? (
-                    // First launch — show onboarding
-                    <Stack.Screen name="Auth" component={AuthStack} />
-                ) : user ? (
-                    // Returning user, authenticated — show main app
+                {user ? (
+                    // Authenticated — always show main app
                     <Stack.Screen name="Main" component={MainTabs} />
+                ) : !hasSeenOnboarding ? (
+                    // Not authenticated, first launch — show onboarding
+                    <Stack.Screen name="Auth" component={AuthStack} />
                 ) : (
-                    // Returning user, not authenticated — go straight to login
+                    // Not authenticated, returning user — go straight to login
                     <Stack.Screen name="Auth">
                         {() => <AuthStack initialRouteName="Login" />}
                     </Stack.Screen>

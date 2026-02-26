@@ -30,6 +30,7 @@ interface AuthContextType {
     resetPassword: (email: string, resetToken: string, newPassword: string) => Promise<void>;
     register: (email: string, password: string, displayName: string, yearLevel: number, program: string, studentNumber: string, phoneNumber: string) => Promise<void>;
     logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 import { Alert } from 'react-native';
@@ -155,16 +156,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // OTP verified — fetch and set user to complete login
+        // OTP verified — clear 2FA pending state first so navigator can proceed
+        twoFactorPendingRef.current = false;
+        setTwoFactorPending(false);
+        setPendingOTPEmail(null);
+
+        // Then fetch and set user to complete login
         const response = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${token}` }
         });
         setUser(response.data.user);
-
-        // Clear 2FA pending state
-        twoFactorPendingRef.current = false;
-        setTwoFactorPending(false);
-        setPendingOTPEmail(null);
     };
 
     /**
@@ -212,6 +213,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const refreshUser = async () => {
+        const fbUser = auth.currentUser;
+        if (!fbUser) return;
+        const idToken = await fbUser.getIdToken();
+        const response = await api.get('/auth/me', {
+            headers: { Authorization: `Bearer ${idToken}` },
+        });
+        setUser(response.data.user);
+    };
+
     const logout = async () => {
         setLoading(true);
         try {
@@ -229,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, firebaseUser, loading, twoFactorPending, pendingOTPEmail, login, verifyOTP, resendOTP, sendResetOTP, verifyResetOTP, resetPassword, register, logout }}>
+        <AuthContext.Provider value={{ user, firebaseUser, loading, twoFactorPending, pendingOTPEmail, login, verifyOTP, resendOTP, sendResetOTP, verifyResetOTP, resetPassword, register, logout, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

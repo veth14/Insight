@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
+import { scale, vs, ms } from '../../utils/responsive';
 
 type Nav = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'StudyDetail'>;
@@ -162,55 +163,55 @@ const styles = StyleSheet.create({
 
     topBar: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: 16, paddingVertical: 10,
+        paddingHorizontal: scale(16), paddingVertical: vs(10),
         backgroundColor: '#F5F6FA',
     },
     backBtn: {
-        width: 36, height: 36, borderRadius: 10,
+        width: scale(36), height: vs(36), borderRadius: ms(10),
         backgroundColor: '#fff',
         justifyContent: 'center', alignItems: 'center',
         borderWidth: 1, borderColor: '#E0E5F0',
         shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
     },
-    topBarTitle: { fontSize: 16, fontWeight: '800', color: '#0E1F43' },
+    topBarTitle: { fontSize: ms(16), fontWeight: '800', color: '#0E1F43' },
 
-    scroll: { paddingHorizontal: 16, paddingBottom: 110, gap: 12 },
+    scroll: { paddingHorizontal: scale(16), paddingBottom: vs(110), gap: vs(12) },
 
     // Hero card
     heroCard: {
         backgroundColor: '#0E1F43',
-        borderRadius: 18,
-        padding: 18,
-        gap: 10,
+        borderRadius: ms(18),
+        padding: scale(18),
+        gap: vs(10),
     },
-    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-    tagText: { fontSize: 11, fontWeight: '700' },
-    heroTitle: { fontSize: 15, fontWeight: '800', color: '#fff', lineHeight: 22 },
-    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    metaText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', flex: 1 },
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(6) },
+    tag: { paddingHorizontal: scale(10), paddingVertical: vs(4), borderRadius: ms(20) },
+    tagText: { fontSize: ms(11), fontWeight: '700' },
+    heroTitle: { fontSize: ms(15), fontWeight: '800', color: '#fff', lineHeight: vs(22) },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },
+    metaText: { fontSize: ms(12), color: 'rgba(255,255,255,0.65)', flex: 1 },
     programBadge: {
         backgroundColor: 'rgba(255,255,255,0.12)',
-        borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3,
+        borderRadius: ms(20), paddingHorizontal: scale(9), paddingVertical: vs(3),
     },
-    programText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+    programText: { fontSize: ms(11), fontWeight: '700', color: '#fff' },
 
-    actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    actionRow: { flexDirection: 'row', gap: scale(8), marginTop: vs(4) },
     actionBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 5,
+        flexDirection: 'row', alignItems: 'center', gap: scale(5),
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
+        borderRadius: ms(20), paddingHorizontal: scale(14), paddingVertical: vs(7),
     },
     actionBtnAccent: {
         backgroundColor: '#E97C3A', borderColor: '#E97C3A',
     },
-    actionBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+    actionBtnText: { fontSize: ms(12), fontWeight: '700', color: '#fff' },
 
     // Section
     section: {
         backgroundColor: '#fff',
-        borderRadius: 14,
+        borderRadius: ms(14),
         borderWidth: 1, borderColor: '#F0F2F8',
         shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
@@ -218,27 +219,27 @@ const styles = StyleSheet.create({
     },
     sectionHead: {
         flexDirection: 'row', alignItems: 'center',
-        gap: 8, padding: 14,
+        gap: scale(8), padding: scale(14),
     },
     sectionIconBox: {
-        width: 26, height: 26, borderRadius: 7,
+        width: scale(26), height: vs(26), borderRadius: ms(7),
         backgroundColor: '#F0F2F8',
         justifyContent: 'center', alignItems: 'center',
     },
-    sectionTitle: { fontSize: 13, fontWeight: '700', color: '#0E1F43' },
+    sectionTitle: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
     sectionBody: {
-        paddingHorizontal: 14, paddingBottom: 14, paddingTop: 0,
+        paddingHorizontal: scale(14), paddingBottom: vs(14), paddingTop: 0,
         borderTopWidth: 1, borderTopColor: '#F5F6FA',
     },
-    bodyText: { fontSize: 13, color: '#5A6A8A', lineHeight: 20 },
+    bodyText: { fontSize: ms(13), color: '#5A6A8A', lineHeight: vs(20) },
 
     // Tool chips
-    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(7) },
     toolChip: {
         backgroundColor: '#EEF1F8',
-        borderRadius: 20, paddingHorizontal: 11, paddingVertical: 5,
+        borderRadius: ms(20), paddingHorizontal: scale(11), paddingVertical: vs(5),
     },
-    toolChipText: { fontSize: 11, fontWeight: '600', color: '#3B4F70' },
+    toolChipText: { fontSize: ms(11), fontWeight: '600', color: '#3B4F70' },
 });
 
 export default StudyDetailScreen;

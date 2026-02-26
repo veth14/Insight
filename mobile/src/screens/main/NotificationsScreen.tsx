@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '../../components/AppHeader';
+import { scale, vs, ms } from '../../utils/responsive';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -217,36 +218,36 @@ const NotificationsScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6FA' },
 
-    headerSection: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 4 },
-    pageTitle: { fontSize: 22, fontWeight: '800', color: '#0E1F43' },
-    pageSub: { fontSize: 12, color: '#9AADCA', marginTop: 2 },
+    headerSection: { paddingHorizontal: scale(18), paddingTop: vs(10), paddingBottom: vs(4) },
+    pageTitle: { fontSize: ms(22), fontWeight: '800', color: '#0E1F43' },
+    pageSub: { fontSize: ms(12), color: '#9AADCA', marginTop: vs(2) },
 
-    tabWrapper: { paddingHorizontal: 16, paddingVertical: 12 },
+    tabWrapper: { paddingHorizontal: scale(16), paddingVertical: vs(12) },
     tabBar: {
         flexDirection: 'row',
         backgroundColor: '#ECEEF5',
-        borderRadius: 30,
-        padding: 4,
-        gap: 2,
+        borderRadius: ms(30),
+        padding: vs(4),
+        gap: scale(2),
     },
     tabItem: {
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        paddingVertical: 8, borderRadius: 26, gap: 5,
+        paddingVertical: vs(8), borderRadius: ms(26), gap: scale(5),
     },
     tabItemActive: { backgroundColor: '#fff', shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-    tabLabel: { fontSize: 12, fontWeight: '600', color: '#9AADCA' },
+    tabLabel: { fontSize: ms(12), fontWeight: '600', color: '#9AADCA' },
     tabLabelActive: { color: '#0E1F43' },
-    countBadge: { backgroundColor: '#D8DCE8', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
+    countBadge: { backgroundColor: '#D8DCE8', borderRadius: ms(10), paddingHorizontal: scale(6), paddingVertical: vs(1) },
     countBadgeActive: { backgroundColor: '#E1E6F5' },
-    countText: { fontSize: 10, fontWeight: '700', color: '#9AADCA' },
+    countText: { fontSize: ms(10), fontWeight: '700', color: '#9AADCA' },
     countTextActive: { color: '#0E1F43' },
 
-    listContent: { paddingHorizontal: 16, paddingBottom: 110, gap: 10 },
+    listContent: { paddingHorizontal: scale(16), paddingBottom: vs(110), gap: vs(10) },
 
     card: {
         backgroundColor: '#fff',
-        borderRadius: 14,
-        padding: 14,
+        borderRadius: ms(14),
+        padding: scale(14),
         borderWidth: 1,
         borderColor: '#F0F2F8',
         shadowColor: '#0E1F43',
@@ -256,49 +257,49 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     cardExpanded: { borderColor: '#D0D8E8' },
-    cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 },
-    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' },
+    cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: vs(8) },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), flex: 1, flexWrap: 'wrap' },
 
     statusBadge: {
-        flexDirection: 'row', alignItems: 'center', gap: 4,
-        paddingHorizontal: 9, paddingVertical: 4,
-        borderRadius: 20,
+        flexDirection: 'row', alignItems: 'center', gap: scale(4),
+        paddingHorizontal: scale(9), paddingVertical: vs(4),
+        borderRadius: ms(20),
     },
-    statusText: { fontSize: 11, fontWeight: '700' },
+    statusText: { fontSize: ms(11), fontWeight: '700' },
     categoryBadge: {
         backgroundColor: '#F0F2F8',
-        paddingHorizontal: 9, paddingVertical: 4,
-        borderRadius: 20,
+        paddingHorizontal: scale(9), paddingVertical: vs(4),
+        borderRadius: ms(20),
     },
-    categoryText: { fontSize: 11, fontWeight: '600', color: '#5A6A8A' },
+    categoryText: { fontSize: ms(11), fontWeight: '600', color: '#5A6A8A' },
 
-    cardTitle: { fontSize: 14, fontWeight: '700', color: '#0E1F43', lineHeight: 20, marginBottom: 6 },
-    cardMeta: { fontSize: 12, color: '#9AADCA' },
+    cardTitle: { fontSize: ms(14), fontWeight: '700', color: '#0E1F43', lineHeight: vs(20), marginBottom: vs(6) },
+    cardMeta: { fontSize: ms(12), color: '#9AADCA' },
 
-    expandedSection: { marginTop: 10 },
-    divider: { height: 1, backgroundColor: '#F0F2F8', marginBottom: 10 },
-    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
-    metaLabel: { fontSize: 12, fontWeight: '600', color: '#9AADCA' },
-    metaValue: { fontSize: 12, color: '#3B4F70' },
+    expandedSection: { marginTop: vs(10) },
+    divider: { height: vs(1), backgroundColor: '#F0F2F8', marginBottom: vs(10) },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: scale(5), marginBottom: vs(8) },
+    metaLabel: { fontSize: ms(12), fontWeight: '600', color: '#9AADCA' },
+    metaValue: { fontSize: ms(12), color: '#3B4F70' },
 
     feedbackBox: {
         backgroundColor: '#F5F6FA',
-        borderRadius: 10,
-        padding: 12,
+        borderRadius: ms(10),
+        padding: scale(12),
         borderWidth: 1,
         borderColor: '#E8EBF4',
     },
-    feedbackHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
-    feedbackTitle: { fontSize: 12, fontWeight: '700' },
-    feedbackText: { fontSize: 12, color: '#5A6A8A', lineHeight: 18 },
+    feedbackHeader: { flexDirection: 'row', alignItems: 'center', gap: scale(5), marginBottom: vs(6) },
+    feedbackTitle: { fontSize: ms(12), fontWeight: '700' },
+    feedbackText: { fontSize: ms(12), color: '#5A6A8A', lineHeight: vs(18) },
 
-    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: vs(12) },
     emptyIconBox: {
-        width: 72, height: 72, borderRadius: 20,
+        width: scale(72), height: vs(72), borderRadius: ms(20),
         backgroundColor: '#EEF1F8',
         justifyContent: 'center', alignItems: 'center',
     },
-    emptyText: { fontSize: 13, color: '#9AADCA', fontWeight: '600' },
+    emptyText: { fontSize: ms(13), color: '#9AADCA', fontWeight: '600' },
 });
 
 export default NotificationsScreen;

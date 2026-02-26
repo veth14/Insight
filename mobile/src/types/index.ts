@@ -99,7 +99,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
     Home: undefined;
     Search: undefined;
-    Library: undefined;
+    Library: { initialTab?: 'in_progress' | 'saved' | 'completed' } | undefined;
     Upload: undefined;
     Notifications: undefined;
 };
@@ -109,10 +109,22 @@ export type HomeStackParamList = {
     StudyDetail: { studyId: string };
     CiteGenerator: { studyId: string };
     PDFReader: { studyId: string };
+    AccountSettings: undefined;
+    MyAccount: undefined;
+    ChangePassword: undefined;
+    Downloads: undefined;
+    PrivacyPolicy: undefined;
+    TermsOfUse: undefined;
 };
 
 export type SearchStackParamList = {
     SearchMain: undefined;
     StudyDetail: { studyId: string };
     CiteGenerator: { studyId: string };
+    AccountSettings: undefined;
+    MyAccount: undefined;
+    ChangePassword: undefined;
+    Downloads: undefined;
+    PrivacyPolicy: undefined;
+    TermsOfUse: undefined;
 };
