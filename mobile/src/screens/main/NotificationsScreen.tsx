@@ -1,0 +1,304 @@
+﻿import React, { useState } from 'react';
+import {
+    View, Text, StyleSheet, TouchableOpacity,
+    FlatList, StatusBar, LayoutAnimation, Platform, UIManager,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import AppHeader from '../../components/AppHeader';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+type SubmissionStatus = 'pending' | 'approved' | 'denied';
+
+interface Submission {
+    id: string;
+    title: string;
+    authors: string;
+    year: number;
+    category: string;
+    status: SubmissionStatus;
+    submittedAt: string;
+    feedback?: string;
+}
+
+const MOCK_DATA: Submission[] = [
+    {
+        id: '1',
+        title: 'Machine Learning Applications in Early Disease Detection',
+        authors: 'Santos, M et.al',
+        year: 2026,
+        category: 'Health Services',
+        status: 'pending',
+        submittedAt: 'Feb 20, 2026',
+    },
+    {
+        id: '2',
+        title: 'Impact of Social Media Usage on Academic Performance Among College Students',
+        authors: 'Santos, M et.al',
+        year: 2026,
+        category: 'Education',
+        status: 'pending',
+        submittedAt: 'Feb 18, 2026',
+    },
+    {
+        id: '3',
+        title: 'Blockchain-Based Voting System for Student Government Elections',
+        authors: 'Santos, M et.al',
+        year: 2026,
+        category: 'Computer Science',
+        status: 'pending',
+        submittedAt: 'Feb 15, 2026',
+    },
+    {
+        id: '4',
+        title: 'InsiQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects',
+        authors: 'Santos, M et.al',
+        year: 2026,
+        category: 'IoT',
+        status: 'pending',
+        submittedAt: 'Feb 10, 2026',
+    },
+    {
+        id: '5',
+        title: 'Machine Learning Applications in Early Disease Detection',
+        authors: 'Santos, M et.al',
+        year: 2026,
+        category: 'Computer Science',
+        status: 'approved',
+        submittedAt: 'Jan 28, 2026',
+        feedback: 'Great work! Your research has been approved and is now visible in the repository.',
+    },
+];
+
+const TABS: { key: SubmissionStatus; label: string }[] = [
+    { key: 'pending', label: 'Pending' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'denied', label: 'Denied' },
+];
+
+const STATUS_CONFIG: Record<SubmissionStatus, { color: string; bg: string; icon: string; label: string }> = {
+    pending:  { color: '#D68000', bg: '#FFF3CC', icon: 'time-outline',           label: 'pending'  },
+    approved: { color: '#2E7D32', bg: '#E8F5E9', icon: 'checkmark-circle-outline', label: 'approved' },
+    denied:   { color: '#C62828', bg: '#FFEBEE', icon: 'close-circle-outline',    label: 'denied'   },
+};
+
+const EMPTY_CONFIG: Record<SubmissionStatus, { icon: string; message: string }> = {
+    pending:  { icon: 'time-outline',           message: 'No pending submissions' },
+    approved: { icon: 'checkmark-circle-outline', message: 'No approved submissions yet' },
+    denied:   { icon: 'shield-checkmark-outline', message: 'No denied submission found' },
+};
+
+const NotificationsScreen: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<SubmissionStatus>('pending');
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+
+    const filteredData = MOCK_DATA.filter(item => item.status === activeTab);
+
+    const counts: Record<SubmissionStatus, number> = {
+        pending:  MOCK_DATA.filter(i => i.status === 'pending').length,
+        approved: MOCK_DATA.filter(i => i.status === 'approved').length,
+        denied:   MOCK_DATA.filter(i => i.status === 'denied').length,
+    };
+
+    const toggleExpand = (id: string) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpandedId(prev => prev === id ? null : id);
+    };
+
+    const renderItem = ({ item }: { item: Submission }) => {
+        const sc = STATUS_CONFIG[item.status];
+        const isExpanded = expandedId === item.id;
+        return (
+            <TouchableOpacity
+                style={[styles.card, isExpanded && styles.cardExpanded]}
+                onPress={() => toggleExpand(item.id)}
+                activeOpacity={0.85}
+            >
+                <View style={styles.cardTop}>
+                    <View style={styles.badgeRow}>
+                        <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+                            <Ionicons name={sc.icon as any} size={11} color={sc.color} />
+                            <Text style={[styles.statusText, { color: sc.color }]}>{sc.label}</Text>
+                        </View>
+                        <View style={styles.categoryBadge}>
+                            <Text style={styles.categoryText}>{item.category}</Text>
+                        </View>
+                    </View>
+                    <Ionicons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color="#9AADCA"
+                    />
+                </View>
+                <Text style={styles.cardTitle} numberOfLines={isExpanded ? undefined : 2}>{item.title}</Text>
+                <Text style={styles.cardMeta}>{item.authors} • {item.year}</Text>
+                {isExpanded && (
+                    <View style={styles.expandedSection}>
+                        <View style={styles.divider} />
+                        <View style={styles.metaRow}>
+                            <Ionicons name="calendar-outline" size={13} color="#9AADCA" />
+                            <Text style={styles.metaLabel}>Submitted:</Text>
+                            <Text style={styles.metaValue}>{item.submittedAt}</Text>
+                        </View>
+                        {item.feedback && (
+                            <View style={styles.feedbackBox}>
+                                <View style={styles.feedbackHeader}>
+                                    <Ionicons name="chatbubble-ellipses-outline" size={13} color={sc.color} />
+                                    <Text style={[styles.feedbackTitle, { color: sc.color }]}>Reviewer Feedback</Text>
+                                </View>
+                                <Text style={styles.feedbackText}>{item.feedback}</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+            </TouchableOpacity>
+        );
+    };
+
+    const empty = EMPTY_CONFIG[activeTab];
+
+    return (
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AppHeader />
+
+            <View style={styles.headerSection}>
+                <Text style={styles.pageTitle}>Notification</Text>
+                <Text style={styles.pageSub}>Review and manage submissions.</Text>
+            </View>
+
+            {/* Tab bar */}
+            <View style={styles.tabWrapper}>
+                <View style={styles.tabBar}>
+                    {TABS.map(tab => {
+                        const isActive = activeTab === tab.key;
+                        return (
+                            <TouchableOpacity
+                                key={tab.key}
+                                style={[styles.tabItem, isActive && styles.tabItemActive]}
+                                onPress={() => { setActiveTab(tab.key); setExpandedId(null); }}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                                    {tab.label}
+                                </Text>
+                                <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
+                                    <Text style={[styles.countText, isActive && styles.countTextActive]}>{counts[tab.key]}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            </View>
+
+            {filteredData.length === 0 ? (
+                <View style={styles.emptyState}>
+                    <View style={styles.emptyIconBox}>
+                        <Ionicons name={empty.icon as any} size={38} color="#C0CDE8" />
+                    </View>
+                    <Text style={styles.emptyText}>{empty.message}</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={filteredData}
+                    keyExtractor={item => item.id}
+                    renderItem={renderItem}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
+        </SafeAreaView>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+    headerSection: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 4 },
+    pageTitle: { fontSize: 22, fontWeight: '800', color: '#0E1F43' },
+    pageSub: { fontSize: 12, color: '#9AADCA', marginTop: 2 },
+
+    tabWrapper: { paddingHorizontal: 16, paddingVertical: 12 },
+    tabBar: {
+        flexDirection: 'row',
+        backgroundColor: '#ECEEF5',
+        borderRadius: 30,
+        padding: 4,
+        gap: 2,
+    },
+    tabItem: {
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 8, borderRadius: 26, gap: 5,
+    },
+    tabItemActive: { backgroundColor: '#fff', shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+    tabLabel: { fontSize: 12, fontWeight: '600', color: '#9AADCA' },
+    tabLabelActive: { color: '#0E1F43' },
+    countBadge: { backgroundColor: '#D8DCE8', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
+    countBadgeActive: { backgroundColor: '#E1E6F5' },
+    countText: { fontSize: 10, fontWeight: '700', color: '#9AADCA' },
+    countTextActive: { color: '#0E1F43' },
+
+    listContent: { paddingHorizontal: 16, paddingBottom: 110, gap: 10 },
+
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    cardExpanded: { borderColor: '#D0D8E8' },
+    cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, flexWrap: 'wrap' },
+
+    statusBadge: {
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        paddingHorizontal: 9, paddingVertical: 4,
+        borderRadius: 20,
+    },
+    statusText: { fontSize: 11, fontWeight: '700' },
+    categoryBadge: {
+        backgroundColor: '#F0F2F8',
+        paddingHorizontal: 9, paddingVertical: 4,
+        borderRadius: 20,
+    },
+    categoryText: { fontSize: 11, fontWeight: '600', color: '#5A6A8A' },
+
+    cardTitle: { fontSize: 14, fontWeight: '700', color: '#0E1F43', lineHeight: 20, marginBottom: 6 },
+    cardMeta: { fontSize: 12, color: '#9AADCA' },
+
+    expandedSection: { marginTop: 10 },
+    divider: { height: 1, backgroundColor: '#F0F2F8', marginBottom: 10 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 },
+    metaLabel: { fontSize: 12, fontWeight: '600', color: '#9AADCA' },
+    metaValue: { fontSize: 12, color: '#3B4F70' },
+
+    feedbackBox: {
+        backgroundColor: '#F5F6FA',
+        borderRadius: 10,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E8EBF4',
+    },
+    feedbackHeader: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+    feedbackTitle: { fontSize: 12, fontWeight: '700' },
+    feedbackText: { fontSize: 12, color: '#5A6A8A', lineHeight: 18 },
+
+    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+    emptyIconBox: {
+        width: 72, height: 72, borderRadius: 20,
+        backgroundColor: '#EEF1F8',
+        justifyContent: 'center', alignItems: 'center',
+    },
+    emptyText: { fontSize: 13, color: '#9AADCA', fontWeight: '600' },
+});
+
+export default NotificationsScreen;

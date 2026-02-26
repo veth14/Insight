@@ -1,33 +1,30 @@
-import React, { useState } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    TouchableOpacity, 
-    FlatList,
-    StatusBar,
-    ScrollView
+﻿import React, { useState } from 'react';
+import {
+    View, Text, StyleSheet, TouchableOpacity,
+    FlatList, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
-import StudyCard from '../../components/StudyCard';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
+import AppHeader from '../../components/AppHeader';
 
 type LibraryTab = 'in_progress' | 'saved' | 'completed';
 
-// Mock Data with Progress
-const MOCK_LIBRARY = Array(15).fill(0).map((_, i) => ({
+const MOCK_LIBRARY = Array(6).fill(0).map((_, i) => ({
     _id: `lib-${i}`,
-    title: `Research Methodology in CS ${i + 1}`,
-    authors: ['Prof. X'],
+    title: i % 2 === 0
+        ? 'Machine Learning Approaches in Predicting Student Academic....'
+        : 'AI-Powered Plagiarism Detection for Filipino Language.....',
+    authors: i % 2 === 0 ? 'Garcia M., Santos R., Cruz A.,' : 'Smith R., Modelo R.,',
     category: 'Computer Science',
-    yearPublished: 2024,
-    status: i < 5 ? 'in_progress' : (i < 10 ? 'saved' : 'completed'),
-    progress: i < 5 ? (i + 1) * 0.2 : (i < 10 ? 0 : 1),
-    abstract: 'Abstract for library item...',
+    year: '2024',
+    citations: i % 2 === 0 ? 11 : 41,
+    badge: i % 3 !== 0 ? 'Quantitative' : null,
+    abstract: 'This study explores the application of machine learning algorithms in predicting student...',
+    status: i < 2 ? 'in_progress' : i < 4 ? 'saved' : 'completed',
+    progress: i < 2 ? (i + 1) * 0.45 : i < 4 ? 0 : 1,
 }));
 
 const LibraryScreen: React.FC = () => {
@@ -36,69 +33,118 @@ const LibraryScreen: React.FC = () => {
 
     const filteredData = MOCK_LIBRARY.filter(item => item.status === activeTab);
 
-    const renderProgressBar = (progress: number) => (
-        <View style={styles.progressContainer}>
-            <View style={styles.progressBackground}>
-                <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
-            </View>
-            <Text style={styles.progressText}>{Math.round(progress * 100)}% Complete</Text>
-        </View>
-    );
+    const TABS: { key: LibraryTab; label: string; icon: string }[] = [
+        { key: 'in_progress', label: 'Reading', icon: 'book-outline' },
+        { key: 'saved',       label: 'Saved',   icon: 'bookmark-outline' },
+        { key: 'completed',   label: 'Done',    icon: 'checkmark-circle-outline' },
+    ];
 
-    const renderTab = (tab: LibraryTab, label: string) => (
-        <TouchableOpacity 
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => setActiveTab(tab)}
-        >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                {label}
-            </Text>
-        </TouchableOpacity>
-    );
-
-    const renderItem = ({ item }: { item: any }) => (
-        <View style={styles.itemContainer}>
-            <StudyCard 
-                study={item} 
-                variant="vertical"
-                onPress={() => navigation.navigate('StudyDetail', { studyId: item._id })} 
-            />
-            {activeTab === 'in_progress' && renderProgressBar(item.progress)}
-        </View>
-    );
+    const tabCounts = {
+        in_progress: MOCK_LIBRARY.filter(i => i.status === 'in_progress').length,
+        saved: MOCK_LIBRARY.filter(i => i.status === 'saved').length,
+        completed: MOCK_LIBRARY.filter(i => i.status === 'completed').length,
+    };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-            
-            {/* Header */}
-            <View style={styles.header}>
-                <View>
-                    <Text style={styles.headerTitle}>My Library</Text>
-                    <Text style={styles.headerSubtitle}>Manage your academic collection</Text>
-                </View>
-                <TouchableOpacity style={styles.iconButton}>
-                    <Ionicons name="filter" size={20} color={COLORS.white} />
-                </TouchableOpacity>
-            </View>
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+            <AppHeader />
 
             {/* Tabs */}
-            <View style={styles.tabContainer}>
-                {renderTab('in_progress', 'Reading')}
-                {renderTab('saved', 'Saved')}
-                {renderTab('completed', 'Done')}
+            <View style={styles.tabBar}>
+                {TABS.map(tab => (
+                    <TouchableOpacity
+                        key={tab.key}
+                        style={[styles.tabBtn, activeTab === tab.key && styles.tabBtnActive]}
+                        onPress={() => setActiveTab(tab.key)}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons
+                            name={tab.icon as any}
+                            size={15}
+                            color={activeTab === tab.key ? '#fff' : '#5A6A8A'}
+                            style={{ marginRight: 5 }}
+                        />
+                        <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+                            {tab.label}
+                        </Text>
+                        <View style={[styles.tabBadge, activeTab === tab.key && styles.tabBadgeActive]}>
+                            <Text style={[styles.tabBadgeText, activeTab === tab.key && styles.tabBadgeTextActive]}>
+                                {tabCounts[tab.key]}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                ))}
             </View>
 
             <FlatList
                 data={filteredData}
                 keyExtractor={item => item._id}
-                renderItem={renderItem}
+                showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
+                renderItem={({ item }) => (
+                    <TouchableOpacity
+                        style={styles.card}
+                        activeOpacity={0.85}
+                        onPress={() => navigation.navigate('StudyDetail', { studyId: item._id })}
+                    >
+                        <View style={styles.cardTop}>
+                            <View style={styles.badgeRow}>
+                                <View style={styles.categoryBadge}>
+                                    <Text style={styles.categoryBadgeText}>{item.category}</Text>
+                                </View>
+                                {item.badge && (
+                                    <View style={styles.typeBadge}>
+                                        <Text style={styles.typeBadgeText}>{item.badge}</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons
+                                    name={activeTab === 'saved' ? 'bookmark' : 'bookmark-outline'}
+                                    size={18}
+                                    color={activeTab === 'saved' ? '#0E1F43' : '#9AADCA'}
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+                        <Text style={styles.cardAuthors} numberOfLines={1}>{item.authors}</Text>
+                        <Text style={styles.cardAbstract} numberOfLines={2}>{item.abstract}</Text>
+
+                        {activeTab === 'in_progress' && (
+                            <View style={styles.progressWrapper}>
+                                <View style={styles.progressTrack}>
+                                    <View style={[styles.progressFill, { width: `${item.progress * 100}%` as any }]} />
+                                </View>
+                                <Text style={styles.progressLabel}>{Math.round(item.progress * 100)}% read</Text>
+                            </View>
+                        )}
+
+                        <View style={styles.cardMeta}>
+                            <View style={styles.metaItem}>
+                                <Ionicons name="calendar-outline" size={13} color="#9AADCA" />
+                                <Text style={styles.metaText}>{item.year}</Text>
+                            </View>
+                            <View style={styles.metaItem}>
+                                <Ionicons name="people-outline" size={13} color="#9AADCA" />
+                                <Text style={styles.metaText}>{item.citations}</Text>
+                            </View>
+                            {activeTab === 'completed' && (
+                                <View style={styles.doneChip}>
+                                    <Ionicons name="checkmark-circle" size={12} color="#2E7D32" />
+                                    <Text style={styles.doneChipText}>Completed</Text>
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                )}
                 ListEmptyComponent={
-                    <View style={styles.emptyState}>
-                        <Ionicons name="book-outline" size={64} color={COLORS.text.secondary} />
-                        <Text style={styles.emptyText}>No items found in this section.</Text>
-                        <Text style={styles.emptySubtext}>Explore the dashboard to add papers.</Text>
+                    <View style={styles.empty}>
+                        <Ionicons name="book-outline" size={52} color="#C5D0E0" />
+                        <Text style={styles.emptyTitle}>Nothing here yet</Text>
+                        <Text style={styles.emptySubtitle}>Explore the dashboard to add papers.</Text>
                     </View>
                 }
             />
@@ -107,103 +153,94 @@ const LibraryScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    header: {
-        backgroundColor: COLORS.primary,
-        padding: SPACING.m,
-        paddingTop: SPACING.l,
+    container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+    tabBar: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        ...SHADOWS.medium,
-    },
-    headerTitle: {
-        ...TYPOGRAPHY.h1,
-        color: COLORS.white,
-        fontSize: 24,
-    },
-    headerSubtitle: {
-        ...TYPOGRAPHY.caption,
-        color: COLORS.secondary,
-        marginTop: 4,
-    },
-    iconButton: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        padding: 8,
-        borderRadius: BORDER_RADIUS.full,
-    },
-    tabContainer: {
-        flexDirection: 'row',
-        padding: SPACING.m,
-        backgroundColor: COLORS.card,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 8,
+        backgroundColor: '#fff',
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        borderBottomColor: '#E0E5F0',
+        elevation: 2,
     },
-    tab: {
+    tabBtn: {
         flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        marginHorizontal: 4,
-        borderRadius: BORDER_RADIUS.s,
-    },
-    activeTab: {
-        backgroundColor: COLORS.secondary,
-    },
-    tabText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: COLORS.text.secondary,
-    },
-    activeTabText: {
-        color: COLORS.white,
-    },
-    listContent: {
-        padding: SPACING.m,
-        paddingBottom: SPACING.xl,
-    },
-    itemContainer: {
-        marginBottom: SPACING.m,
-    },
-    progressContainer: {
-        marginTop: SPACING.xs,
-        paddingHorizontal: SPACING.xs,
-    },
-    progressBackground: {
-        height: 6,
-        backgroundColor: COLORS.border,
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    progressBar: {
-        height: '100%',
-        backgroundColor: COLORS.primary,
-        borderRadius: 3,
-    },
-    progressText: {
-        ...TYPOGRAPHY.caption,
-        marginTop: 4,
-        textAlign: 'right',
-        color: COLORS.text.secondary,
-        fontSize: 10,
-    },
-    emptyState: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 60,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#F0F2F8',
+        borderWidth: 1,
+        borderColor: '#E0E5F0',
     },
-    emptyText: {
-        ...TYPOGRAPHY.h3,
-        color: COLORS.text.primary,
-        marginTop: SPACING.m,
+    tabBtnActive: { backgroundColor: '#0E1F43', borderColor: '#0E1F43' },
+    tabText: { fontSize: 12, fontWeight: '600', color: '#5A6A8A' },
+    tabTextActive: { color: '#fff' },
+    tabBadge: {
+        marginLeft: 5,
+        backgroundColor: '#E0E5F0',
+        borderRadius: 10,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
     },
-    emptySubtext: {
-        ...TYPOGRAPHY.body,
-        color: COLORS.text.secondary,
-        marginTop: SPACING.s,
+    tabBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+    tabBadgeText: { fontSize: 10, fontWeight: '700', color: '#5A6A8A' },
+    tabBadgeTextActive: { color: '#fff' },
+
+    listContent: { padding: 16, gap: 12, paddingBottom: 100 },
+
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
     },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+    badgeRow: { flexDirection: 'row', gap: 6, flex: 1, marginRight: 8, flexWrap: 'wrap' },
+    categoryBadge: {
+        backgroundColor: '#F0F2F8',
+        paddingHorizontal: 8, paddingVertical: 3,
+        borderRadius: 6,
+    },
+    categoryBadgeText: { fontSize: 10, fontWeight: '600', color: '#5A6A8A' },
+    typeBadge: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 8, paddingVertical: 3,
+        borderRadius: 6,
+    },
+    typeBadgeText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
+    cardTitle: { fontSize: 14, fontWeight: '700', color: '#0E1F43', lineHeight: 20, marginBottom: 4 },
+    cardAuthors: { fontSize: 11, color: '#8A97B0', marginBottom: 6 },
+    cardAbstract: { fontSize: 12, color: '#8A97B0', lineHeight: 18, marginBottom: 8 },
+
+    progressWrapper: { marginBottom: 10 },
+    progressTrack: {
+        height: 5, backgroundColor: '#E8ECF4', borderRadius: 3, overflow: 'hidden',
+    },
+    progressFill: { height: '100%', backgroundColor: '#0E1F43', borderRadius: 3 },
+    progressLabel: { fontSize: 10, color: '#9AADCA', marginTop: 3, textAlign: 'right' },
+
+    cardMeta: { flexDirection: 'row', gap: 14, alignItems: 'center' },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    metaText: { fontSize: 11, color: '#9AADCA' },
+    doneChip: {
+        flexDirection: 'row', alignItems: 'center', gap: 3,
+        marginLeft: 'auto',
+    },
+    doneChipText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
+
+    empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+    emptyTitle: { fontSize: 15, fontWeight: '700', color: '#0E1F43' },
+    emptySubtitle: { fontSize: 13, color: '#8A97B0' },
 });
 
 export default LibraryScreen;

@@ -1,601 +1,258 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
+﻿import React from 'react';
+import {
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
+    StatusBar, Image, Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../contexts/AuthContext';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
-import StudyCard from '../../components/StudyCard';
 import { Ionicons } from '@expo/vector-icons';
+import AppHeader from '../../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HomeStackParamList, UserRole, AcademicProgram } from '../../types';
-import * as DocumentPicker from 'expo-document-picker';
+import { HomeStackParamList } from '../../types';
 
-const MOCK_STUDIES = Array(5).fill(0).map((_, i) => ({
-    _id: `study-${i}`,
-    title: `Machine Learning in Education: A Case Study ${i + 1}`,
-    authors: ['Valmores, I.', 'Doe, J.'],
-    category: 'BSCS', 
-    program: AcademicProgram.BSCS, 
-    yearPublished: 2024,
-    abstract: 'This is a sample abstract for the study. It discusses the implications of AI in modern classrooms...',
-    keywords: ['AI', 'Education', 'Machine Learning'],
-    downloadCount: 150 + i * 10,
-    viewCount: 300 + i * 20,
-}));
+const { width } = Dimensions.get('window');
 
-const MOCK_GAPS = Array(3).fill(0).map((_, i) => ({
-    _id: `gap-${i}`,
-    title: `Unexplored Areas in Quantum Computing Security ${i + 1}`,
-    authors: ['Smith, A.'],
-    category: 'BSIT', 
-    program: AcademicProgram.BSIT,
-    yearPublished: 2025,
-    abstract: 'Exploring the potential vulnerabilities in post-quantum cryptography...',
-    keywords: ['Quantum', 'Security', 'Cryptography'],
-    downloadCount: 50,
-    viewCount: 100,
-}));
+// ─── Sample image assets ─────────────────────────────────────────────────────
+const IMG_ML        = require('../../../assets/images/SAMPLE/machine learning.jpg');
+const IMG_AI_EDU    = require('../../../assets/images/SAMPLE/AI in Education.png');
+const IMG_AI_EDU2   = require('../../../assets/images/SAMPLE/ai in education.jpg');
+const IMG_MOBILE    = require('../../../assets/images/SAMPLE/mobile.jpeg');
+const IMG_LOGO      = require('../../../assets/images/Insiqht_LOGO.png');
+
+const MOCK_RECENTLY_ADDED = [
+    { _id: 'r1', title: 'Machine Learning Approaches in Predicting Student Academic Performance', category: 'Information Technology', image: IMG_ML },
+    { _id: 'r2', title: 'InsIQht: A Mobile-Based Centralized Repository for Capstone Projects', category: 'Information Technology', image: IMG_LOGO },
+];
+
+const MOCK_RECOMMENDED = [
+    { _id: 'rec1', title: 'AI in Education: A Systematic Review', category: 'Artificial Intelligence', views: '1k', image: IMG_AI_EDU },
+    { _id: 'rec2', title: 'Artificial Intelligence in Education', category: 'Artificial Intelligence', views: '2k', image: IMG_AI_EDU2 },
+    { _id: 'rec3', title: 'Mobile Health Applications', category: 'Mobile App', views: '3k', image: IMG_MOBILE },
+];
+
+const MOCK_TRENDING = [
+    { _id: 't1', title: 'InsIQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects', category: 'Computer Science', image: IMG_LOGO },
+    { _id: 't2', title: 'Machine Learning Approaches in Predicting Student Academic Performance 2026', category: 'Artificial Intelligent', image: IMG_ML },
+];
 
 const DashboardScreen: React.FC = () => {
-    const { user } = useAuth();
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
-    // Upload State
-    const [modalVisible, setModalVisible] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [formData, setFormData] = useState({
-        title: '',
-        authors: '',
-        category: '',
-        program: user?.program || AcademicProgram.BSCS,
-        keywords: '',
-        tools: '',
-        gap: '',
-        abstract: ''
-    });
-    const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-
-    // Filter content based on user program
-    // In a real app, this would happen on the backend query
-    const recommendedStudies = MOCK_STUDIES; // Placeholder for logic
-    const userProgram = user?.program || AcademicProgram.BSCS;
-
-    const handlePickDocument = async () => {
-        try {
-            const result = await DocumentPicker.getDocumentAsync({
-                type: 'application/pdf',
-                copyToCacheDirectory: true
-            });
-
-            if (result.canceled) return;
-            setSelectedFile(result.assets[0]);
-        } catch (err) {
-            Alert.alert('Error', 'Failed to pick document');
-        }
-    };
-
-    const handleUpload = async () => {
-        if (!selectedFile || !formData.title || !formData.authors) {
-            Alert.alert('Missing Fields', 'Please fill in required fields and select a PDF.');
-            return;
-        }
-
-        setUploading(true);
-        // Mock Progress
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 0.1;
-            setUploadProgress(Math.min(progress, 0.9));
-        }, 200);
-
-        try {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Mock API delay
-            clearInterval(interval);
-            setUploadProgress(1);
-            Alert.alert('Success', 'Study uploaded successfully!');
-            setModalVisible(false);
-            resetForm();
-        } catch (error) {
-            Alert.alert('Upload Failed', 'Could not upload study.');
-        } finally {
-            setUploading(false);
-            setUploadProgress(0);
-            clearInterval(interval);
-        }
-    };
-
-    const resetForm = () => {
-        setFormData({ 
-            title: '', 
-            authors: '', 
-            category: '', 
-            program: user?.program || AcademicProgram.BSCS,
-            keywords: '', 
-            tools: '', 
-            gap: '', 
-            abstract: '' 
-        });
-        setSelectedFile(null);
-    };
-
-    const handleStudyPress = (studyId: string) => {
-        navigation.navigate('StudyDetail', { studyId });
-    };
-
-    const renderSectionHeader = (title: string, subtitle?: string) => (
-        <View style={styles.sectionHeader}>
-            <View>
-                <Text style={styles.sectionTitle}>{title}</Text>
-                {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
-            </View>
-            <TouchableOpacity onPress={() => console.log('See All pressed')}>
-                <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-        </View>
-    );
+    const handleStudyPress = (studyId: string) => navigation.navigate('StudyDetail', { studyId });
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-            
-            {/* Academic Header */}
-            <View style={styles.header}>
-                <View style={styles.headerContent}>
-                    <Text style={styles.brandText}>INSIGHT</Text>
-                    <Text style={styles.universityText}>UNIVERSITY PREVIEW</Text>
-                </View>
-                <TouchableOpacity style={styles.iconButton}>
-                    <Ionicons name="notifications-outline" size={24} color={COLORS.white} />
-                </TouchableOpacity>
-            </View>
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                
-                {/* Search Bar Placeholder */}
-                <View style={styles.searchContainer}>
-                    <Ionicons name="search" size={20} color={COLORS.text.secondary} style={styles.searchIcon} />
-                    <Text style={styles.searchPlaceholder}>Search for papers, authors, or topics...</Text>
+            <AppHeader />
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
+                {/* â”€â”€ Stat Cards â”€â”€ */}
+                <View style={styles.statsRow}>
+                    <View style={styles.statCard}>
+                        <Ionicons name="document-text-outline" size={20} color="#0E1F43" />
+                        <Text style={styles.statNumber}>1,248</Text>
+                        <Text style={styles.statLabel}>Studies</Text>
+                        <Text style={[styles.statChange, { color: '#E53935' }]}>-12%</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Ionicons name="eye-outline" size={20} color="#0E1F43" />
+                        <Text style={styles.statNumber}>4</Text>
+                        <Text style={styles.statLabel}>Reading</Text>
+                        <Text style={[styles.statChange, { color: '#3B82F6' }]}>+2%</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Ionicons name="bookmark-outline" size={20} color="#0E1F43" />
+                        <Text style={styles.statNumber}>4</Text>
+                        <Text style={styles.statLabel}>Saved</Text>
+                        <Text style={[styles.statChange, { color: '#10B981' }]}>+3%</Text>
+                    </View>
                 </View>
 
-                {/* Categories / Disciplines */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsContainer} contentContainerStyle={styles.chipsContent}>
-                    {['All Fields', 'Computer Science', 'Medicine', 'Engineering', 'Social Sciences', 'Arts'].map((chip, index) => (
-                        <TouchableOpacity key={index} style={[styles.chip, index === 0 && styles.activeChip]}>
-                            <Text style={[styles.chipText, index === 0 && styles.activeChipText]}>{chip}</Text>
+                {/* â”€â”€ Recently Added â”€â”€ */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Recently Added</Text>
+                </View>
+                <View style={styles.recentRow}>
+                    {MOCK_RECENTLY_ADDED.map(item => (
+                        <TouchableOpacity key={item._id} style={styles.recentCard} onPress={() => handleStudyPress(item._id)} activeOpacity={0.85}>
+                            <Image source={item.image} style={styles.recentThumb} resizeMode="cover" />
+                            <View style={styles.recentBody}>
+                                <Text style={styles.cardCategory}>{item.category}</Text>
+                                <Text style={styles.recentTitle} numberOfLines={2}>{item.title}</Text>
+                            </View>
                         </TouchableOpacity>
                     ))}
-                </ScrollView>
+                </View>
 
-                {/* Recommended This Week (Horizontal) */}
-                {renderSectionHeader(`Recommended for ${userProgram}`, 'Curated based on your program')}
+                {/* â”€â”€ Recommended For You â”€â”€ */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Recommended For You</Text>
+                </View>
                 <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    data={recommendedStudies}
+                    data={MOCK_RECOMMENDED}
+                    keyExtractor={item => item._id}
+                    contentContainerStyle={styles.hList}
                     renderItem={({ item }) => (
-                        <StudyCard 
-                            study={item} 
-                            variant="horizontal" 
-                            onPress={() => handleStudyPress(item._id as string)}
-                        />
+                        <TouchableOpacity style={styles.recCard} onPress={() => handleStudyPress(item._id)} activeOpacity={0.85}>
+                            <Image source={item.image} style={styles.recThumb} resizeMode="cover" />
+                            <View style={styles.recBody}>
+                                <Text style={styles.recTitle} numberOfLines={2}>{item.title}</Text>
+                                <Text style={styles.cardCategory}>{item.category}</Text>
+                                <View style={styles.recMeta}>
+                                    <Ionicons name="eye-outline" size={12} color="#888" />
+                                    <Text style={styles.recViews}>{item.views}</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
                     )}
-                    keyExtractor={item => item._id as string}
-                    contentContainerStyle={styles.horizontalList}
                 />
 
-                {/* Emerging Research Gaps (Vertical List) */}
-                <View style={styles.gapsSection}>
-                    {renderSectionHeader('Emerging Research Gaps', 'High-impact opportunities')}
-                    <View style={styles.verticalList}>
-                        {MOCK_GAPS.map((item) => (
-                            <StudyCard 
-                                key={item._id} 
-                                study={item} 
-                                variant="vertical" 
-                                onPress={() => handleStudyPress(item._id as string)}
-                            />
-                        ))}
-                    </View>
+                {/* â”€â”€ Trending â”€â”€ */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Trending</Text>
+                    <TouchableOpacity><Text style={styles.seeAll}>See all</Text></TouchableOpacity>
+                </View>
+                <View style={styles.trendingList}>
+                    {MOCK_TRENDING.map(item => (
+                        <TouchableOpacity key={item._id} style={styles.trendRow} onPress={() => handleStudyPress(item._id)} activeOpacity={0.85}>
+                            <Image source={item.image} style={styles.trendThumb} resizeMode="cover" />
+                            <View style={styles.trendBody}>
+                                <Text style={styles.cardCategory}>{item.category}</Text>
+                                <Text style={styles.trendTitle} numberOfLines={2}>{item.title}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
                 </View>
 
             </ScrollView>
 
-            {/* Upload FAB - Year 4 Only */}
-            {user?.role === UserRole.STUDENT_4TH && (
-                <TouchableOpacity 
-                    style={styles.fab} 
-                    onPress={() => setModalVisible(true)}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="add" size={32} color={COLORS.white} />
-                </TouchableOpacity>
-            )}
-
-            {/* Upload Modal */}
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={styles.modalContainer}
-                >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Upload Research</Text>
-                                <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                    <Ionicons name="close" size={24} color={COLORS.text.primary} />
-                                </TouchableOpacity>
-                            </View>
-
-                            <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-                                <Text style={styles.label}>Title</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Study Title"
-                                    value={formData.title}
-                                    onChangeText={(text) => setFormData({...formData, title: text})}
-                                />
-
-                                <Text style={styles.label}>Authors</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Author names (comma separated)"
-                                    value={formData.authors}
-                                    onChangeText={(text) => setFormData({...formData, authors: text})}
-                                />
-
-                                <View style={styles.row}>
-                                    <View style={[styles.column, { marginRight: 8 }]}>
-                                        <Text style={styles.label}>Category</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="e.g. AI"
-                                            value={formData.category}
-                                            onChangeText={(text) => setFormData({...formData, category: text})}
-                                        />
-                                    </View>
-                                    <View style={[styles.column, { marginLeft: 8 }]}>
-                                        <Text style={styles.label}>Program</Text>
-                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 }}>
-                                            {[AcademicProgram.BSIS, AcademicProgram.BSIT, AcademicProgram.BSCS].map((prog) => (
-                                                <TouchableOpacity
-                                                    key={prog}
-                                                    onPress={() => setFormData({...formData, program: prog})}
-                                                    style={{
-                                                        backgroundColor: formData.program === prog ? COLORS.primary : COLORS.card,
-                                                        borderWidth: 1,
-                                                        borderColor: formData.program === prog ? COLORS.primary : COLORS.border,
-                                                        borderRadius: 16,
-                                                        paddingVertical: 4,
-                                                        paddingHorizontal: 10,
-                                                        marginRight: 6,
-                                                        marginBottom: 6
-                                                    }}
-                                                >
-                                                    <Text style={{ 
-                                                        color: formData.program === prog ? COLORS.white : COLORS.text.secondary,
-                                                        fontSize: 10,
-                                                        fontWeight: '600'
-                                                    }}>{prog}</Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    </View>
-                                </View>
-                                <View style={styles.row}>
-                                    <View style={[styles.column]}>
-                                        <Text style={styles.label}>Keywords</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Tags"
-                                            value={formData.keywords}
-                                            onChangeText={(text) => setFormData({...formData, keywords: text})}
-                                        />
-                                    </View>
-                                </View>
-
-                                <Text style={styles.label}>Tools Used</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Technologies/Frameworks"
-                                    value={formData.tools}
-                                    onChangeText={(text) => setFormData({...formData, tools: text})}
-                                />
-
-                                <Text style={styles.label}>Research Gap</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    placeholder="What problem does this solve?"
-                                    multiline
-                                    numberOfLines={3}
-                                    value={formData.gap}
-                                    onChangeText={(text) => setFormData({...formData, gap: text})}
-                                />
-
-                                <Text style={styles.label}>Abstract</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    placeholder="Summary of the study"
-                                    multiline
-                                    numberOfLines={4}
-                                    value={formData.abstract}
-                                    onChangeText={(text) => setFormData({...formData, abstract: text})}
-                                />
-
-                                {/* File Selection */}
-                                <TouchableOpacity style={styles.fileButton} onPress={handlePickDocument}>
-                                    <Ionicons name="document-text-outline" size={24} color={selectedFile ? COLORS.primary : COLORS.text.secondary} />
-                                    <Text style={[
-                                        styles.fileButtonText, 
-                                        selectedFile && { color: COLORS.primary, fontWeight: '600' }
-                                    ]}>
-                                        {selectedFile ? selectedFile.name : 'Select PDF Document'}
-                                    </Text>
-                                    {selectedFile && <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />}
-                                </TouchableOpacity>
-                            </ScrollView>
-
-                            {/* Submit Button */}
-                            <TouchableOpacity 
-                                style={[styles.submitButton, uploading && styles.disabledButton]} 
-                                onPress={handleUpload}
-                                disabled={uploading}
-                            >
-                                {uploading ? (
-                                    <View style={styles.progressWrapper}>
-                                        <Text style={styles.uploadingText}>Uploading... {Math.round(uploadProgress * 100)}%</Text>
-                                        <View style={styles.progressBarBg}>
-                                            <View style={[styles.progressBarFill, { width: `${uploadProgress * 100}%` }]} />
-                                        </View>
-                                    </View>
-                                ) : (
-                                    <Text style={styles.submitButtonText}>Submit Research</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
-            </Modal>
         </SafeAreaView>
     );
 };
 
+// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const CARD_W = width * 0.62;
+const REC_W = width * 0.38;
+
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
-    header: {
-        backgroundColor: COLORS.primary,
-        padding: SPACING.m,
+    container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+
+
+    scroll: { paddingBottom: 100 },
+
+    // Stats
+    statsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: SPACING.l,
-    },
-    headerContent: {
-        flex: 1,
-    },
-    brandText: {
-        color: COLORS.white,
-        fontSize: 24,
-        fontWeight: 'bold',
-        letterSpacing: 1,
-    },
-    universityText: {
-        color: COLORS.secondary,
-        fontSize: 10,
-        fontWeight: '600',
-        letterSpacing: 1.5,
-        marginTop: 2,
-    },
-    iconButton: {
-        padding: SPACING.xs,
-    },
-    scrollContent: {
-        paddingBottom: SPACING.xl,
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: COLORS.card,
-        margin: SPACING.m,
-        padding: SPACING.m,
-        borderRadius: BORDER_RADIUS.m,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        ...SHADOWS.subtle,
-    },
-    searchIcon: {
-        marginRight: SPACING.s,
-    },
-    searchPlaceholder: {
-        color: COLORS.text.secondary,
-        flex: 1,
-    },
-    chipsContainer: {
-        marginBottom: SPACING.m,
-    },
-    chipsContent: {
-        paddingHorizontal: SPACING.m,
-    },
-    chip: {
-        paddingVertical: 8,
         paddingHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: COLORS.card,
-        marginRight: SPACING.s,
-        borderWidth: 1,
-        borderColor: COLORS.border,
+        paddingTop: 16,
+        paddingBottom: 8,
+        gap: 10,
     },
-    activeChip: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    chipText: {
-        color: COLORS.text.secondary,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    activeChipText: {
-        color: COLORS.white,
-        fontWeight: '600',
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    statCard: {
+        flex: 1,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 12,
         alignItems: 'flex-start',
-        paddingHorizontal: SPACING.m,
-        marginBottom: SPACING.m,
-        marginTop: SPACING.s,
-    },
-    sectionTitle: {
-        ...TYPOGRAPHY.h2,
-        color: COLORS.text.primary,
-    },
-    sectionSubtitle: {
-        ...TYPOGRAPHY.caption,
-        color: COLORS.text.secondary,
-        marginTop: 2,
-    },
-    seeAll: {
-        color: COLORS.secondary,
-        fontWeight: '600',
-        fontSize: 14,
-        marginTop: 4,
-    },
-    horizontalList: {
-        paddingHorizontal: SPACING.m,
-        paddingBottom: SPACING.m,
-    },
-    verticalList: {
-        paddingHorizontal: SPACING.m,
-    },
-    gapsSection: {
-        marginTop: SPACING.s,
-    },
-    fab: {
-        position: 'absolute',
-        bottom: SPACING.l,
-        right: SPACING.l,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: COLORS.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...SHADOWS.medium,
-        zIndex: 100,
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    modalContent: {
-        backgroundColor: COLORS.background,
-        borderTopLeftRadius: BORDER_RADIUS.l,
-        borderTopRightRadius: BORDER_RADIUS.l,
-        padding: SPACING.l,
-        maxHeight: '90%',
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: SPACING.m,
-    },
-    modalTitle: {
-        ...TYPOGRAPHY.h2,
-        color: COLORS.text.primary,
-    },
-    formContainer: {
-        marginBottom: SPACING.m,
-    },
-    label: {
-        ...TYPOGRAPHY.caption,
-        color: COLORS.text.secondary,
-        marginBottom: SPACING.xs,
-        marginTop: SPACING.s,
-    },
-    input: {
-        backgroundColor: COLORS.card,
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 8,
+        elevation: 3,
         borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: BORDER_RADIUS.s,
-        padding: SPACING.m,
-        ...TYPOGRAPHY.body,
-        color: COLORS.text.primary,
+        borderColor: '#F0F2F8',
     },
-    textArea: {
-        height: 100,
-        textAlignVertical: 'top',
+    statNumber: { fontSize: 20, fontWeight: '700', color: '#0E1F43', marginTop: 6 },
+    statLabel: { fontSize: 11, color: '#888', marginTop: 1 },
+    statChange: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+
+    // Section header
+    sectionHeader: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12,
     },
-    row: {
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0E1F43' },
+    seeAll: { fontSize: 13, fontWeight: '600', color: '#3B82F6' },
+
+    hList: { paddingHorizontal: 20, gap: 12, paddingBottom: 4 },
+
+    recentRow: {
         flexDirection: 'row',
-    },
-    column: {
-        flex: 1,
-    },
-    fileButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: SPACING.l,
-        marginBottom: SPACING.m,
-        padding: SPACING.m,
-        backgroundColor: COLORS.card,
-        borderRadius: BORDER_RADIUS.s,
-        borderWidth: 1,
-        borderColor: COLORS.primary,
-        borderStyle: 'dashed',
-    },
-    fileButtonText: {
-        marginLeft: SPACING.s,
-        ...TYPOGRAPHY.body,
-        color: COLORS.text.secondary,
-        flex: 1,
-    },
-    submitButton: {
-        backgroundColor: COLORS.primary,
-        padding: SPACING.m,
-        borderRadius: BORDER_RADIUS.m,
-        alignItems: 'center',
-        marginTop: SPACING.s,
-        height: 56,
-        justifyContent: 'center',
-    },
-    disabledButton: {
-        opacity: 0.9,
-    },
-    submitButtonText: {
-        color: COLORS.white,
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    progressWrapper: {
-        width: '100%',
-    },
-    uploadingText: {
-        color: COLORS.white,
-        fontSize: 12,
+        paddingHorizontal: 20,
+        gap: 12,
         marginBottom: 4,
-        textAlign: 'center',
     },
-    progressBarBg: {
-        height: 4,
-        backgroundColor: 'rgba(255,255,255,0.3)',
-        borderRadius: 2,
+
+    // Recently Added cards
+    recentCard: {
+        flex: 1,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        overflow: 'hidden',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 8,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
     },
-    progressBarFill: {
-        height: '100%',
-        backgroundColor: COLORS.white,
-        borderRadius: 2,
+    recentThumb: {
+        width: '100%', height: 130,
     },
+    recentBody: { padding: 10 },
+    cardCategory: { fontSize: 10, fontWeight: '600', color: '#888', marginBottom: 4, textTransform: 'capitalize' },
+    recentTitle: { fontSize: 12, fontWeight: '600', color: '#1A2744', lineHeight: 17 },
+
+    // Recommended cards
+    recCard: {
+        width: REC_W,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        overflow: 'hidden',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 8,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+    },
+    recThumb: { width: '100%', height: 90 },
+    recBody: { padding: 10 },
+    recTitle: { fontSize: 12, fontWeight: '600', color: '#1A2744', lineHeight: 17, marginBottom: 4 },
+    recMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 3 },
+    recViews: { fontSize: 11, color: '#888' },
+
+    // Trending
+    trendingList: { paddingHorizontal: 20, gap: 12 },
+    trendRow: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        overflow: 'hidden',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+    },
+    trendThumb: {
+        width: 80, height: 80,
+        flexShrink: 0,
+    },
+    trendBody: { flex: 1, padding: 12, justifyContent: 'center' },
+    trendTitle: { fontSize: 13, fontWeight: '600', color: '#1A2744', lineHeight: 18 },
+
+
 });
 
 export default DashboardScreen;
+

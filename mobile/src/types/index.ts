@@ -100,7 +100,8 @@ export type MainTabParamList = {
     Home: undefined;
     Search: undefined;
     Library: undefined;
-    Profile: undefined;
+    Upload: undefined;
+    Notifications: undefined;
 };
 
 export type HomeStackParamList = {

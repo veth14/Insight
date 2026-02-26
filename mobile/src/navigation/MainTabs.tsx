@@ -4,33 +4,30 @@ import { MainTabParamList } from '../types';
 import HomeStack from './HomeStack';
 import SearchScreen from '../screens/main/SearchScreen';
 import LibraryScreen from '../screens/main/LibraryScreen';
-import ProfileScreen from '../screens/main/ProfileScreen';
-import { COLORS } from '../constants/theme';
-import { Ionicons } from '@expo/vector-icons'; // Assuming Expo
+import UploadScreen from '../screens/main/UploadScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
+import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-/**
- * MainTabs Navigator
- * Bottom tab navigation for main app sections
- */
 const MainTabs: React.FC = () => {
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 headerShown: false,
-                tabBarActiveTintColor: COLORS.accent, // Updated to Accent Teal
-                tabBarInactiveTintColor: COLORS.text.secondary,
+                tabBarActiveTintColor: '#0E1F43',
+                tabBarInactiveTintColor: '#9AADCA',
                 tabBarStyle: {
-                    backgroundColor: COLORS.card,
-                    borderTopColor: COLORS.border,
-                    height: 60,
-                    paddingBottom: 8,
+                    backgroundColor: '#fff',
+                    borderTopWidth: 1,
+                    borderTopColor: '#EEF1F8',
+                    height: 62,
+                    paddingBottom: 10,
                     paddingTop: 8,
                 },
                 tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontFamily: 'Roboto', // Or system font
+                    fontSize: 11,
+                    fontWeight: '600',
                 },
                 tabBarIcon: ({ focused, color, size }) => {
                     let iconName: keyof typeof Ionicons.glyphMap = 'home';
@@ -40,43 +37,22 @@ const MainTabs: React.FC = () => {
                     } else if (route.name === 'Search') {
                         iconName = focused ? 'search' : 'search-outline';
                     } else if (route.name === 'Library') {
-                        iconName = focused ? 'library' : 'library-outline';
-                    } else if (route.name === 'Profile') {
-                        iconName = focused ? 'person' : 'person-outline';
+                        iconName = focused ? 'book' : 'book-outline';
+                    } else if (route.name === 'Upload') {
+                        iconName = focused ? 'create' : 'create-outline';
+                    } else if (route.name === 'Notifications') {
+                        iconName = focused ? 'notifications' : 'notifications-outline';
                     }
 
-                    return <Ionicons name={iconName} size={size} color={color} />;
+                    return <Ionicons name={iconName} size={22} color={color} />;
                 },
             })}
         >
-            <Tab.Screen
-                name="Home"
-                component={HomeStack}
-                options={{
-                    tabBarLabel: 'Dashboard',
-                }}
-            />
-            <Tab.Screen
-                name="Search"
-                component={SearchScreen}
-                options={{
-                    tabBarLabel: 'Search',
-                }}
-            />
-            <Tab.Screen
-                name="Library"
-                component={LibraryScreen}
-                options={{
-                    tabBarLabel: 'Library',
-                }}
-            />
-            <Tab.Screen
-                name="Profile"
-                component={ProfileScreen}
-                options={{
-                    tabBarLabel: 'Profile',
-                }}
-            />
+            <Tab.Screen name="Home" component={HomeStack} options={{ tabBarLabel: 'Dashboard' }} />
+            <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarLabel: 'Search' }} />
+            <Tab.Screen name="Library" component={LibraryScreen} options={{ tabBarLabel: 'Library' }} />
+            <Tab.Screen name="Upload" component={UploadScreen} options={{ tabBarLabel: 'Upload' }} />
+            <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ tabBarLabel: 'Alerts' }} />
         </Tab.Navigator>
     );
 };

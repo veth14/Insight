@@ -1,243 +1,423 @@
-import React, { useState } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    TextInput, 
-    TouchableOpacity, 
-    FlatList, 
-    Modal, 
-    Platform,
-    StatusBar
+﻿import React, { useState } from 'react';
+import {
+    View, Text, StyleSheet, TextInput, TouchableOpacity,
+    FlatList, Modal, ScrollView, TouchableWithoutFeedback,
+    StatusBar, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
-import StudyCard from '../../components/StudyCard';
 import { useNavigation } from '@react-navigation/native';
+import AppHeader from '../../components/AppHeader';
 
-// Mock Data
-const MOCK_RESULTS = Array(10).fill(0).map((_, i) => ({
-    _id: `search-${i}`,
-    title: `Advanced Algorithms in Mobile Computing ${i + 1}`,
-    authors: ['Valmores, I.', 'Turing, A.'],
-    category: i % 2 === 0 ? 'Mobile Dev' : 'Algorithms',
-    yearPublished: 2024 - (i % 5),
-    abstract: 'This study explores high-performance algorithms for modern mobile architectures...',
-}));
+const { width } = Dimensions.get('window');
 
+// --- Mock Data ---
+const CATEGORIES = ['All Categories', 'Data Science', 'Multimedia', 'IoT and Emb.', 'Web System', 'Mobile Dev'];
+
+const MOCK_RESULTS = [
+    {
+        _id: 's1',
+        title: 'InsIQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects....',
+        authors: 'Abando A., Albidla E.,',
+        category: 'Computer Science',
+        badge: null,
+        year: '2024',
+        citations: 41,
+        abstract: 'This study explores the application of machine learning algorithms in predicting student...',
+    },
+    {
+        _id: 's2',
+        title: 'Machine Learning Approaches in Predicting Student Academic....',
+        authors: 'Garcia M., Santos, R., Cruz, A.,',
+        category: 'Computer Science',
+        badge: 'Quantitative',
+        year: '2024',
+        citations: 11,
+        abstract: 'This study explores the application of machine learning algorithms in predicting student...',
+    },
+    {
+        _id: 's3',
+        title: 'AI-Powered Plagiarism Detection for Filipino Language.....',
+        authors: 'Smith R., Modelo R.,',
+        category: 'Computer Science',
+        badge: 'Quantitative',
+        year: '2024',
+        citations: 41,
+        abstract: 'This study explores the application of machine learning algorithms in predicting student...',
+    },
+];
+
+const TRENDING_TOPICS = [
+    'Artificial Intelligence in Education',
+    'Mobile Health Applications',
+    'Cybersecurity & Data Privacy',
+    'IoT & Smart Systems',
+];
+
+const RESEARCH_THEMES = ['All', 'AI/ML', 'Mobile Dev', 'IoT', 'Web System', 'Security', 'Data Analytics'];
+
+// --- Component ---
 const SearchScreen: React.FC = () => {
-    const [query, setQuery] = useState('');
-    const [filterVisible, setFilterVisible] = useState(false);
     const navigation = useNavigation<any>();
+    const [query, setQuery] = useState('');
+    const [activeCategory, setActiveCategory] = useState('All Categories');
+    const [advancedVisible, setAdvancedVisible] = useState(false);
 
-    const renderHeader = () => (
-        <View style={styles.header}>
-            <View style={styles.searchContainer}>
-                <Ionicons name="search" size={20} color={COLORS.text.secondary} style={styles.searchIcon} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search titles, authors, keywords..."
-                    value={query}
-                    onChangeText={setQuery}
-                    placeholderTextColor={COLORS.text.secondary}
-                />
-                {query.length > 0 && (
-                    <TouchableOpacity onPress={() => setQuery('')}>
-                        <Ionicons name="close-circle" size={20} color={COLORS.text.secondary} />
-                    </TouchableOpacity>
-                )}
-            </View>
-            <TouchableOpacity 
-                style={styles.filterButton} 
-                onPress={() => setFilterVisible(true)}
-            >
-                <Ionicons name="options" size={24} color={COLORS.primary} />
-            </TouchableOpacity>
-        </View>
-    );
+    const [keywords, setKeywords] = useState('');
+    const [fromYear, setFromYear] = useState('2020');
+    const [toYear, setToYear] = useState('2025');
+    const [department, setDepartment] = useState('');
+    const [activeTheme, setActiveTheme] = useState('All');
 
-    const renderFilterModal = () => (
-        <Modal
-            animationType="slide"
-            transparent={true}
-            visible={filterVisible}
-            onRequestClose={() => setFilterVisible(false)}
-        >
-            <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, SHADOWS.medium]}>
-                    <View style={styles.modalHeader}>
-                        <Text style={TYPOGRAPHY.h3}>Filter Results</Text>
-                        <TouchableOpacity onPress={() => setFilterVisible(false)}>
-                            <Ionicons name="close" size={24} color={COLORS.text.primary} />
-                        </TouchableOpacity>
-                    </View>
-                    
-                    {/* Filter Options Placeholder */}
-                    <Text style={styles.filterLabel}>Year</Text>
-                    <View style={styles.filterRow}>
-                        {['2024', '2023', '2022+'].map(y => (
-                            <TouchableOpacity key={y} style={styles.chip}>
-                                <Text style={styles.chipText}>{y}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    <Text style={styles.filterLabel}>Category</Text>
-                    <View style={styles.filterRow}>
-                        {['AI', 'Web', 'Mobile'].map(c => (
-                            <TouchableOpacity key={c} style={styles.chip}>
-                                <Text style={styles.chipText}>{c}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    <TouchableOpacity 
-                        style={styles.applyButton}
-                        onPress={() => setFilterVisible(false)}
-                    >
-                        <Text style={styles.applyButtonText}>Apply Filters</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
+    const filteredResults = MOCK_RESULTS.filter(item =>
+        query.length === 0 ||
+        item.title.toLowerCase().includes(query.toLowerCase()) ||
+        item.authors.toLowerCase().includes(query.toLowerCase())
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            {renderHeader()}
-            
-            <FlatList
-                data={query.length > 0 ? MOCK_RESULTS : []}
-                keyExtractor={item => item._id}
-                renderItem={({ item }) => (
-                    <StudyCard 
-                        study={item} 
-                        variant="vertical" 
-                        onPress={() => navigation.navigate('HomeStack', { 
-                            screen: 'StudyDetail', 
-                            params: { studyId: item._id } 
-                        })}
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+            <AppHeader />
+
+            {/* Search Bar */}
+            <View style={styles.searchRow}>
+                <View style={styles.searchBox}>
+                    <Ionicons name="search-outline" size={18} color="#9AADCA" style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search by author, keyword..."
+                        placeholderTextColor="#9AADCA"
+                        value={query}
+                        onChangeText={setQuery}
+                        returnKeyType="search"
                     />
-                )}
+                    {query.length > 0 && (
+                        <TouchableOpacity onPress={() => setQuery('')}>
+                            <Ionicons name="close-circle" size={18} color="#9AADCA" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+                <TouchableOpacity style={styles.filterIconBtn} onPress={() => setAdvancedVisible(true)} activeOpacity={0.7}>
+                    <Ionicons name="options-outline" size={20} color="#0E1F43" />
+                </TouchableOpacity>
+            </View>
+
+            {/* Category Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>
+                {CATEGORIES.map(cat => (
+                    <TouchableOpacity
+                        key={cat}
+                        style={[styles.catChip, activeCategory === cat && styles.catChipActive]}
+                        onPress={() => setActiveCategory(cat)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.catChipText, activeCategory === cat && styles.catChipTextActive]}>{cat}</Text>
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
+
+            {/* Results + Trending */}
+            <FlatList
+                data={filteredResults}
+                keyExtractor={item => item._id}
+                showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
-                ListEmptyComponent={
-                    <View style={styles.emptyState}>
-                        <Ionicons name="library-outline" size={64} color={COLORS.text.secondary} />
-                        <Text style={[TYPOGRAPHY.body, { marginTop: SPACING.m, textAlign: 'center' }]}>
-                            {query.length > 0 ? 'No papers found.' : 'Search the academic repository\nby title, author, or keyword.'}
-                        </Text>
+                renderItem={({ item }) => (
+                    <TouchableOpacity style={styles.resultCard} activeOpacity={0.85}>
+                        <View style={styles.cardTop}>
+                            <View style={styles.badgeRow}>
+                                <View style={styles.categoryBadge}>
+                                    <Text style={styles.categoryBadgeText}>{item.category}</Text>
+                                </View>
+                                {item.badge && (
+                                    <View style={styles.typeBadge}>
+                                        <Text style={styles.typeBadgeText}>{item.badge}</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="bookmark-outline" size={18} color="#9AADCA" />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+                        <Text style={styles.cardAuthors} numberOfLines={1}>{item.authors}</Text>
+                        <Text style={styles.cardAbstract} numberOfLines={2}>{item.abstract}</Text>
+                        <View style={styles.cardMeta}>
+                            <View style={styles.metaItem}>
+                                <Ionicons name="calendar-outline" size={13} color="#9AADCA" />
+                                <Text style={styles.metaText}>{item.year}</Text>
+                            </View>
+                            <View style={styles.metaItem}>
+                                <Ionicons name="people-outline" size={13} color="#9AADCA" />
+                                <Text style={styles.metaText}>{item.citations}</Text>
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                )}
+                ListFooterComponent={
+                    <View style={styles.trendingSection}>
+                        <View style={styles.trendingHeader}>
+                            <Ionicons name="trending-up-outline" size={18} color="#0E1F43" />
+                            <Text style={styles.trendingTitle}>Trending Topics (2026)</Text>
+                        </View>
+                        {TRENDING_TOPICS.map((topic, i) => (
+                            <TouchableOpacity key={i} style={styles.trendingItem} onPress={() => setQuery(topic)} activeOpacity={0.7}>
+                                <Text style={styles.trendingItemText}>{topic}</Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
                 }
             />
 
-            {renderFilterModal()}
+            {/* Advanced Search Modal */}
+            <Modal transparent animationType="fade" visible={advancedVisible} onRequestClose={() => setAdvancedVisible(false)}>
+                <TouchableWithoutFeedback onPress={() => setAdvancedVisible(false)}>
+                    <View style={styles.modalOverlay}>
+                        <TouchableWithoutFeedback>
+                            <View style={styles.modalCard}>
+                                <Text style={styles.modalSectionLabel}>Keywords</Text>
+                                <View style={styles.modalSearchBox}>
+                                    <Ionicons name="search-outline" size={16} color="#9AADCA" style={{ marginRight: 8 }} />
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        placeholder="Search in title, abstract, keywords..."
+                                        placeholderTextColor="#9AADCA"
+                                        value={keywords}
+                                        onChangeText={setKeywords}
+                                    />
+                                </View>
+
+                                <View style={styles.yearRow}>
+                                    <View style={styles.yearField}>
+                                        <Text style={styles.modalSectionLabel}>From</Text>
+                                        <TextInput
+                                            style={styles.yearInput}
+                                            value={fromYear}
+                                            onChangeText={setFromYear}
+                                            keyboardType="numeric"
+                                            maxLength={4}
+                                        />
+                                    </View>
+                                    <View style={styles.yearField}>
+                                        <Text style={styles.modalSectionLabel}>To Year</Text>
+                                        <TextInput
+                                            style={styles.yearInput}
+                                            value={toYear}
+                                            onChangeText={setToYear}
+                                            keyboardType="numeric"
+                                            maxLength={4}
+                                        />
+                                    </View>
+                                </View>
+
+                                <Text style={styles.modalSectionLabel}>Department</Text>
+                                <TextInput
+                                    style={styles.modalInputFull}
+                                    placeholder=""
+                                    placeholderTextColor="#9AADCA"
+                                    value={department}
+                                    onChangeText={setDepartment}
+                                />
+
+                                <Text style={styles.modalSectionLabel}>Research Theme</Text>
+                                <View style={styles.themeRow}>
+                                    {RESEARCH_THEMES.map(theme => (
+                                        <TouchableOpacity
+                                            key={theme}
+                                            style={[styles.themeChip, activeTheme === theme && styles.themeChipActive]}
+                                            onPress={() => setActiveTheme(theme)}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text style={[styles.themeChipText, activeTheme === theme && styles.themeChipTextActive]}>{theme}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity
+                                        style={styles.searchBtn}
+                                        onPress={() => { setQuery(keywords); setAdvancedVisible(false); }}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="search" size={16} color="#fff" />
+                                        <Text style={styles.searchBtnText}>Search</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.clearBtn}
+                                        onPress={() => { setKeywords(''); setFromYear('2020'); setToYear('2025'); setDepartment(''); setActiveTheme('All'); }}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="close" size={16} color="#555" />
+                                        <Text style={styles.clearBtnText}>Clear</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
         </SafeAreaView>
     );
 };
 
+// --- Styles ---
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    },
-    header: {
+    container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+    searchRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: SPACING.m,
-        backgroundColor: COLORS.card,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
-        ...SHADOWS.subtle,
-        zIndex: 10,
+        paddingHorizontal: 16,
+        paddingTop: 14,
+        paddingBottom: 4,
+        backgroundColor: '#F5F6FA',
+        gap: 10,
     },
-    searchContainer: {
+    searchBox: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.background,
-        borderRadius: BORDER_RADIUS.m,
-        paddingHorizontal: SPACING.m,
-        paddingVertical: 10, // Taller touch target
-        marginRight: SPACING.m,
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#E0E5F0',
+        paddingHorizontal: 12,
+        height: 42,
     },
-    searchIcon: {
-        marginRight: SPACING.s,
+    searchInput: { flex: 1, fontSize: 14, color: '#0E1F43' },
+    filterIconBtn: {
+        width: 42, height: 42,
+        borderRadius: 10,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E0E5F0',
+        justifyContent: 'center', alignItems: 'center',
     },
-    searchInput: {
-        flex: 1,
-        fontSize: 16,
-        color: COLORS.text.primary,
-        height: '100%',
+
+    chipScroll: { flexGrow: 0, flexShrink: 0, backgroundColor: '#F5F6FA' },
+    chipRow: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 8, alignItems: 'center' },
+    catChip: {
+        paddingHorizontal: 14, paddingVertical: 7,
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        borderWidth: 1.5, borderColor: '#D0D8E8',
     },
-    filterButton: {
-        padding: SPACING.s,
+    catChipActive: { backgroundColor: '#0E1F43', borderColor: '#0E1F43' },
+    catChipText: { fontSize: 13, fontWeight: '500', color: '#5A6A8A' },
+    catChipTextActive: { color: '#fff', fontWeight: '600' },
+
+    divider: { height: 0 },
+
+    listContent: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, gap: 12 },
+
+    resultCard: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        elevation: 2,
     },
-    listContent: {
-        padding: SPACING.m,
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+    badgeRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', flex: 1, marginRight: 8 },
+    categoryBadge: {
+        backgroundColor: '#F0F2F8',
+        paddingHorizontal: 8, paddingVertical: 3,
+        borderRadius: 6,
     },
-    emptyState: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: SPACING.xxl * 2,
+    categoryBadgeText: { fontSize: 10, fontWeight: '600', color: '#5A6A8A' },
+    typeBadge: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 8, paddingVertical: 3,
+        borderRadius: 6,
     },
-    // Modal Styles
+    typeBadgeText: { fontSize: 10, fontWeight: '600', color: '#2E7D32' },
+    cardTitle: { fontSize: 14, fontWeight: '700', color: '#0E1F43', lineHeight: 20, marginBottom: 4 },
+    cardAuthors: { fontSize: 11, color: '#8A97B0', marginBottom: 6 },
+    cardAbstract: { fontSize: 12, color: '#8A97B0', lineHeight: 18, marginBottom: 8 },
+    cardMeta: { flexDirection: 'row', gap: 14 },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    metaText: { fontSize: 11, color: '#9AADCA' },
+
+    trendingSection: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        padding: 16,
+        marginTop: 4,
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+        elevation: 2,
+    },
+    trendingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+    trendingTitle: { fontSize: 14, fontWeight: '700', color: '#0E1F43' },
+    trendingItem: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F5F6FA' },
+    trendingItemText: { fontSize: 13, color: '#3B4F70' },
+
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: COLORS.card,
-        borderTopLeftRadius: BORDER_RADIUS.l,
-        borderTopRightRadius: BORDER_RADIUS.l,
-        padding: SPACING.l,
-        minHeight: 400,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        marginBottom: SPACING.l,
+        paddingTop: 80,
     },
-    filterLabel: {
-        ...TYPOGRAPHY.h3,
-        fontSize: 16,
-        marginBottom: SPACING.s,
-        marginTop: SPACING.m,
+    modalCard: {
+        width: width - 32,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 20,
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 16,
     },
-    filterRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+    modalSectionLabel: { fontSize: 12, fontWeight: '700', color: '#0E1F43', marginBottom: 6, marginTop: 12 },
+    modalSearchBox: {
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: '#F5F6FA', borderRadius: 10, borderWidth: 1, borderColor: '#E0E5F0',
+        paddingHorizontal: 12, height: 40,
     },
-    chip: {
-        paddingHorizontal: SPACING.m,
-        paddingVertical: SPACING.s,
-        borderRadius: BORDER_RADIUS.full,
-        backgroundColor: COLORS.background,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        marginRight: SPACING.s,
-        marginBottom: SPACING.s,
+    modalInput: { flex: 1, fontSize: 13, color: '#0E1F43' },
+    yearRow: { flexDirection: 'row', gap: 12 },
+    yearField: { flex: 1 },
+    yearInput: {
+        height: 40, borderRadius: 10, borderWidth: 1, borderColor: '#E0E5F0',
+        backgroundColor: '#F5F6FA', paddingHorizontal: 12, fontSize: 14, color: '#0E1F43',
+        textAlign: 'center',
     },
-    chipText: {
-        ...TYPOGRAPHY.caption,
-        color: COLORS.text.primary,
+    modalInputFull: {
+        height: 40, borderRadius: 10, borderWidth: 1, borderColor: '#E0E5F0',
+        backgroundColor: '#F5F6FA', paddingHorizontal: 12, fontSize: 13, color: '#0E1F43',
     },
-    applyButton: {
-        backgroundColor: COLORS.primary,
-        borderRadius: BORDER_RADIUS.m,
-        padding: SPACING.m,
-        alignItems: 'center',
-        marginTop: SPACING.xl,
+    themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+    themeChip: {
+        paddingHorizontal: 12, paddingVertical: 6,
+        borderRadius: 20, backgroundColor: '#F0F2F8',
+        borderWidth: 1, borderColor: '#E0E5F0',
     },
-    applyButtonText: {
-        color: '#FFF',
-        fontWeight: 'bold',
-        fontSize: 16,
+    themeChipActive: { backgroundColor: '#0E1F43', borderColor: '#0E1F43' },
+    themeChipText: { fontSize: 12, fontWeight: '600', color: '#5A6A8A' },
+    themeChipTextActive: { color: '#fff' },
+    modalActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+    searchBtn: {
+        flex: 1, height: 44, backgroundColor: '#0E1F43',
+        borderRadius: 12, flexDirection: 'row',
+        justifyContent: 'center', alignItems: 'center', gap: 6,
     },
+    searchBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    clearBtn: {
+        flex: 1, height: 44, backgroundColor: '#F0F2F8',
+        borderRadius: 12, flexDirection: 'row',
+        justifyContent: 'center', alignItems: 'center', gap: 6,
+        borderWidth: 1, borderColor: '#E0E5F0',
+    },
+    clearBtnText: { color: '#555', fontWeight: '600', fontSize: 14 },
 });
 
 export default SearchScreen;
