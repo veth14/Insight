@@ -90,6 +90,10 @@ export type AuthStackParamList = {
     Onboarding: undefined;
     Login: undefined;
     Register: undefined;
+    TwoFactor: { email: string };
+    ForgotPassword: undefined;
+    ForgotPasswordOTP: { email: string };
+    ResetPassword: { email: string; resetToken: string };
 };
 
 export type MainTabParamList = {

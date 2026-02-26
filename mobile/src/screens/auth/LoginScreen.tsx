@@ -64,6 +64,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         setLoading(true);
         try {
             await login(email, password);
+            // login() sends OTP and sets twoFactorPending — navigate to verification screen
+            navigation.navigate('TwoFactor', { email });
         } catch (error: any) {
             Alert.alert('Login Failed', 'Invalid credentials or network error.');
         } finally {
@@ -139,7 +141,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                                 <Text style={styles.rememberText}>Remember me</Text>
                             </TouchableOpacity>
                             
-                            <TouchableOpacity>
+                            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                                 <Text style={styles.forgotText}>Forgot password ?</Text>
                             </TouchableOpacity>
                         </View>

@@ -23,6 +23,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList, AcademicProgram } from '../../types';
 import { COLORS, TYPOGRAPHY, SPACING, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import TermsAndConditionsModal from './TermsAndConditionsModal';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -49,6 +50,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     // UI State
     const [isSecure, setIsSecure] = useState(true);
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
     const [loading, setLoading] = useState(false);
     
     // Animations
@@ -204,17 +206,32 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                         </View>
 
                         {/* Terms Checkbox */}
-                        <TouchableOpacity 
-                            style={styles.termsRow} 
+                        <TouchableOpacity
+                            style={styles.termsRow}
                             onPress={() => setTermsAccepted(!termsAccepted)}
                         >
                             <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
                                 {termsAccepted && <Ionicons name="checkmark" size={12} color="white" />}
                             </View>
                             <Text style={styles.termsText}>
-                                By checking the box you agree to our <Text style={styles.linkText}>Terms and Conditions</Text>
+                                By checking the box you agree to our{' '}
+                                <Text
+                                    style={styles.linkText}
+                                    onPress={() => setShowTerms(true)}
+                                >
+                                    Terms and Conditions
+                                </Text>
                             </Text>
                         </TouchableOpacity>
+
+                        <TermsAndConditionsModal
+                            visible={showTerms}
+                            onClose={() => setShowTerms(false)}
+                            onAgree={() => {
+                                setTermsAccepted(true);
+                                setShowTerms(false);
+                            }}
+                        />
 
                         {/* Register Button */}
                         <TouchableOpacity
