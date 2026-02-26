@@ -7,6 +7,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SearchStackParamList } from '../../types';
 import AppHeader from '../../components/AppHeader';
 
 const { width } = Dimensions.get('window');
@@ -58,7 +60,7 @@ const RESEARCH_THEMES = ['All', 'AI/ML', 'Mobile Dev', 'IoT', 'Web System', 'Sec
 
 // --- Component ---
 const SearchScreen: React.FC = () => {
-    const navigation = useNavigation<any>();
+    const navigation = useNavigation<NativeStackNavigationProp<SearchStackParamList>>();
     const [query, setQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('All Categories');
     const [advancedVisible, setAdvancedVisible] = useState(false);
@@ -125,7 +127,7 @@ const SearchScreen: React.FC = () => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.resultCard} activeOpacity={0.85}>
+                    <TouchableOpacity style={styles.resultCard} activeOpacity={0.85} onPress={() => navigation.navigate('StudyDetail', { studyId: item._id })}>
                         <View style={styles.cardTop}>
                             <View style={styles.badgeRow}>
                                 <View style={styles.categoryBadge}>

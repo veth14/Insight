@@ -107,5 +107,12 @@ export type MainTabParamList = {
 export type HomeStackParamList = {
     Dashboard: undefined;
     StudyDetail: { studyId: string };
+    CiteGenerator: { studyId: string };
     PDFReader: { studyId: string };
+};
+
+export type SearchStackParamList = {
+    SearchMain: undefined;
+    StudyDetail: { studyId: string };
+    CiteGenerator: { studyId: string };
 };

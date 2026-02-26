@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../types';
 import HomeStack from './HomeStack';
-import SearchScreen from '../screens/main/SearchScreen';
+import SearchStack from './SearchStack';
 import LibraryScreen from '../screens/main/LibraryScreen';
 import UploadScreen from '../screens/main/UploadScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
@@ -49,7 +49,7 @@ const MainTabs: React.FC = () => {
             })}
         >
             <Tab.Screen name="Home" component={HomeStack} options={{ tabBarLabel: 'Dashboard' }} />
-            <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarLabel: 'Search' }} />
+            <Tab.Screen name="Search" component={SearchStack} options={{ tabBarLabel: 'Search' }} />
             <Tab.Screen name="Library" component={LibraryScreen} options={{ tabBarLabel: 'Library' }} />
             <Tab.Screen name="Upload" component={UploadScreen} options={{ tabBarLabel: 'Upload' }} />
             <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ tabBarLabel: 'Alerts' }} />

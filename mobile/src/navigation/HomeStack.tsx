@@ -4,6 +4,7 @@ import { HomeStackParamList } from '../types';
 import DashboardScreen from '../screens/main/DashboardScreen';
 import PDFReaderScreen from '../screens/main/PDFReaderScreen';
 import StudyDetailScreen from '../screens/main/StudyDetailScreen';
+import CiteGeneratorScreen from '../screens/main/CiteGeneratorScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -22,6 +23,7 @@ const HomeStack: React.FC = () => {
                 name="StudyDetail"
                 component={StudyDetailScreen}
             />
+            <Stack.Screen name="CiteGenerator" component={CiteGeneratorScreen} />
             <Stack.Screen
                 name="PDFReader"
                 component={PDFReaderScreen}

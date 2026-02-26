@@ -1,291 +1,244 @@
-import React, { useState } from 'react';
-import { 
-    View, 
-    Text, 
-    StyleSheet, 
-    ScrollView, 
-    TouchableOpacity, 
-    Platform, 
-    StatusBar,
-    Animated,
-    LayoutAnimation,
+﻿import React, { useState } from 'react';
+import {
+    View, Text, StyleSheet, ScrollView, TouchableOpacity,
+    StatusBar, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SHADOWS } from '../../constants/theme';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
-import StudyCard from '../../components/StudyCard';
 
-const CollapsibleSection = ({ title, children, isOpen, onToggle }: any) => (
-    <View style={styles.sectionContainer}>
-        <TouchableOpacity style={styles.sectionHeader} onPress={onToggle} activeOpacity={0.7}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            <Ionicons 
-                name={isOpen ? "chevron-up" : "chevron-down"} 
-                size={20} 
-                color={COLORS.text.secondary} 
-            />
-        </TouchableOpacity>
-        {isOpen && (
-            <View style={styles.sectionContent}>
-                <Text style={styles.sectionText}>{children}</Text>
-            </View>
-        )}
-    </View>
-);
+type Nav = NativeStackNavigationProp<HomeStackParamList>;
+type Route = RouteProp<HomeStackParamList, 'StudyDetail'>;
 
-const ActionButton = ({ icon, label, onPress, variant = 'secondary' }: any) => (
-    <TouchableOpacity 
-        style={[
-            styles.actionButton, 
-            variant === 'primary' && styles.actionButtonPrimary
-        ]} 
-        onPress={onPress}
-    >
-        <Ionicons 
-            name={icon} 
-            size={20} 
-            color={variant === 'primary' ? '#FFF' : COLORS.primary} 
-        />
-        <Text style={[
-            styles.actionButtonText,
-            variant === 'primary' && styles.actionButtonTextPrimary
-        ]}>{label}</Text>
-    </TouchableOpacity>
-);
+// ─── Mock study data (replace with API call using route.params.studyId) ────────
+const MOCK_STUDY = {
+    id: '1',
+    title: 'InsiQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects and Student Research at Quezon City University',
+    authors: ['Abella', 'Alboro', 'Omas', 'San Juan', 'Lazaro', 'Vicente', 'Geli Saber', 'Lopez, Vicente, and Nathaniel'],
+    year: 2025,
+    program: 'BSIT',
+    tags: ['Education', 'Mobile App', 'Cloud-Based API'],
+    abstract: 'A secure mobile application serving as the official Quezon City University repository for digitized academic theses, literatures, and capstone projects. It restricts access to institutional members and provides a structured environment for navigating past research to identify future study opportunities.',
+    methodology: 'The Project follows the Agile Methodology, an iterative process that allows for continuous feedback, easy customization, and feature refinement to ensure all user requirements are met.',
+    conclusion: 'This project will enhance students\' and faculty members\' ability to access, manage, and utilize academic research through a centralized mobile platform while applying emerging technologies in application development. It is expected to improve research visibility, reduce duplication of studies, and strengthen students\' practical skills in designing and developing modern mobile-based systems.',
+    tools: ['Artificial Intelligence (AI)', 'Internet of Things (IoT)', 'Augmented Reality (AR)', 'Dart', 'Blockchain', 'Cloud-Based API Services', 'Cross-Platform Mobile', 'Flutter', 'Visual Studio Code', 'Android SDK', 'Firebase Authentication', 'Backend REST API', 'Mongo DB'],
+    limitations: 'The app will only be accessible to Quezon City University users and will not support public or external access. The app cannot guarantee 100% accuracy in its AI-based features since its responses heavily rely on the quality of available data and user inputs. The app will not replace official university systems for thesis submission, grading, or document approval. The app cannot prevent plagiarism entirely, but only helps reduce duplication through organization and search features. The app\'s performance may depend on internet connectivity, device compatibility, and server stability. This project is limited to mobile platforms only and does not include a full desktop or web-based version. The content availability depends on the number of uploaded studies, which may initially be limited.',
+    futureRecommendation: 'In the future, the system may be enhanced by integrating Artificial Intelligence (AI) to improve research gap detection, automate abstract summarization, and provide smarter study recommendations based on user behavior and preferences.\nA web-based version of the platform may also be developed to support desktop users and provide wider accessibility across devices.',
+};
+
+const TAG_COLORS: Record<string, { bg: string; text: string }> = {
+    'Education':        { bg: 'rgba(255, 191,  0, 0.18)', text: '#FFBF00' },
+    'Mobile App':       { bg: 'rgba( 47, 128, 237, 0.18)', text: '#2F80ED' },
+    'Cloud-Based API':  { bg: 'rgba(233, 124,  58, 0.18)', text: '#E97C3A' },
+    'Cloud-based API':  { bg: 'rgba(233, 124,  58, 0.18)', text: '#E97C3A' },
+};
+
+const DEFAULT_TAG = { bg: '#ECEEF5', text: '#5A6A8A' };
+
+interface SectionProps { icon: string; title: string; children: React.ReactNode; defaultOpen?: boolean; }
+
+const Section: React.FC<SectionProps> = ({ icon, title, children, defaultOpen = true }) => {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <View style={styles.section}>
+            <TouchableOpacity style={styles.sectionHead} onPress={() => setOpen(o => !o)} activeOpacity={0.8}>
+                <View style={styles.sectionIconBox}>
+                    <Ionicons name={icon as any} size={14} color="#0E1F43" />
+                </View>
+                <Text style={styles.sectionTitle}>{title}</Text>
+                <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#9AADCA" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+            {open && <View style={styles.sectionBody}>{children}</View>}
+        </View>
+    );
+};
 
 const StudyDetailScreen: React.FC = () => {
-    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
-    const route = useRoute();
-    const studyId = (route.params as any)?.studyId || 'default';
+    const navigation = useNavigation<Nav>();
+    const study = MOCK_STUDY;
+    const [saved, setSaved] = useState(false);
 
-    const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
-        'Abstract': true,
-        'Methodology': false,
-        'Results': false,
-    });
-
-    const toggleSection = (section: string) => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section]
-        }));
-    };
+    const tagColor = (tag: string) => TAG_COLORS[tag] ?? DEFAULT_TAG;
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={COLORS.text.primary} />
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="#F5F6FA" />
+
+            {/* Top bar */}
+            <View style={styles.topBar}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+                    <Ionicons name="chevron-back" size={20} color="#0E1F43" />
                 </TouchableOpacity>
-                <View style={styles.headerActions}>
-                    <TouchableOpacity style={styles.headerIcon}>
-                        <Ionicons name="share-social-outline" size={24} color={COLORS.text.primary} />
-                    </TouchableOpacity>
-                </View>
+                <Text style={styles.topBarTitle}>Study Details</Text>
+                <View style={{ width: 36 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.titleSection}>
-                    <View style={styles.badgeContainer}>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>Computer Science</Text>
-                        </View>
-                        <Text style={styles.yearText}>2024</Text>
-                    </View>
-                    <Text style={styles.title}>Machine Learning in Academic Research</Text>
-                    <Text style={styles.authors}>By Ian Valmores, Dr. Alan Turing</Text>
-                </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-                {/* Action Row */}
-                <View style={styles.actionRow}>
-                    <ActionButton icon="bookmark-outline" label="Save" />
-                    <ActionButton icon="document-text-outline" label="Cite" />
-                    <ActionButton 
-                        icon="book-outline" 
-                        label="Read Now" 
-                        variant="primary" 
-                        onPress={() => navigation.navigate('PDFReader', { studyId })}
-                    />
-                </View>
-
-                {/* Content Sections */}
-                <CollapsibleSection 
-                    title="Abstract" 
-                    isOpen={expandedSections['Abstract']}
-                    onToggle={() => toggleSection('Abstract')}
-                >
-                    This study explores the integration of machine learning algorithms within academic research repositories to enhance searchability and recommendation systems. Using a dataset of 5,000 papers...
-                </CollapsibleSection>
-
-                <CollapsibleSection 
-                    title="Methodology" 
-                    isOpen={expandedSections['Methodology']}
-                    onToggle={() => toggleSection('Methodology')}
-                >
-                    We employed a mixed-methods approach, combining quantitative analysis of search logs with qualitative interviews of 50 university students...
-                </CollapsibleSection>
-
-                <CollapsibleSection 
-                    title="Key Findings" 
-                    isOpen={expandedSections['Results']}
-                    onToggle={() => toggleSection('Results')}
-                >
-                    1. Search time reduced by 40%.{'\n'}
-                    2. Discovery of cross-disciplinary papers increased by 25%.{'\n'}
-                    3. Student engagement with the platform doubled.
-                </CollapsibleSection>
-
-                <View style={styles.similarSection}>
-                    <Text style={styles.sectionHeaderTitle}>Similar Works</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {[1, 2, 3].map(i => (
-                            <StudyCard 
-                                key={i}
-                                study={{
-                                    title: `Related Study ${i}`,
-                                    authors: ['Smith et al.'],
-                                    category: 'AI',
-                                    yearPublished: 2023
-                                }}
-                                variant="horizontal"
-                            />
+                {/* Hero card */}
+                <View style={styles.heroCard}>
+                    {/* Tags */}
+                    <View style={styles.tagRow}>
+                        {study.tags.map(tag => (
+                            <View key={tag} style={[styles.tag, { backgroundColor: tagColor(tag).bg }]}>
+                                <Text style={[styles.tagText, { color: tagColor(tag).text }]}>{tag}</Text>
+                            </View>
                         ))}
-                    </ScrollView>
+                    </View>
+
+                    {/* Title */}
+                    <Text style={styles.heroTitle}>{study.title}</Text>
+
+                    {/* Authors */}
+                    <View style={styles.metaRow}>
+                        <Ionicons name="people-outline" size={13} color="rgba(255,255,255,0.55)" />
+                        <Text style={styles.metaText} numberOfLines={2}>{study.authors.join(', ')}</Text>
+                    </View>
+                    <View style={styles.metaRow}>
+                        <Ionicons name="calendar-outline" size={13} color="rgba(255,255,255,0.55)" />
+                        <Text style={styles.metaText}>{study.year}</Text>
+                        <View style={styles.programBadge}>
+                            <Text style={styles.programText}>{study.program}</Text>
+                        </View>
+                    </View>
+
+                    {/* Action buttons */}
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity style={styles.actionBtn} onPress={() => setSaved(s => !s)} activeOpacity={0.8}>
+                            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={15} color={saved ? '#E97C3A' : '#fff'} />
+                            <Text style={styles.actionBtnText}>Save</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
+                            <Ionicons name="download-outline" size={15} color="#fff" />
+                            <Text style={styles.actionBtnText}>Download</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.actionBtn, styles.actionBtnAccent]} activeOpacity={0.8} onPress={() => navigation.navigate('CiteGenerator', { studyId: study.id })}>
+                            <Ionicons name="copy-outline" size={15} color="#0E1F43" />
+                            <Text style={[styles.actionBtnText, { color: '#0E1F43' }]}>Cite</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
+
+                {/* Sections */}
+                <Section icon="document-text-outline" title="Abstract">
+                    <Text style={styles.bodyText}>{study.abstract}</Text>
+                </Section>
+
+                <Section icon="flask-outline" title="Methodology">
+                    <Text style={styles.bodyText}>{study.methodology}</Text>
+                </Section>
+
+                <Section icon="checkmark-done-outline" title="Conclusion">
+                    <Text style={styles.bodyText}>{study.conclusion}</Text>
+                </Section>
+
+                <Section icon="construct-outline" title="Tools and Technology">
+                    <View style={styles.chipWrap}>
+                        {study.tools.map(tool => (
+                            <View key={tool} style={styles.toolChip}>
+                                <Text style={styles.toolChipText}>{tool}</Text>
+                            </View>
+                        ))}
+                    </View>
+                </Section>
+
+                <Section icon="warning-outline" title="Limitations" defaultOpen={false}>
+                    <Text style={styles.bodyText}>{study.limitations}</Text>
+                </Section>
+
+                <Section icon="bulb-outline" title="Future Recommendation" defaultOpen={false}>
+                    <Text style={styles.bodyText}>{study.futureRecommendation}</Text>
+                </Section>
+
             </ScrollView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+    topBar: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 16, paddingVertical: 10,
+        backgroundColor: '#F5F6FA',
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: SPACING.m,
-        paddingVertical: SPACING.s,
-        backgroundColor: COLORS.card,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+    backBtn: {
+        width: 36, height: 36, borderRadius: 10,
+        backgroundColor: '#fff',
+        justifyContent: 'center', alignItems: 'center',
+        borderWidth: 1, borderColor: '#E0E5F0',
+        shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
     },
-    backButton: {
-        padding: SPACING.s,
+    topBarTitle: { fontSize: 16, fontWeight: '800', color: '#0E1F43' },
+
+    scroll: { paddingHorizontal: 16, paddingBottom: 110, gap: 12 },
+
+    // Hero card
+    heroCard: {
+        backgroundColor: '#0E1F43',
+        borderRadius: 18,
+        padding: 18,
+        gap: 10,
     },
-    headerActions: {
-        flexDirection: 'row',
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+    tagText: { fontSize: 11, fontWeight: '700' },
+    heroTitle: { fontSize: 15, fontWeight: '800', color: '#fff', lineHeight: 22 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    metaText: { fontSize: 12, color: 'rgba(255,255,255,0.65)', flex: 1 },
+    programBadge: {
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3,
     },
-    headerIcon: {
-        padding: SPACING.s,
+    programText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+    actionRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+    actionBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
     },
-    scrollContent: {
-        paddingBottom: SPACING.xl,
+    actionBtnAccent: {
+        backgroundColor: '#E97C3A', borderColor: '#E97C3A',
     },
-    titleSection: {
-        padding: SPACING.l,
-        backgroundColor: COLORS.card,
-        marginBottom: SPACING.m,
+    actionBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+    // Section
+    section: {
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        borderWidth: 1, borderColor: '#F0F2F8',
+        shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+        overflow: 'hidden',
     },
-    badgeContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: SPACING.s,
+    sectionHead: {
+        flexDirection: 'row', alignItems: 'center',
+        gap: 8, padding: 14,
     },
-    badge: {
-        backgroundColor: COLORS.secondary + '20', // 20% opacity
-        paddingHorizontal: SPACING.s,
-        paddingVertical: 4,
-        borderRadius: BORDER_RADIUS.s,
-        marginRight: SPACING.m,
+    sectionIconBox: {
+        width: 26, height: 26, borderRadius: 7,
+        backgroundColor: '#F0F2F8',
+        justifyContent: 'center', alignItems: 'center',
     },
-    badgeText: {
-        color: COLORS.secondary,
-        fontWeight: 'bold',
-        fontSize: 12,
+    sectionTitle: { fontSize: 13, fontWeight: '700', color: '#0E1F43' },
+    sectionBody: {
+        paddingHorizontal: 14, paddingBottom: 14, paddingTop: 0,
+        borderTopWidth: 1, borderTopColor: '#F5F6FA',
     },
-    yearText: {
-        color: COLORS.text.secondary,
-        fontSize: 12,
+    bodyText: { fontSize: 13, color: '#5A6A8A', lineHeight: 20 },
+
+    // Tool chips
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+    toolChip: {
+        backgroundColor: '#EEF1F8',
+        borderRadius: 20, paddingHorizontal: 11, paddingVertical: 5,
     },
-    title: {
-        ...TYPOGRAPHY.h2,
-        color: COLORS.primary,
-        marginBottom: SPACING.s,
-    },
-    authors: {
-        ...TYPOGRAPHY.body,
-        color: COLORS.text.secondary,
-        fontStyle: 'italic',
-    },
-    actionRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        padding: SPACING.m,
-        backgroundColor: COLORS.card,
-        marginBottom: SPACING.m,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: SPACING.s,
-        paddingHorizontal: SPACING.m,
-        borderRadius: BORDER_RADIUS.full,
-        backgroundColor: COLORS.background,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-    },
-    actionButtonPrimary: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    actionButtonText: {
-        marginLeft: SPACING.s,
-        color: COLORS.primary,
-        fontWeight: '600',
-        fontSize: 12,
-    },
-    actionButtonTextPrimary: {
-        color: '#FFF',
-    },
-    sectionContainer: {
-        backgroundColor: COLORS.card,
-        marginBottom: 1, // separator look
-        padding: SPACING.m,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    sectionTitle: {
-        ...TYPOGRAPHY.h3,
-        fontSize: 16,
-    },
-    sectionContent: {
-        marginTop: SPACING.m,
-    },
-    sectionText: {
-        ...TYPOGRAPHY.body,
-        color: COLORS.text.secondary,
-        lineHeight: 24,
-    },
-    similarSection: {
-        marginTop: SPACING.m,
-        paddingLeft: SPACING.m,
-    },
-    sectionHeaderTitle: {
-        ...TYPOGRAPHY.h3,
-        marginBottom: SPACING.m,
-        color: COLORS.text.primary,
-    }
+    toolChipText: { fontSize: 11, fontWeight: '600', color: '#3B4F70' },
 });
 
 export default StudyDetailScreen;
