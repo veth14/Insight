@@ -1,16 +1,12 @@
 ﻿import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    FlatList, StatusBar, LayoutAnimation, Platform, UIManager,
+    FlatList, StatusBar, LayoutAnimation,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 type SubmissionStatus = 'pending' | 'approved' | 'denied';
 
