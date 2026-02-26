@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Dimensions, StatusBar, TouchableOpacity, Image, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
@@ -89,18 +90,20 @@ const OnboardingScreen: React.FC = () => {
         ]).start();
     }, []);
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentIndex < SLIDES.length - 1) {
             flatListRef.current?.scrollToIndex({
                 index: currentIndex + 1,
                 animated: true,
             });
         } else {
+            await AsyncStorage.setItem('hasSeenOnboarding', 'true');
             navigation.replace('Login');
         }
     };
 
-    const handleSkip = () => {
+    const handleSkip = async () => {
+        await AsyncStorage.setItem('hasSeenOnboarding', 'true');
         navigation.replace('Login');
     };
 

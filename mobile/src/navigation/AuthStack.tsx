@@ -11,17 +11,21 @@ import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
+interface AuthStackProps {
+    initialRouteName?: keyof AuthStackParamList;
+}
+
 /**
  * AuthStack Navigator
  * Handles authentication-related screens
  */
-const AuthStack: React.FC = () => {
+const AuthStack: React.FC<AuthStackProps> = ({ initialRouteName = 'Onboarding' }) => {
     return (
         <Stack.Navigator
             screenOptions={{
                 headerShown: false,
             }}
-            initialRouteName="Onboarding"
+            initialRouteName={initialRouteName}
         >
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
