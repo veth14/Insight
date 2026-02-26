@@ -115,7 +115,7 @@ const DashboardScreen: React.FC = () => {
                 {/* â”€â”€ Trending â”€â”€ */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Trending</Text>
-                    <TouchableOpacity><Text style={styles.seeAll}>See all</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('TrendingAll')}><Text style={styles.seeAll}>See all</Text></TouchableOpacity>
                 </View>
                 <View style={styles.trendingList}>
                     {MOCK_TRENDING.map(item => (

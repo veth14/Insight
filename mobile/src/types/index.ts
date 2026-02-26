@@ -115,6 +115,7 @@ export type HomeStackParamList = {
     Downloads: undefined;
     PrivacyPolicy: undefined;
     TermsOfUse: undefined;
+    TrendingAll: undefined;
 };
 
 export type SearchStackParamList = {
