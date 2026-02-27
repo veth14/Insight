@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SearchStackParamList } from '../../types';
 import AppHeader from '../../components/AppHeader';
@@ -60,6 +60,9 @@ const SearchScreen: React.FC = () => {
     const [results, setResults]   = useState<StudyCard[]>([]);
     const [loading, setLoading]   = useState(false);
     const [searched, setSearched] = useState(false);   // whether user has triggered a search
+    const [page, setPage]         = useState(1);
+    const [total, setTotal]       = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
     const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
 
     // Bookmark toggle for visible cards
@@ -77,12 +80,12 @@ const SearchScreen: React.FC = () => {
         }
     };
 
-    const doSearch = useCallback(async (overrideQuery?: string) => {
+    const doSearch = useCallback(async (overrideQuery?: string, pageNum = 1) => {
         const q = overrideQuery ?? query;
-        setLoading(true);
-        setSearched(true);
+        if (pageNum === 1) { setLoading(true); setSearched(true); }
+        else setLoading(true);
         try {
-            const params: Record<string, string> = { limit: '30' };
+            const params: Record<string, string> = { limit: '30', page: String(pageNum) };
             if (q.trim())                                    params.q        = q.trim();
             if (activeCategory !== 'All Categories')         params.category = activeCategory;
             if (activeTheme    !== 'All')                    params.studyType = activeTheme;
@@ -90,11 +93,15 @@ const SearchScreen: React.FC = () => {
             if (toYear)                                      params.toYear   = toYear;
 
             const res = await api.get('/studies/search', { params });
-            setResults(res.data.studies ?? []);
+            const studies = res.data.studies ?? [];
+            setResults(prev => pageNum === 1 ? studies : [...prev, ...studies]);
+            setTotal(res.data.total ?? (pageNum === 1 ? studies.length : total));
+            setPage(pageNum);
         } catch (e) {
             console.error('search error', e);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     }, [query, activeCategory, activeTheme, fromYear, toYear]);
 
@@ -102,6 +109,19 @@ const SearchScreen: React.FC = () => {
     useEffect(() => {
         if (searched) doSearch();
     }, [activeCategory]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Keep track of which studies are bookmarked for UI state
+    useFocusEffect(useCallback(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const res = await api.get('/studies/bookmarks');
+                const ids = (res.data.studies || []).map((s: any) => s._id);
+                if (mounted) setBookmarked(new Set(ids));
+            } catch (_e) { /* ignore */ }
+        })();
+        return () => { mounted = false; };
+    }, []));
 
     const handleAdvancedSearch = () => {
         setQuery(keywords);
@@ -170,6 +190,17 @@ const SearchScreen: React.FC = () => {
                     keyExtractor={item => item._id}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.listContent}
+                    onEndReached={() => {
+                        if (!loading && results.length < total) doSearch(undefined, page + 1);
+                    }}
+                    onEndReachedThreshold={0.6}
+                    refreshing={refreshing}
+                    onRefresh={() => { setRefreshing(true); setPage(1); doSearch(undefined, 1); }}
+                    ListFooterComponent={loading && page > 1 ? (
+                        <View style={{ paddingVertical: 12 }}>
+                            <ActivityIndicator size="small" color="#0E1F43" />
+                        </View>
+                    ) : null}
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             style={styles.resultCard}
