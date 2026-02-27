@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ActivityIndicator,
     TouchableOpacity, Platform, StatusBar,
@@ -20,14 +20,43 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
     const [title, setTitle]     = useState('Document');
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState<string | null>(null);
+    const [lastPage, setLastPage] = useState(1);
+    const progressTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Debounced progress reporter — fires 2 s after the last page change
+    const handleMessage = useCallback((event: any) => {
+        try {
+            const msg = JSON.parse(event.nativeEvent.data);
+            if (msg.type !== 'pageChange') return;
+            const { page, total } = msg as { page: number; total: number };
+            if (!page || !total) return;
+
+            if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
+            progressTimerRef.current = setTimeout(async () => {
+                const progress = Math.min(100, Math.round((page / total) * 100));
+                try {
+                    await api.put(`/studies/${studyId}/progress`, {
+                        lastPage:   page,
+                        totalPages: total,
+                        progress,
+                    });
+                } catch { /* silent — progress is best-effort */ }
+            }, 2000);
+        } catch { /* ignore malformed messages */ }
+    }, [studyId]);
+
+    useEffect(() => {
+        return () => { if (progressTimerRef.current) clearTimeout(progressTimerRef.current); };
+    }, []);
 
     useEffect(() => {
         (async () => {
             try {
                 const res = await api.get(`/studies/${studyId}`);
-                const { fileUrl: url, title: t } = res.data;
+                const { fileUrl: url, title: t, lastPage: lp } = res.data;
                 if (!url) { setError('No document available for this study.'); return; }
                 setTitle(t ?? 'Document');
+                setLastPage(lp && lp > 1 ? lp : 1);
                 setFileUrl(url);
             } catch (e: any) {
                 setError('Failed to load the document. Please try again.');
@@ -37,7 +66,7 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
         })();
     }, [studyId]);
 
-    const pdfHtml = (url: string) => `<!DOCTYPE html>
+    const pdfHtml = (url: string, startPage: number = 1) => `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=4.0, user-scalable=yes">
@@ -85,6 +114,7 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
 (function(){
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   const PDF_URL=decodeURIComponent('${encodeURIComponent(url)}');
+  const START_PAGE=${startPage};
   const DPR=Math.min(window.devicePixelRatio||1,3);
   const GUTTER=20;
   const CSS_WIDTH=window.innerWidth-GUTTER;
@@ -93,8 +123,9 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
   const badge=document.getElementById('badge');
   const pages=document.getElementById('pages');
   let totalPages=0,badgeTimer=null;
-  function showBadge(text){badge.textContent=text;badge.classList.add('show');clearTimeout(badgeTimer);badgeTimer=setTimeout(()=>badge.classList.remove('show'),2000)}
-  const visObserver=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.intersectionRatio>0.3)showBadge(e.target.dataset.page+' / '+totalPages)})},{threshold:[0.3,0.6]});
+  function postPage(page,total){try{if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:'pageChange',page:+page,total:+total}))}catch(_){}}
+  function showBadge(page){const text=page+' / '+totalPages;badge.textContent=text;badge.classList.add('show');clearTimeout(badgeTimer);badgeTimer=setTimeout(()=>badge.classList.remove('show'),2000);postPage(page,totalPages)}
+  const visObserver=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.intersectionRatio>0.3)showBadge(e.target.dataset.page)})},{threshold:[0.3,0.6]});
   function renderPageIntoCard(pdf,num,card){
     pdf.getPage(num).then(page=>{
       const baseVp=page.getViewport({scale:1});
@@ -132,8 +163,14 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
       },{rootMargin:'250px'});
       document.querySelectorAll('.page-card').forEach(c=>lazyObs.observe(c));
       splashBar.style.width='100%';
-      setTimeout(()=>splash.classList.add('hide'),350);
-      showBadge('1 / '+totalPages);
+      setTimeout(()=>{
+        splash.classList.add('hide');
+        if(START_PAGE>1){
+          const t=document.querySelector('[data-page="'+START_PAGE+'"]');
+          if(t)t.scrollIntoView({behavior:'instant',block:'start'});
+        }
+        showBadge(START_PAGE);
+      },400);
     });
   }
   const task=pdfjsLib.getDocument({url:PDF_URL,withCredentials:false});
@@ -179,11 +216,12 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
                 </View>
             ) : fileUrl ? (
                 <WebView
-                    source={{ html: pdfHtml(fileUrl) }}
+                    source={{ html: pdfHtml(fileUrl, lastPage) }}
                     style={{ flex: 1, backgroundColor: '#e8ecf2' }}
                     originWhitelist={['*']}
                     javaScriptEnabled
                     startInLoadingState
+                    onMessage={handleMessage}
                     renderLoading={() => (
                         <View style={styles.center}>
                             <ActivityIndicator size="large" color="#0E1F43" />

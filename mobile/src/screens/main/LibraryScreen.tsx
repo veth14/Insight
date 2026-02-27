@@ -192,12 +192,16 @@ const LibraryScreen: React.FC = () => {
                         <Text style={styles.cardAuthors} numberOfLines={1}>{joinAuthors(item.authors)}</Text>
                         <Text style={styles.cardAbstract} numberOfLines={2}>{item.abstract}</Text>
 
-                        {activeTab === 'in_progress' && item.progress > 0 && (
+                        {item.progress > 0 && (
                             <View style={styles.progressWrapper}>
                                 <View style={styles.progressTrack}>
-                                    <View style={[styles.progressFill, { width: `${item.progress}%` as any }]} />
+                                    <View style={[styles.progressFill, { width: `${Math.min(item.progress, 100)}%` as any,
+                                        backgroundColor: item.progress >= 100 ? '#22C55E' : '#0E1F43',
+                                    }]} />
                                 </View>
-                                <Text style={styles.progressLabel}>{Math.round(item.progress)}% read</Text>
+                                <Text style={styles.progressLabel}>
+                                    {item.progress >= 100 ? 'Completed' : `${Math.round(item.progress)}% read`}
+                                </Text>
                             </View>
                         )}
 

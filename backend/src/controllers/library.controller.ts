@@ -98,13 +98,36 @@ export const getBookmarks = async (req: Request, res: Response): Promise<void> =
             .lean();
 
         const studyIds = bookmarks.map(b => b.studyId);
-        const studies  = await AcademicStudy.find({ _id: { $in: studyIds } })
-            .select(STUDY_CARD_FIELDS)
-            .lean();
+        const [studies, readingHistory] = await Promise.all([
+            AcademicStudy.find({ _id: { $in: studyIds } })
+                .select(STUDY_CARD_FIELDS)
+                .lean(),
+            ReadingHistory.find({ userId: uid, studyId: { $in: studyIds } })
+                .select('studyId progress lastPage totalPages lastReadAt')
+                .lean(),
+        ]);
 
-        // Preserve bookmark order
+        // Build a progress map keyed by studyId
+        const progressMap = new Map(
+            readingHistory.map(r => [String(r.studyId), r])
+        );
+
+        // Preserve bookmark order and merge progress
         const studyMap = new Map(studies.map(s => [String(s._id), s]));
-        const ordered  = studyIds.map(id => studyMap.get(String(id))).filter(Boolean);
+        const ordered  = studyIds
+            .map(id => {
+                const study    = studyMap.get(String(id));
+                const progress = progressMap.get(String(id));
+                if (!study) return null;
+                return {
+                    ...study,
+                    progress:   progress?.progress   ?? 0,
+                    lastPage:   progress?.lastPage   ?? 0,
+                    totalPages: progress?.totalPages ?? 0,
+                    lastReadAt: progress?.lastReadAt ?? null,
+                };
+            })
+            .filter(Boolean);
 
         res.json({ studies: ordered });
     } catch (error: any) {
@@ -330,10 +353,14 @@ export const getStudyById = async (req: Request, res: Response): Promise<void> =
         // Increment view count (fire-and-forget)
         AcademicStudy.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => {});
 
-        // Check bookmark status for current user
-        const isBookmarked = uid
-            ? !!(await Bookmark.exists({ userId: uid, studyId: id }))
-            : false;
+        // Check bookmark status + reading progress for current user
+        const [isBookmarkedDoc, readingRecord] = await Promise.all([
+            uid ? Bookmark.exists({ userId: uid, studyId: id }) : Promise.resolve(null),
+            uid ? ReadingHistory.findOne({ userId: uid, studyId: id })
+                      .select('lastPage totalPages progress').lean()
+                : Promise.resolve(null),
+        ]);
+        const isBookmarked = !!isBookmarkedDoc;
 
         // Sign both image and PDF URLs
         const [signedFileUrl, signedImageUrl] = await Promise.all([
@@ -346,6 +373,10 @@ export const getStudyById = async (req: Request, res: Response): Promise<void> =
             fileUrl:        signedFileUrl,
             systemImageUrl: signedImageUrl,
             isBookmarked,
+            // Reading-resume data (null when user has never opened the PDF)
+            lastPage:   (readingRecord as any)?.lastPage   ?? null,
+            totalPages: (readingRecord as any)?.totalPages ?? null,
+            progress:   (readingRecord as any)?.progress   ?? null,
         });
     } catch (error: any) {
         console.error('getStudyById error:', error);
