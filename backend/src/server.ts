@@ -1,5 +1,5 @@
+import './config/env'; // ⚠️ Must be first — loads .env before any other module
 import express, { Application } from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -9,10 +9,8 @@ import { connectDB } from './config/database';
 import { initializeFirebase } from './config/firebase';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
+import studiesRoutes from './routes/studies.routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
-
-// Load environment variables
-dotenv.config();
 
 // Initialize Express app
 const app: Application = express();
@@ -57,11 +55,7 @@ app.get('/health', (req, res) => {
  */
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
-// TODO: Add more routes
-// app.use('/api/studies', studyRoutes);
-// app.use('/api/bookmarks', bookmarkRoutes);
-// app.use('/api/reading-history', readingHistoryRoutes);
-// app.use('/api/analytics', analyticsRoutes);
+app.use('/api/studies', studiesRoutes);
 
 /**
  * Error Handlers

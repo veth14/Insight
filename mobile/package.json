@@ -37,6 +37,7 @@
     "@babel/core": "^7.23.5",
     "@types/babel__core": "^7.20.5",
     "@types/react": "~19.1.10",
+    "expo-module-scripts": "^55.0.2",
     "react-refresh": "^0.18.0",
     "typescript": "^5.3.3"
   },

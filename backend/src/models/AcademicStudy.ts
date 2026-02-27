@@ -3,19 +3,28 @@ import mongoose, { Schema, Document } from 'mongoose';
 /**
  * Academic Study Document Interface
  */
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
 export interface IAcademicStudy extends Document {
     title: string;
     authors: string[];
     abstract: string;
+    methodology?: string;
+    keyFindings?: string;
+    toolsUsed?: string[];
     keywords: string[];
     category: string;
+    studyType: string;         // e.g. 'Thesis' | 'Project' | 'Dissertation'
     yearPublished: number;
-    uploadedBy: string; // User UID
-    fileUrl: string; // Supabase file path
+    uploadedBy: string;        // User UID
+    fileUrl: string;
+    systemImageUrl?: string;
     thumbnailUrl?: string;
-    fullText: string; // Extracted text for search
+    fullText: string;
     downloadCount: number;
     viewCount: number;
+    approvalStatus: ApprovalStatus;
+    rejectionReason?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -64,6 +73,10 @@ const AcademicStudySchema: Schema = new Schema(
             type: String,
             required: true,
         },
+        systemImageUrl: {
+            type: String,
+            default: null,
+        },
         thumbnailUrl: {
             type: String,
         },
@@ -72,6 +85,22 @@ const AcademicStudySchema: Schema = new Schema(
             required: true,
             text: true, // Enable text search on full text
         },
+        methodology:  { type: String, default: null },
+        keyFindings:  { type: String, default: null },
+        toolsUsed:    { type: [String], default: [] },
+        studyType: {
+            type: String,
+            required: true,
+            default: 'Thesis',
+            index: true,
+        },
+        approvalStatus: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending',
+            index: true,
+        },
+        rejectionReason: { type: String, default: null },
         downloadCount: {
             type: Number,
             default: 0,

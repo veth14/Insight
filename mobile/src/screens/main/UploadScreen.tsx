@@ -1,69 +1,245 @@
 ﻿import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
-    ScrollView, StatusBar, Platform,
+    ScrollView, StatusBar, Platform, Alert, ActivityIndicator,
+    KeyboardAvoidingView, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
+import { auth } from '../../config/firebase';
 
 const DEPARTMENTS = ['BSIT', 'BSCS', 'BSIS'];
-const RESEARCH_TYPES = ['Quantitative', 'Qualitative', 'Mixed Methods'];
-const CATEGORIES = ['AI/ML', 'Mobile Dev', 'IoT', 'Web System', 'Security', 'Data Analytics', 'Multimedia'];
+const STUDY_TYPES = ['Thesis', 'Project', 'Dissertation'];
+const CATEGORIES  = ['AI/ML', 'Mobile Dev', 'IoT', 'Web System', 'Security', 'Data Analytics', 'Multimedia'];
+const TOOLS_LIST  = [
+    'React Native', 'React', 'Vue.js', 'Angular', 'Next.js',
+    'Node.js', 'Express', 'Laravel', 'Django', 'Flask',
+    'Python', 'Java', 'Kotlin', 'Swift', 'PHP', 'C#', 'C++',
+    'MySQL', 'MongoDB', 'PostgreSQL', 'Firebase', 'Supabase',
+    'Arduino', 'Raspberry Pi', 'ESP32', 'TensorFlow', 'PyTorch',
+    'Flutter', 'Unity', 'Android Studio', 'Xcode', 'Figma',
+];
+
+interface PickedFile {
+    uri: string;
+    name: string;
+    size?: number;
+    mimeType?: string;
+}
+
+const formatSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const SectionCard = React.memo(({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
+    <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+            <View style={styles.sectionIconBox}>
+                <Ionicons name={icon as any} size={15} color="#0E1F43" />
+            </View>
+            <Text style={styles.sectionTitle}>{title}</Text>
+        </View>
+        {children}
+    </View>
+));
+
+const ChipGroup = React.memo(({ items, active, onSelect }: { items: string[]; active: string; onSelect: (v: string) => void }) => (
+    <View style={styles.chipGroup}>
+        {items.map(item => (
+            <TouchableOpacity
+                key={item}
+                style={[styles.chip, active === item && styles.chipActive]}
+                onPress={() => onSelect(item)}
+                activeOpacity={0.8}
+            >
+                {active === item && <Ionicons name="checkmark" size={12} color="#fff" style={{ marginRight: 4 }} />}
+                <Text style={[styles.chipText, active === item && styles.chipTextActive]}>{item}</Text>
+            </TouchableOpacity>
+        ))}
+    </View>
+));
 
 const UploadScreen: React.FC = () => {
-    const [title, setTitle] = useState('');
-    const [authors, setAuthors] = useState('');
-    const [abstract, setAbstract] = useState('');
-    const [year, setYear] = useState('');
+    // Form fields
+    const [title, setTitle]           = useState('');
+    const [authors, setAuthors]       = useState('');
+    const [abstract, setAbstract]     = useState('');
+    const [year, setYear]             = useState(String(new Date().getFullYear()));
     const [activeDept, setActiveDept] = useState('');
     const [activeType, setActiveType] = useState('');
     const [activeCategory, setActiveCategory] = useState('');
-    const [fileName, setFileName] = useState('');
+    const [keywords, setKeywords]     = useState('');
+    const [methodology, setMethodology]   = useState('');
+    const [keyFindings, setKeyFindings]   = useState('');
+    const [selectedTools, setSelectedTools] = useState<string[]>([]);
 
-    const handlePickFile = () => {
-        setFileName('sample_research.pdf');
+    const toggleTool = (tool: string) =>
+        setSelectedTools(prev =>
+            prev.includes(tool) ? prev.filter(t => t !== tool) : [...prev, tool]
+        );
+
+    // File
+    const [pickedFile, setPickedFile]   = useState<PickedFile | null>(null);
+    const [pickedImage, setPickedImage] = useState<{ uri: string; name: string; mimeType: string } | null>(null);
+
+    // Upload state
+    const [uploading, setUploading]   = useState(false);
+    const [submitted, setSubmitted]   = useState(false);
+
+    /* ── Pick Image ─────────────────────────────────────────────────── */
+    const handlePickImage = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert('Permission Required', 'Please allow access to your photo library to upload a system image.');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+            allowsEditing: true,
+            aspect: [4, 3],
+        });
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+        const asset    = result.assets[0];
+        const ext      = asset.uri.split('.').pop() ?? 'jpg';
+        const mimeType = asset.mimeType ?? `image/${ext}`;
+        setPickedImage({ uri: asset.uri, name: `system_image.${ext}`, mimeType });
     };
 
-    const handleSubmit = () => {};
+    /* ── Pick PDF ──────────────────────────────────────────────────── */
+    const handlePickFile = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'application/pdf',
+                copyToCacheDirectory: true,
+            });
+            if (result.canceled || !result.assets || result.assets.length === 0) return;
+            const asset = result.assets[0];
+            setPickedFile({
+                uri:      asset.uri,
+                name:     asset.name,
+                size:     asset.size,
+                mimeType: asset.mimeType ?? 'application/pdf',
+            });
+        } catch (err) {
+            Alert.alert('Error', 'Could not open file picker. Please try again.');
+        }
+    };
 
-    const isReady = title && authors && abstract && year && activeDept && activeType && activeCategory;
+    /* ── Submit ────────────────────────────────────────────────────── */
+    const handleSubmit = async () => {
+        if (!pickedFile) {
+            Alert.alert('Missing PDF', 'Please attach a PDF file before submitting.');
+            return;
+        }
+        if (!pickedImage) {
+            Alert.alert('Missing Image', 'Please upload a logo or screenshot of your system.');
+            return;
+        }
 
-    const SectionCard = ({ icon, title: t, children }: { icon: string; title: string; children: React.ReactNode }) => (
-        <View style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-                <View style={styles.sectionIconBox}>
-                    <Ionicons name={icon as any} size={15} color="#0E1F43" />
+        setUploading(true);
+        try {
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) throw new Error('Not authenticated');
+
+            const form = new FormData();
+            form.append('pdf', {
+                uri:  pickedFile.uri,
+                name: pickedFile.name,
+                type: pickedFile.mimeType ?? 'application/pdf',
+            } as any);
+            form.append('image', {
+                uri:  pickedImage.uri,
+                name: pickedImage.name,
+                type: pickedImage.mimeType,
+            } as any);
+            form.append('title',         title.trim());
+            form.append('authors',       authors.trim());
+            form.append('abstract',      abstract.trim());
+            form.append('keywords',      keywords.trim());
+            form.append('methodology',    methodology.trim());
+            form.append('keyFindings',    keyFindings.trim());
+            form.append('toolsUsed',      selectedTools.join(','));
+            form.append('category',      activeCategory);
+            form.append('studyType',     activeType);
+            form.append('yearPublished', year.trim());
+
+            const res = await fetch(
+                `${process.env.EXPO_PUBLIC_API_URL}/studies/upload`,
+                {
+                    method:  'POST',
+                    body:    form as any,
+                    headers: { Authorization: `Bearer ${idToken}` },
+                },
+            );
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message ?? `Error ${res.status}`);
+
+            setSubmitted(true);
+        } catch (err: any) {
+            console.error('Upload error:', err);
+            Alert.alert('Upload Failed', err.message ?? 'Something went wrong. Please try again.');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const resetForm = () => {
+        setTitle(''); setAuthors(''); setAbstract(''); setYear(String(new Date().getFullYear()));
+        setActiveDept(''); setActiveType(''); setActiveCategory(''); setKeywords('');
+        setMethodology(''); setKeyFindings(''); setSelectedTools([]);
+        setPickedFile(null); setPickedImage(null); setSubmitted(false);
+    };
+
+    const isReady = title && authors && abstract && year && activeType && activeCategory && pickedFile && pickedImage && !uploading;
+
+    /* ── Success Screen ─────────────────────────────────────────────── */
+    if (submitted) {
+        return (
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" backgroundColor="#F5F6FA" />
+                <AppHeader />
+                <View style={styles.successBox}>
+                    <View style={styles.successIcon}>
+                        <Ionicons name="checkmark-circle" size={ms(62)} color="#16A34A" />
+                    </View>
+                    <Text style={styles.successTitle}>Submitted!</Text>
+                    <Text style={styles.successSub}>
+                        Your research has been submitted and is pending admin review.{'\n'}
+                        You'll be notified once it's approved.
+                    </Text>
+                    <TouchableOpacity style={[styles.submitBtn, { marginTop: vs(28), alignSelf: 'stretch' }]} onPress={resetForm} activeOpacity={0.8}>
+                        <Ionicons name="add-circle-outline" size={ms(18)} color="#fff" />
+                        <Text style={styles.submitBtnText}>Submit Another</Text>
+                    </TouchableOpacity>
                 </View>
-                <Text style={styles.sectionTitle}>{t}</Text>
-            </View>
-            {children}
-        </View>
-    );
+            </SafeAreaView>
+        );
+    }
 
-    const ChipGroup = ({ items, active, onSelect }: { items: string[]; active: string; onSelect: (v: string) => void }) => (
-        <View style={styles.chipGroup}>
-            {items.map(item => (
-                <TouchableOpacity
-                    key={item}
-                    style={[styles.chip, active === item && styles.chipActive]}
-                    onPress={() => onSelect(item)}
-                    activeOpacity={0.8}
-                >
-                    {active === item && <Ionicons name="checkmark" size={12} color="#fff" style={{ marginRight: 4 }} />}
-                    <Text style={[styles.chipText, active === item && styles.chipTextActive]}>{item}</Text>
-                </TouchableOpacity>
-            ))}
-        </View>
-    );
-
+    /* ── Form ───────────────────────────────────────────────────────── */
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle="dark-content" backgroundColor="#F5F6FA" />
             <AppHeader />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scroll}
+                keyboardShouldPersistTaps="always"
+                keyboardDismissMode="none"
+            >
 
                 <View style={styles.headerSection}>
                     <Text style={styles.pageTitle}>Submit Research</Text>
@@ -73,31 +249,14 @@ const UploadScreen: React.FC = () => {
                 {/* Basic Info */}
                 <SectionCard icon="document-text-outline" title="Basic Information">
                     <Text style={styles.label}>Research Title <Text style={styles.req}>*</Text></Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter full title of the study..."
-                        placeholderTextColor="#9AADCA"
-                        value={title}
-                        onChangeText={setTitle}
-                    />
+                    <TextInput style={styles.input} placeholder="Enter full title of the study..." placeholderTextColor="#9AADCA" value={title} onChangeText={setTitle} />
+
                     <Text style={[styles.label, { marginTop: 14 }]}>Authors <Text style={styles.req}>*</Text></Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="e.g. dela Cruz J., Santos M.,"
-                        placeholderTextColor="#9AADCA"
-                        value={authors}
-                        onChangeText={setAuthors}
-                    />
+                    <TextInput style={styles.input} placeholder="e.g. Dela Cruz, Juan A.; Santos, Maria B." placeholderTextColor="#9AADCA" value={authors} onChangeText={setAuthors} />
+                    <Text style={styles.hint}>Separate multiple authors with semicolons ( ; )</Text>
+
                     <Text style={[styles.label, { marginTop: 14 }]}>Year Published <Text style={styles.req}>*</Text></Text>
-                    <TextInput
-                        style={[styles.input, styles.yearInput]}
-                        placeholder="e.g. 2024"
-                        placeholderTextColor="#9AADCA"
-                        value={year}
-                        onChangeText={setYear}
-                        keyboardType="numeric"
-                        maxLength={4}
-                    />
+                    <TextInput style={[styles.input, styles.yearInput]} placeholder="e.g. 2024" placeholderTextColor="#9AADCA" value={year} onChangeText={setYear} keyboardType="numeric" maxLength={4} />
                 </SectionCard>
 
                 {/* Abstract */}
@@ -109,39 +268,134 @@ const UploadScreen: React.FC = () => {
                         value={abstract}
                         onChangeText={setAbstract}
                         multiline
-                        numberOfLines={5}
                         textAlignVertical="top"
+                        blurOnSubmit={false}
+                        returnKeyType="default"
+                        scrollEnabled={false}
                     />
                     <Text style={styles.charCount}>{abstract.length} characters</Text>
                 </SectionCard>
 
+                {/* Keywords */}
+                <SectionCard icon="pricetag-outline" title="Keywords">
+                    <TextInput style={styles.input} placeholder="e.g. Machine Learning, IoT, Web System" placeholderTextColor="#9AADCA" value={keywords} onChangeText={setKeywords} />
+                    <Text style={styles.hint}>Separate keywords with commas</Text>
+                </SectionCard>
+
+                {/* Research Details */}
+                <SectionCard icon="bulb-outline" title="Research Details (Optional)">
+                    <Text style={styles.label}>Methodology</Text>
+                    <TextInput
+                        style={[styles.input, styles.textarea, { minHeight: vs(80) }]}
+                        placeholder="e.g. Agile development, Experimental research, Descriptive method…"
+                        placeholderTextColor="#9AADCA"
+                        value={methodology}
+                        onChangeText={setMethodology}
+                        multiline
+                        textAlignVertical="top"
+                        blurOnSubmit={false}
+                        scrollEnabled={false}
+                    />
+                    <Text style={[styles.label, { marginTop: vs(14) }]}>Key Findings</Text>
+                    <TextInput
+                        style={[styles.input, styles.textarea, { minHeight: vs(80) }]}
+                        placeholder="e.g. The system achieved 94% accuracy…"
+                        placeholderTextColor="#9AADCA"
+                        value={keyFindings}
+                        onChangeText={setKeyFindings}
+                        multiline
+                        textAlignVertical="top"
+                        blurOnSubmit={false}
+                        scrollEnabled={false}
+                    />
+                </SectionCard>
+
+                {/* Tools Used */}
+                <SectionCard icon="construct-outline" title="Tools &amp; Technologies Used">
+                    <Text style={styles.hint}>Tap to select — choose all that apply</Text>
+                    <View style={[styles.chipGroup, { marginTop: vs(10) }]}>
+                        {TOOLS_LIST.map(tool => {
+                            const active = selectedTools.includes(tool);
+                            return (
+                                <TouchableOpacity
+                                    key={tool}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => toggleTool(tool)}
+                                    activeOpacity={0.8}
+                                >
+                                    {active && <Ionicons name="checkmark" size={12} color="#fff" style={{ marginRight: 4 }} />}
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{tool}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                    {selectedTools.length > 0 && (
+                        <Text style={[styles.hint, { marginTop: vs(10), color: '#2E7D32' }]}>
+                            {selectedTools.length} tool{selectedTools.length > 1 ? 's' : ''} selected
+                        </Text>
+                    )}
+                </SectionCard>
+
                 {/* Classification */}
                 <SectionCard icon="albums-outline" title="Classification">
-                    <Text style={styles.label}>Department <Text style={styles.req}>*</Text></Text>
+                    <Text style={styles.label}>Study Type <Text style={styles.req}>*</Text></Text>
+                    <ChipGroup items={STUDY_TYPES} active={activeType} onSelect={setActiveType} />
+                    <Text style={[styles.label, { marginTop: 14 }]}>Department</Text>
                     <ChipGroup items={DEPARTMENTS} active={activeDept} onSelect={setActiveDept} />
-                    <Text style={[styles.label, { marginTop: 14 }]}>Research Type <Text style={styles.req}>*</Text></Text>
-                    <ChipGroup items={RESEARCH_TYPES} active={activeType} onSelect={setActiveType} />
                     <Text style={[styles.label, { marginTop: 14 }]}>Research Category <Text style={styles.req}>*</Text></Text>
                     <ChipGroup items={CATEGORIES} active={activeCategory} onSelect={setActiveCategory} />
                 </SectionCard>
 
-                {/* File Upload */}
+                {/* System Image */}
+                <SectionCard icon="image-outline" title="System Image / Logo">
+                    <Text style={styles.hint}>Upload a screenshot or logo that represents your system. <Text style={styles.req}>Required</Text></Text>
+                    <TouchableOpacity
+                        style={[styles.imageBox, pickedImage ? styles.imageBoxFilled : null]}
+                        onPress={handlePickImage}
+                        activeOpacity={0.8}
+                        disabled={uploading}
+                    >
+                        {pickedImage ? (
+                            <View style={styles.imagePreviewRow}>
+                                <Image source={{ uri: pickedImage.uri }} style={styles.imagePreview} resizeMode="cover" />
+                                <View style={{ flex: 1, marginLeft: scale(12) }}>
+                                    <Text style={styles.fileName} numberOfLines={1}>{pickedImage.name}</Text>
+                                    <Text style={styles.fileReady}>Image selected ✓</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setPickedImage(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} disabled={uploading}>
+                                    <Ionicons name="close-circle" size={20} color="#9AADCA" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={[styles.uploadIconCircle, { backgroundColor: '#EEF1FB' }]}>
+                                    <Ionicons name="image-outline" size={28} color="#3B5BDB" />
+                                </View>
+                                <Text style={styles.fileBoxTitle}>Tap to choose an image</Text>
+                                <Text style={styles.fileBoxSub}>JPG, PNG or WebP · Max 20 MB</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </SectionCard>
+
+                {/* Upload PDF */}
                 <SectionCard icon="attach-outline" title="Upload PDF">
                     <TouchableOpacity
-                        style={[styles.fileBox, fileName ? styles.fileBoxFilled : null]}
+                        style={[styles.fileBox, pickedFile ? styles.fileBoxFilled : null]}
                         onPress={handlePickFile}
                         activeOpacity={0.8}
+                        disabled={uploading}
                     >
-                        {fileName ? (
+                        {pickedFile ? (
                             <View style={styles.fileSelectedRow}>
                                 <View style={styles.fileIconBox}>
-                                    <Ionicons name="document-text" size={22} color="#0E1F43" />
+                                    <Ionicons name="document-text" size={22} color="#DC2626" />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.fileName} numberOfLines={1}>{fileName}</Text>
-                                    <Text style={styles.fileReady}>Ready to upload</Text>
+                                    <Text style={styles.fileName} numberOfLines={1}>{pickedFile.name}</Text>
+                                    <Text style={styles.fileReady}>{formatSize(pickedFile.size)} · Ready to upload</Text>
                                 </View>
-                                <TouchableOpacity onPress={() => setFileName('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <TouchableOpacity onPress={() => setPickedFile(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} disabled={uploading}>
                                     <Ionicons name="close-circle" size={20} color="#9AADCA" />
                                 </TouchableOpacity>
                             </View>
@@ -160,13 +414,14 @@ const UploadScreen: React.FC = () => {
                 {/* Progress chips summary */}
                 <View style={styles.summaryRow}>
                     {[
-                        { label: 'Title', done: !!title },
-                        { label: 'Authors', done: !!authors },
+                        { label: 'Title',    done: !!title },
+                        { label: 'Authors',  done: !!authors },
                         { label: 'Abstract', done: !!abstract },
-                        { label: 'Year', done: !!year },
-                        { label: 'Dept.', done: !!activeDept },
-                        { label: 'Type', done: !!activeType },
+                        { label: 'Year',     done: !!year },
+                        { label: 'Type',     done: !!activeType },
                         { label: 'Category', done: !!activeCategory },
+                        { label: 'Image',    done: !!pickedImage },
+                        { label: 'PDF',      done: !!pickedFile },
                     ].map(({ label, done }) => (
                         <View key={label} style={[styles.summaryChip, done && styles.summaryChipDone]}>
                             <Ionicons name={done ? 'checkmark-circle' : 'ellipse-outline'} size={11} color={done ? '#2E7D32' : '#9AADCA'} />
@@ -182,11 +437,21 @@ const UploadScreen: React.FC = () => {
                     activeOpacity={0.8}
                     disabled={!isReady}
                 >
-                    <Ionicons name="cloud-upload-outline" size={19} color="#fff" />
-                    <Text style={styles.submitBtnText}>Submit Research</Text>
+                    {uploading ? (
+                        <>
+                            <ActivityIndicator size="small" color="#fff" />
+                            <Text style={styles.submitBtnText}>Uploading to Supabase…</Text>
+                        </>
+                    ) : (
+                        <>
+                            <Ionicons name="cloud-upload-outline" size={19} color="#fff" />
+                            <Text style={styles.submitBtnText}>Submit Research</Text>
+                        </>
+                    )}
                 </TouchableOpacity>
 
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
@@ -221,8 +486,15 @@ const styles = StyleSheet.create({
     },
     sectionTitle: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
 
+    // Success screen
+    successBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: scale(32) },
+    successIcon: { marginBottom: vs(16) },
+    successTitle: { fontSize: ms(26), fontWeight: '800', color: '#0E1F43', marginBottom: vs(10) },
+    successSub: { fontSize: ms(14), color: '#5A6A8A', textAlign: 'center', lineHeight: 22 },
+
     label: { fontSize: ms(12), fontWeight: '600', color: '#5A6A8A', marginBottom: vs(7) },
     req: { color: '#E53935' },
+    hint: { fontSize: ms(11), color: '#9AADCA', marginTop: vs(4) },
 
     input: {
         backgroundColor: '#F5F6FA',
@@ -234,7 +506,7 @@ const styles = StyleSheet.create({
         fontSize: ms(14),
         color: '#0E1F43',
     },
-    textarea: { minHeight: vs(110), paddingTop: vs(12) },
+    textarea: { minHeight: vs(130), paddingTop: vs(12), paddingBottom: vs(12) },
     yearInput: { width: scale(110) },
     charCount: { fontSize: ms(10), color: '#9AADCA', textAlign: 'right', marginTop: vs(4) },
 
@@ -283,6 +555,30 @@ const styles = StyleSheet.create({
     },
     fileName: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
     fileReady: { fontSize: ms(11), color: '#2E7D32', marginTop: vs(2) },
+
+    // Image picker
+    imageBox: {
+        borderRadius: ms(14),
+        borderWidth: 1.5,
+        borderColor: '#D0D8E8',
+        borderStyle: 'dashed',
+        paddingVertical: vs(24),
+        alignItems: 'center',
+        gap: vs(8),
+        backgroundColor: '#F5F6FA',
+    },
+    imageBoxFilled: {
+        paddingVertical: vs(14),
+        borderStyle: 'solid',
+        borderColor: '#3B5BDB',
+        backgroundColor: '#EEF1FB',
+    },
+    imagePreviewRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(4), width: '100%' },
+    imagePreview: {
+        width: scale(64), height: vs(52),
+        borderRadius: ms(8),
+        backgroundColor: '#D0D8E8',
+    },
 
     // Summary chips
     summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(6), marginBottom: vs(16) },

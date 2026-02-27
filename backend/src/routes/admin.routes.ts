@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { getUsers, updateUserStatus, updateUser, getRegistrations, approveRegistration, rejectRegistration } from '../controllers/admin.controller';
 import { getAuditLogs } from '../controllers/audit.controller';
+import { getUserActivities } from '../controllers/activity.controller';
+import { getLiterature, approveLiterature, rejectLiterature } from '../controllers/literature.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/authorize.middleware';
 import { UserRole } from '../types';
@@ -39,6 +41,13 @@ router.put('/users/:uid', updateUser);
 router.get('/audit', getAuditLogs);
 
 /**
+ * @route   GET /api/admin/activities
+ * @desc    Get user activity log entries (supports ?search=&type=&limit=&skip=)
+ * @access  Admin / Faculty
+ */
+router.get('/activities', getUserActivities);
+
+/**
  * @route   GET  /api/admin/registrations
  * @route   PATCH /api/admin/registrations/:uid/approve
  * @route   PATCH /api/admin/registrations/:uid/reject
@@ -46,5 +55,16 @@ router.get('/audit', getAuditLogs);
 router.get('/registrations', getRegistrations);
 router.patch('/registrations/:uid/approve', approveRegistration);
 router.patch('/registrations/:uid/reject', rejectRegistration);
+
+/**
+ * @route   GET   /api/admin/literature
+ * @route   PATCH /api/admin/literature/:id/approve
+ * @route   PATCH /api/admin/literature/:id/reject
+ * @desc    Manage research submissions
+ * @access  Admin / Faculty
+ */
+router.get('/literature', getLiterature);
+router.patch('/literature/:id/approve', approveLiterature);
+router.patch('/literature/:id/reject', rejectLiterature);
 
 export default router;
