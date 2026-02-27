@@ -3,6 +3,7 @@ import { getUsers, updateUserStatus, updateUser, getRegistrations, approveRegist
 import { getAuditLogs } from '../controllers/audit.controller';
 import { getUserActivities } from '../controllers/activity.controller';
 import { getLiterature, approveLiterature, rejectLiterature } from '../controllers/literature.controller';
+import { getAnalytics } from '../controllers/analytics.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/authorize.middleware';
 import { UserRole } from '../types';
@@ -66,5 +67,12 @@ router.patch('/registrations/:uid/reject', rejectRegistration);
 router.get('/literature', getLiterature);
 router.patch('/literature/:id/approve', approveLiterature);
 router.patch('/literature/:id/reject', rejectLiterature);
+
+/**
+ * @route   GET /api/admin/analytics
+ * @desc    Returns dashboard stats, user growth, year level dist, top categories
+ * @access  Admin / Faculty
+ */
+router.get('/analytics', getAnalytics);
 
 export default router;

@@ -500,26 +500,47 @@ const AdminLiteratureScreen: React.FC = () => {
                                 <View style={{ height: vs(8) }} />
                             </ScrollView>
 
-                            {/* Approve / Reject buttons */}
-                            <View style={styles.modalActions}>
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, isApproved ? styles.actionBtnApproved : styles.actionBtnApproveOutline]}
-                                    onPress={() => { if (!isApproved) setApproveDialog(true); }}
-                                    activeOpacity={0.8}
-                                >
-                                    <Ionicons name={isApproved ? 'checkmark' : 'checkmark-circle-outline'} size={ms(16)} color={isApproved ? '#fff' : '#16A34A'} />
-                                    <Text style={[styles.actionBtnText, { color: isApproved ? '#fff' : '#16A34A' }]}>Approve</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, isRejected ? styles.actionBtnRejected : styles.actionBtnRejectOutline]}
-                                    onPress={() => { if (!isRejected) setRejectDialog(true); }}
-                                    activeOpacity={0.8}
-                                >
-                                    <Ionicons name={isRejected ? 'checkmark' : 'close-outline'} size={ms(16)} color={isRejected ? '#fff' : '#DC2626'} />
-                                    <Text style={[styles.actionBtnText, { color: isRejected ? '#fff' : '#DC2626' }]}>Reject</Text>
-                                </TouchableOpacity>
-                            </View>
+                            {/* Action bar — context-aware */}
+                            {isApproved ? (
+                                <View style={styles.statusBar}>
+                                    <Ionicons name="checkmark-circle" size={ms(18)} color="#16A34A" />
+                                    <Text style={styles.statusBarText}>Approved</Text>
+                                </View>
+                            ) : isRejected ? (
+                                <View style={styles.modalActions}>
+                                    <View style={[styles.statusBarInline, { flex: 1 }]}>
+                                        <Ionicons name="close-circle" size={ms(16)} color="#DC2626" />
+                                        <Text style={styles.statusBarInlineText}>Rejected</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.actionBtnApproveOutline, { flex: 1 }]}
+                                        onPress={() => setApproveDialog(true)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="checkmark-circle-outline" size={ms(16)} color="#16A34A" />
+                                        <Text style={[styles.actionBtnText, { color: '#16A34A' }]}>Approve</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.actionBtnApproveOutline]}
+                                        onPress={() => setApproveDialog(true)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="checkmark-circle-outline" size={ms(16)} color="#16A34A" />
+                                        <Text style={[styles.actionBtnText, { color: '#16A34A' }]}>Approve</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.actionBtnRejectOutline]}
+                                        onPress={() => setRejectDialog(true)}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="close-outline" size={ms(16)} color="#DC2626" />
+                                        <Text style={[styles.actionBtnText, { color: '#DC2626' }]}>Reject</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         </>
                     )}
                 </View>
@@ -1019,6 +1040,23 @@ const styles = StyleSheet.create({
     actionBtnRejectOutline:  { borderColor: '#DC2626', backgroundColor: '#FFF5F5' },
     actionBtnRejected:       { borderColor: '#DC2626', backgroundColor: '#DC2626' },
     actionBtnText: { fontSize: ms(13), fontWeight: '700' },
+
+    /* Approved status bar (replaces action buttons) */
+    statusBar: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+        paddingHorizontal: scale(20), paddingVertical: vs(16),
+        borderTopWidth: 1, borderTopColor: '#DCFCE7',
+        backgroundColor: '#F0FDF4',
+    },
+    statusBarText: { fontSize: ms(14), fontWeight: '700', color: '#16A34A' },
+
+    /* Rejected inline label */
+    statusBarInline: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6),
+        borderWidth: 1.5, borderColor: '#FECACA', backgroundColor: '#FFF5F5',
+        borderRadius: ms(12), paddingVertical: vs(12),
+    },
+    statusBarInlineText: { fontSize: ms(13), fontWeight: '700', color: '#DC2626' },
 
     /* Dialogs */
     dialogOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
