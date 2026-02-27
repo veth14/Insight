@@ -1,12 +1,14 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    FlatList, StatusBar, LayoutAnimation,
+    FlatList, StatusBar, LayoutAnimation, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
+import api from '../../services/api.service';
 
 type SubmissionStatus = 'pending' | 'approved' | 'denied';
 
@@ -21,54 +23,16 @@ interface Submission {
     feedback?: string;
 }
 
-const MOCK_DATA: Submission[] = [
-    {
-        id: '1',
-        title: 'Machine Learning Applications in Early Disease Detection',
-        authors: 'Santos, M et.al',
-        year: 2026,
-        category: 'Health Services',
-        status: 'pending',
-        submittedAt: 'Feb 20, 2026',
-    },
-    {
-        id: '2',
-        title: 'Impact of Social Media Usage on Academic Performance Among College Students',
-        authors: 'Santos, M et.al',
-        year: 2026,
-        category: 'Education',
-        status: 'pending',
-        submittedAt: 'Feb 18, 2026',
-    },
-    {
-        id: '3',
-        title: 'Blockchain-Based Voting System for Student Government Elections',
-        authors: 'Santos, M et.al',
-        year: 2026,
-        category: 'Computer Science',
-        status: 'pending',
-        submittedAt: 'Feb 15, 2026',
-    },
-    {
-        id: '4',
-        title: 'InsiQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects',
-        authors: 'Santos, M et.al',
-        year: 2026,
-        category: 'IoT',
-        status: 'pending',
-        submittedAt: 'Feb 10, 2026',
-    },
-    {
-        id: '5',
-        title: 'Machine Learning Applications in Early Disease Detection',
-        authors: 'Santos, M et.al',
-        year: 2026,
-        category: 'Computer Science',
-        status: 'approved',
-        submittedAt: 'Jan 28, 2026',
-        feedback: 'Great work! Your research has been approved and is now visible in the repository.',
-    },
-];
+function formatDate(iso: string): string {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatAuthors(authors: string[]): string {
+    if (!authors || authors.length === 0) return 'Unknown';
+    if (authors.length === 1) return authors[0];
+    return `${authors[0]} et al.`;
+}
 
 const TABS: { key: SubmissionStatus; label: string }[] = [
     { key: 'pending', label: 'Pending' },
@@ -89,15 +53,47 @@ const EMPTY_CONFIG: Record<SubmissionStatus, { icon: string; message: string }> 
 };
 
 const NotificationsScreen: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<SubmissionStatus>('pending');
+    const [activeTab, setActiveTab]   = useState<SubmissionStatus>('pending');
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [loading, setLoading]       = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const filteredData = MOCK_DATA.filter(item => item.status === activeTab);
+    const fetchSubmissions = useCallback(async (isRefresh = false) => {
+        if (!isRefresh) setLoading(true);
+        try {
+            const res = await api.get('/studies/my');
+            const raw: any[] = res.data.studies ?? [];
+            const mapped: Submission[] = raw.map(s => ({
+                id:          String(s._id),
+                title:       s.title,
+                authors:     formatAuthors(s.authors),
+                year:        s.yearPublished,
+                category:    s.category,
+                // backend: 'rejected' → screen: 'denied'
+                status:      (s.approvalStatus === 'rejected' ? 'denied' : s.approvalStatus) as SubmissionStatus,
+                submittedAt: formatDate(s.createdAt),
+                feedback:    s.rejectionReason ?? undefined,
+            }));
+            setSubmissions(mapped);
+        } catch (e) {
+            console.error('fetchSubmissions error', e);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useFocusEffect(useCallback(() => { fetchSubmissions(); }, [fetchSubmissions]));
+
+    const onRefresh = () => { setRefreshing(true); fetchSubmissions(true); };
+
+    const filteredData = submissions.filter(item => item.status === activeTab);
 
     const counts: Record<SubmissionStatus, number> = {
-        pending:  MOCK_DATA.filter(i => i.status === 'pending').length,
-        approved: MOCK_DATA.filter(i => i.status === 'approved').length,
-        denied:   MOCK_DATA.filter(i => i.status === 'denied').length,
+        pending:  submissions.filter(i => i.status === 'pending').length,
+        approved: submissions.filter(i => i.status === 'approved').length,
+        denied:   submissions.filter(i => i.status === 'denied').length,
     };
 
     const toggleExpand = (id: string) => {
@@ -108,6 +104,9 @@ const NotificationsScreen: React.FC = () => {
     const renderItem = ({ item }: { item: Submission }) => {
         const sc = STATUS_CONFIG[item.status];
         const isExpanded = expandedId === item.id;
+        // For approved items show a default congratulation message if no specific feedback
+        const displayFeedback = item.feedback
+            ?? (item.status === 'approved' ? 'Great work! Your research has been approved and is now visible in the repository.' : undefined);
         return (
             <TouchableOpacity
                 style={[styles.card, isExpanded && styles.cardExpanded]}
@@ -140,13 +139,13 @@ const NotificationsScreen: React.FC = () => {
                             <Text style={styles.metaLabel}>Submitted:</Text>
                             <Text style={styles.metaValue}>{item.submittedAt}</Text>
                         </View>
-                        {item.feedback && (
+                        {displayFeedback && (
                             <View style={styles.feedbackBox}>
                                 <View style={styles.feedbackHeader}>
                                     <Ionicons name="chatbubble-ellipses-outline" size={13} color={sc.color} />
                                     <Text style={[styles.feedbackTitle, { color: sc.color }]}>Reviewer Feedback</Text>
                                 </View>
-                                <Text style={styles.feedbackText}>{item.feedback}</Text>
+                                <Text style={styles.feedbackText}>{displayFeedback}</Text>
                             </View>
                         )}
                     </View>
@@ -156,6 +155,21 @@ const NotificationsScreen: React.FC = () => {
     };
 
     const empty = EMPTY_CONFIG[activeTab];
+
+    if (loading) return (
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <AppHeader />
+            <View style={styles.headerSection}>
+                <Text style={styles.pageTitle}>Notification</Text>
+                <Text style={styles.pageSub}>Review and manage submissions.</Text>
+            </View>
+            <View style={styles.loadingCenter}>
+                <ActivityIndicator size="large" color="#0E1F43" />
+                <Text style={styles.loadingText}>Loading submissions…</Text>
+            </View>
+        </SafeAreaView>
+    );
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -205,6 +219,7 @@ const NotificationsScreen: React.FC = () => {
                     renderItem={renderItem}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0E1F43" />}
                 />
             )}
         </SafeAreaView>
@@ -213,6 +228,9 @@ const NotificationsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+    loadingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: vs(10) },
+    loadingText:   { fontSize: ms(13), color: '#9AADCA', fontWeight: '500' },
 
     headerSection: { paddingHorizontal: scale(18), paddingTop: vs(10), paddingBottom: vs(4) },
     pageTitle: { fontSize: ms(22), fontWeight: '800', color: '#0E1F43' },

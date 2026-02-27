@@ -1,32 +1,30 @@
-import React, { useState, useCallback } from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ScrollView, StatusBar, Alert,
+    ScrollView, StatusBar, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../../types';
 import { scale, vs, ms } from '../../utils/responsive';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+export const DOWNLOADS_KEY  = '@insight_downloads';
+const TOTAL_STORAGE_MB      = 100;
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-interface DownloadItem {
-    id: string;
-    title: string;
-    sizeMB: number;
-    date: string;
+export interface DownloadItem {
+    id:      string;
+    title:   string;
+    sizeMB:  number;
+    date:    string;
+    fileUrl: string;
 }
-
-// ── Mock data (replace with AsyncStorage / FileSystem when backend is ready) ──
-
-const INITIAL_DOWNLOADS: DownloadItem[] = [
-    { id: '1', title: 'Machine Learning Approaches in Predicting Student Academic Performance', sizeMB: 3.4, date: 'Feb 12, 2026' },
-    { id: '2', title: 'AI-Powered Plagiarism Detection for Filipino Language Academic Texts', sizeMB: 1.8, date: 'Feb 10, 2026' },
-    { id: '3', title: 'InsiQht: A Mobile-Based Centralized Repository for CCS Research', sizeMB: 3.2, date: 'Feb 08, 2026' },
-    { id: '4', title: 'GreenPulse: QCU Urban Farm Monitoring System', sizeMB: 0.9, date: 'Feb 06, 2026' },
-];
-
-const TOTAL_STORAGE_MB = 100;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -36,35 +34,65 @@ const formatSize = (mb: number) =>
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
 const DownloadsScreen: React.FC = () => {
-    const navigation = useNavigation();
-    const [downloads, setDownloads] = useState<DownloadItem[]>(INITIAL_DOWNLOADS);
+    const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
+    const [downloads, setDownloads] = useState<DownloadItem[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const usedMB = downloads.reduce((sum, d) => sum + d.sizeMB, 0);
+    const loadDownloads = useCallback(async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true);
+        try {
+            const raw = await AsyncStorage.getItem(DOWNLOADS_KEY);
+            setDownloads(raw ? JSON.parse(raw) : []);
+        } catch {
+            setDownloads([]);
+        } finally {
+            setRefreshing(false);
+        }
+    }, []);
+
+    useFocusEffect(useCallback(() => { loadDownloads(); }, [loadDownloads]));
+
+    const usedMB   = downloads.reduce((sum, d) => sum + (d.sizeMB ?? 0), 0);
     const progress = Math.min(usedMB / TOTAL_STORAGE_MB, 1);
+
+    const handleOpen = (item: DownloadItem) => {
+        navigation.navigate('PDFReader', { studyId: item.id });
+    };
 
     const handleDelete = useCallback((item: DownloadItem) => {
         Alert.alert(
             'Remove Download',
-            `Remove "${item.title.slice(0, 50)}..." from your downloads?`,
+            `Remove "${item.title.length > 50 ? item.title.slice(0, 50) + '...' : item.title}" from your downloads?`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Remove',
                     style: 'destructive',
-                    onPress: () => setDownloads(prev => prev.filter(d => d.id !== item.id)),
+                    onPress: async () => {
+                        const updated = downloads.filter(d => d.id !== item.id);
+                        setDownloads(updated);
+                        await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify(updated));
+                    },
                 },
             ]
         );
-    }, []);
+    }, [downloads]);
 
     const handleClearAll = () => {
         if (downloads.length === 0) return;
         Alert.alert(
             'Clear All Downloads',
-            'Remove all downloaded files? This cannot be undone.',
+            'Remove all downloaded files from this list? This cannot be undone.',
             [
                 { text: 'Cancel', style: 'cancel' },
-                { text: 'Clear All', style: 'destructive', onPress: () => setDownloads([]) },
+                {
+                    text: 'Clear All',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setDownloads([]);
+                        await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify([]));
+                    },
+                },
             ]
         );
     };
@@ -89,6 +117,14 @@ const DownloadsScreen: React.FC = () => {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scroll}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={() => loadDownloads(true)}
+                        colors={['#0E1F43']}
+                        tintColor="#0E1F43"
+                    />
+                }
             >
                 {/* Storage card */}
                 <View style={styles.storageCard}>
@@ -99,7 +135,7 @@ const DownloadsScreen: React.FC = () => {
                         </Text>
                     </View>
                     <View style={styles.progressTrack}>
-                        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+                        <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
                     </View>
                 </View>
 
@@ -108,14 +144,20 @@ const DownloadsScreen: React.FC = () => {
                     <View style={styles.emptyState}>
                         <Ionicons name="cloud-download-outline" size={52} color="#C0CDE8" />
                         <Text style={styles.emptyTitle}>No downloads yet</Text>
-                        <Text style={styles.emptySub}>Files you download will appear here</Text>
+                        <Text style={styles.emptySub}>
+                            Tap "Download" on any study to save it here
+                        </Text>
                     </View>
                 ) : (
                     <View style={styles.listCard}>
                         {downloads.map((item, index) => (
                             <React.Fragment key={item.id}>
                                 {index > 0 && <View style={styles.rowDivider} />}
-                                <View style={styles.row}>
+                                <TouchableOpacity
+                                    style={styles.row}
+                                    activeOpacity={0.75}
+                                    onPress={() => handleOpen(item)}
+                                >
                                     {/* Doc icon */}
                                     <View style={styles.docIcon}>
                                         <Ionicons name="document-text-outline" size={20} color="#4A6FA5" />
@@ -138,7 +180,7 @@ const DownloadsScreen: React.FC = () => {
                                             <Ionicons name="trash-outline" size={20} color="#EF4444" style={{ marginTop: vs(6) }} />
                                         </TouchableOpacity>
                                     </View>
-                                </View>
+                                </TouchableOpacity>
                             </React.Fragment>
                         ))}
                     </View>
@@ -165,100 +207,50 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
     },
     topBarTitle: { fontSize: ms(16), fontWeight: '800', color: '#0E1F43' },
-    clearBtn: { paddingHorizontal: scale(4), paddingVertical: vs(4) },
+    clearBtn:    { paddingHorizontal: scale(4), paddingVertical: vs(4) },
     clearBtnText: { fontSize: ms(13), fontWeight: '600', color: '#E53935' },
 
-    scroll: {
-        padding: scale(16),
-        paddingBottom: vs(40),
-        gap: vs(14),
-    },
+    scroll: { padding: scale(16), paddingBottom: vs(40), gap: vs(14) },
 
-    // Storage card
     storageCard: {
-        backgroundColor: '#0E1F43',
-        borderRadius: ms(16),
-        padding: scale(18),
-        gap: vs(10),
+        backgroundColor: '#0E1F43', borderRadius: ms(16), padding: scale(18), gap: vs(10),
     },
     storageRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     },
-    storageLabel: {
-        fontSize: ms(13), fontWeight: '700', color: '#fff',
-    },
-    storageValue: {
-        fontSize: ms(13), fontWeight: '700', color: '#F5A623',
-    },
+    storageLabel: { fontSize: ms(13), fontWeight: '700', color: '#fff' },
+    storageValue: { fontSize: ms(13), fontWeight: '700', color: '#F5A623' },
     progressTrack: {
-        height: vs(8),
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        borderRadius: ms(4),
-        overflow: 'hidden',
+        height: vs(8), backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: ms(4), overflow: 'hidden',
     },
     progressFill: {
-        height: '100%',
-        backgroundColor: '#F5A623',
-        borderRadius: ms(4),
+        height: '100%', backgroundColor: '#F5A623', borderRadius: ms(4),
     },
 
-    // Empty state
     emptyState: {
-        alignItems: 'center',
-        paddingTop: vs(60),
-        gap: vs(8),
+        alignItems: 'center', paddingVertical: vs(60), gap: vs(10),
     },
-    emptyTitle: {
-        fontSize: ms(16), fontWeight: '700', color: '#0E1F43',
-        marginTop: vs(8),
-    },
-    emptySub: {
-        fontSize: ms(13), color: '#9AADCA', textAlign: 'center',
-    },
+    emptyTitle: { fontSize: ms(16), fontWeight: '700', color: '#1A2744', marginTop: vs(8) },
+    emptySub:   { fontSize: ms(13), color: '#9AADCA', textAlign: 'center', paddingHorizontal: scale(32) },
 
-    // List card
     listCard: {
-        backgroundColor: '#fff',
-        borderRadius: ms(16),
-        borderWidth: 1,
-        borderColor: '#F0F2F8',
+        backgroundColor: '#fff', borderRadius: ms(16),
+        borderWidth: 1, borderColor: '#F0F2F8',
         shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
-        overflow: 'hidden',
+        shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, overflow: 'hidden',
     },
-    rowDivider: {
-        height: vs(1),
-        backgroundColor: '#F5F6FA',
-        marginHorizontal: scale(14),
-    },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: scale(14),
-        paddingVertical: vs(12),
-        gap: scale(10),
-    },
+    rowDivider: { height: 1, backgroundColor: '#F0F2F8' },
+    row: { flexDirection: 'row', alignItems: 'center', padding: scale(14), gap: scale(12) },
     docIcon: {
-        width: scale(38), height: vs(38), borderRadius: ms(10),
-        backgroundColor: '#EEF3FF',
-        justifyContent: 'center', alignItems: 'center',
+        width: scale(40), height: vs(40), borderRadius: ms(10),
+        backgroundColor: '#EEF3FD', justifyContent: 'center', alignItems: 'center',
+        flexShrink: 0,
     },
-    rowBody: {
-        flex: 1,
-        gap: vs(3),
-    },
-    rowTitle: {
-        fontSize: ms(13), fontWeight: '600', color: '#0E1F43', lineHeight: vs(18),
-    },
-    rowMeta: {
-        fontSize: ms(11), color: '#9AADCA',
-    },
-    rowActions: {
-        alignItems: 'center',
-        gap: vs(2),
-    },
+    rowBody:    { flex: 1 },
+    rowTitle:   { fontSize: ms(13), fontWeight: '600', color: '#1A2744', lineHeight: vs(19) },
+    rowMeta:    { fontSize: ms(11), color: '#9AADCA', marginTop: vs(3) },
+    rowActions: { alignItems: 'center', gap: vs(2), flexShrink: 0 },
 });
 
 export default DownloadsScreen;

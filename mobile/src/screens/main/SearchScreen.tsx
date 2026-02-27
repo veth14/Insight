@@ -1,8 +1,8 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
     FlatList, Modal, ScrollView, TouchableWithoutFeedback,
-    StatusBar, Dimensions,
+    StatusBar, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,45 +11,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SearchStackParamList } from '../../types';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
+import api from '../../services/api.service';
 
 const { width } = Dimensions.get('window');
 
-// --- Mock Data ---
-const CATEGORIES = ['All Categories', 'Data Science', 'Multimedia', 'IoT and Emb.', 'Web System', 'Mobile Dev'];
-
-const MOCK_RESULTS = [
-    {
-        _id: 's1',
-        title: 'InsIQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects....',
-        authors: 'Abando A., Albidla E.,',
-        category: 'Computer Science',
-        badge: null,
-        year: '2024',
-        citations: 41,
-        abstract: 'This study explores the application of machine learning algorithms in predicting student...',
-    },
-    {
-        _id: 's2',
-        title: 'Machine Learning Approaches in Predicting Student Academic....',
-        authors: 'Garcia M., Santos, R., Cruz, A.,',
-        category: 'Computer Science',
-        badge: 'Quantitative',
-        year: '2024',
-        citations: 11,
-        abstract: 'This study explores the application of machine learning algorithms in predicting student...',
-    },
-    {
-        _id: 's3',
-        title: 'AI-Powered Plagiarism Detection for Filipino Language.....',
-        authors: 'Smith R., Modelo R.,',
-        category: 'Computer Science',
-        badge: 'Quantitative',
-        year: '2024',
-        citations: 41,
-        abstract: 'This study explores the application of machine learning algorithms in predicting student...',
-    },
-];
-
+const CATEGORIES = ['All Categories', 'Computer Science', 'Data Science', 'Health Services',
+    'Education', 'Multimedia', 'IoT', 'Web System', 'Mobile Dev', 'Security'];
+const RESEARCH_THEMES = ['All', 'Thesis', 'Capstone', 'Dissertation'];
 const TRENDING_TOPICS = [
     'Artificial Intelligence in Education',
     'Mobile Health Applications',
@@ -57,31 +25,99 @@ const TRENDING_TOPICS = [
     'IoT & Smart Systems',
 ];
 
-const RESEARCH_THEMES = ['All', 'AI/ML', 'Mobile Dev', 'IoT', 'Web System', 'Security', 'Data Analytics'];
+interface StudyCard {
+    _id: string;
+    title: string;
+    authors: string[];
+    category: string;
+    studyType?: string;
+    yearPublished: number;
+    abstract: string;
+    viewCount: number;
+    isBookmarked?: boolean;
+}
 
-// --- Component ---
+function joinAuthors(authors: string[]): string {
+    if (!authors?.length) return '';
+    if (authors.length === 1) return authors[0];
+    return `${authors[0]} et al.`;
+}
+
 const SearchScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<SearchStackParamList>>();
-    const [query, setQuery] = useState('');
+    const [query, setQuery]               = useState('');
     const [activeCategory, setActiveCategory] = useState('All Categories');
     const [advancedVisible, setAdvancedVisible] = useState(false);
 
-    const [keywords, setKeywords] = useState('');
-    const [fromYear, setFromYear] = useState('2020');
-    const [toYear, setToYear] = useState('2025');
+    // Advanced filter state
+    const [keywords, setKeywords]   = useState('');
+    const [fromYear, setFromYear]   = useState('2020');
+    const [toYear, setToYear]       = useState(String(new Date().getFullYear()));
     const [department, setDepartment] = useState('');
     const [activeTheme, setActiveTheme] = useState('All');
 
-    const filteredResults = MOCK_RESULTS.filter(item =>
-        query.length === 0 ||
-        item.title.toLowerCase().includes(query.toLowerCase()) ||
-        item.authors.toLowerCase().includes(query.toLowerCase())
-    );
+    // Data state
+    const [results, setResults]   = useState<StudyCard[]>([]);
+    const [loading, setLoading]   = useState(false);
+    const [searched, setSearched] = useState(false);   // whether user has triggered a search
+    const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
+
+    // Bookmark toggle for visible cards
+    const toggleBookmark = async (studyId: string) => {
+        try {
+            const res = await api.post(`/studies/${studyId}/bookmark`);
+            setBookmarked(prev => {
+                const next = new Set(prev);
+                if (res.data.bookmarked) next.add(studyId);
+                else next.delete(studyId);
+                return next;
+            });
+        } catch (e) {
+            console.error('toggleBookmark error', e);
+        }
+    };
+
+    const doSearch = useCallback(async (overrideQuery?: string) => {
+        const q = overrideQuery ?? query;
+        setLoading(true);
+        setSearched(true);
+        try {
+            const params: Record<string, string> = { limit: '30' };
+            if (q.trim())                                    params.q        = q.trim();
+            if (activeCategory !== 'All Categories')         params.category = activeCategory;
+            if (activeTheme    !== 'All')                    params.studyType = activeTheme;
+            if (fromYear)                                    params.fromYear = fromYear;
+            if (toYear)                                      params.toYear   = toYear;
+
+            const res = await api.get('/studies/search', { params });
+            setResults(res.data.studies ?? []);
+        } catch (e) {
+            console.error('search error', e);
+        } finally {
+            setLoading(false);
+        }
+    }, [query, activeCategory, activeTheme, fromYear, toYear]);
+
+    // Auto-search when category chip changes (only after first search)
+    useEffect(() => {
+        if (searched) doSearch();
+    }, [activeCategory]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleAdvancedSearch = () => {
+        setQuery(keywords);
+        setAdvancedVisible(false);
+        doSearch(keywords);
+    };
+
+    const clearAdvanced = () => {
+        setKeywords(''); setFromYear('2020');
+        setToYear(String(new Date().getFullYear()));
+        setDepartment(''); setActiveTheme('All');
+    };
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
             <AppHeader />
 
             {/* Search Bar */}
@@ -95,9 +131,10 @@ const SearchScreen: React.FC = () => {
                         value={query}
                         onChangeText={setQuery}
                         returnKeyType="search"
+                        onSubmitEditing={() => doSearch()}
                     />
                     {query.length > 0 && (
-                        <TouchableOpacity onPress={() => setQuery('')}>
+                        <TouchableOpacity onPress={() => { setQuery(''); setResults([]); setSearched(false); }}>
                             <Ionicons name="close-circle" size={18} color="#9AADCA" />
                         </TouchableOpacity>
                     )}
@@ -121,58 +158,89 @@ const SearchScreen: React.FC = () => {
                 ))}
             </ScrollView>
 
-            {/* Results + Trending */}
-            <FlatList
-                data={filteredResults}
-                keyExtractor={item => item._id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-                renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.resultCard} activeOpacity={0.85} onPress={() => navigation.navigate('StudyDetail', { studyId: item._id })}>
-                        <View style={styles.cardTop}>
-                            <View style={styles.badgeRow}>
-                                <View style={styles.categoryBadge}>
-                                    <Text style={styles.categoryBadgeText}>{item.category}</Text>
-                                </View>
-                                {item.badge && (
-                                    <View style={styles.typeBadge}>
-                                        <Text style={styles.typeBadgeText}>{item.badge}</Text>
+            {/* Results */}
+            {loading ? (
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color="#0E1F43" />
+                    <Text style={styles.loadingText}>Searching…</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={results}
+                    keyExtractor={item => item._id}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.listContent}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            style={styles.resultCard}
+                            activeOpacity={0.85}
+                            onPress={() => navigation.navigate('StudyDetail', { studyId: item._id })}
+                        >
+                            <View style={styles.cardTop}>
+                                <View style={styles.badgeRow}>
+                                    <View style={styles.categoryBadge}>
+                                        <Text style={styles.categoryBadgeText}>{item.category}</Text>
                                     </View>
-                                )}
+                                    {item.studyType && (
+                                        <View style={styles.typeBadge}>
+                                            <Text style={styles.typeBadgeText}>{item.studyType}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => toggleBookmark(item._id)}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <Ionicons
+                                        name={bookmarked.has(item._id) ? 'bookmark' : 'bookmark-outline'}
+                                        size={18}
+                                        color={bookmarked.has(item._id) ? '#0E1F43' : '#9AADCA'}
+                                    />
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                                <Ionicons name="bookmark-outline" size={18} color="#9AADCA" />
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-                        <Text style={styles.cardAuthors} numberOfLines={1}>{item.authors}</Text>
-                        <Text style={styles.cardAbstract} numberOfLines={2}>{item.abstract}</Text>
-                        <View style={styles.cardMeta}>
-                            <View style={styles.metaItem}>
-                                <Ionicons name="calendar-outline" size={13} color="#9AADCA" />
-                                <Text style={styles.metaText}>{item.year}</Text>
+                            <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+                            <Text style={styles.cardAuthors} numberOfLines={1}>{joinAuthors(item.authors)}</Text>
+                            <Text style={styles.cardAbstract} numberOfLines={2}>{item.abstract}</Text>
+                            <View style={styles.cardMeta}>
+                                <View style={styles.metaItem}>
+                                    <Ionicons name="calendar-outline" size={13} color="#9AADCA" />
+                                    <Text style={styles.metaText}>{item.yearPublished}</Text>
+                                </View>
+                                <View style={styles.metaItem}>
+                                    <Ionicons name="eye-outline" size={13} color="#9AADCA" />
+                                    <Text style={styles.metaText}>{item.viewCount ?? 0}</Text>
+                                </View>
                             </View>
-                            <View style={styles.metaItem}>
-                                <Ionicons name="people-outline" size={13} color="#9AADCA" />
-                                <Text style={styles.metaText}>{item.citations}</Text>
+                        </TouchableOpacity>
+                    )}
+                    ListEmptyComponent={
+                        searched ? (
+                            <View style={styles.emptyState}>
+                                <Ionicons name="search-outline" size={42} color="#C5D0E0" />
+                                <Text style={styles.emptyTitle}>No results found</Text>
+                                <Text style={styles.emptySubtitle}>Try different keywords or filters.</Text>
                             </View>
-                        </View>
-                    </TouchableOpacity>
-                )}
-                ListFooterComponent={
-                    <View style={styles.trendingSection}>
-                        <View style={styles.trendingHeader}>
-                            <Ionicons name="trending-up-outline" size={18} color="#0E1F43" />
-                            <Text style={styles.trendingTitle}>Trending Topics (2026)</Text>
-                        </View>
-                        {TRENDING_TOPICS.map((topic, i) => (
-                            <TouchableOpacity key={i} style={styles.trendingItem} onPress={() => setQuery(topic)} activeOpacity={0.7}>
-                                <Text style={styles.trendingItemText}>{topic}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                }
-            />
+                        ) : (
+                            <View style={styles.trendingSection}>
+                                <View style={styles.trendingHeader}>
+                                    <Ionicons name="trending-up-outline" size={18} color="#0E1F43" />
+                                    <Text style={styles.trendingTitle}>Trending Topics ({new Date().getFullYear()})</Text>
+                                </View>
+                                {TRENDING_TOPICS.map((topic, i) => (
+                                    <TouchableOpacity
+                                        key={i}
+                                        style={styles.trendingItem}
+                                        onPress={() => { setQuery(topic); doSearch(topic); }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.trendingItemText}>{topic}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )
+                    }
+                />
+            )}
 
             {/* Advanced Search Modal */}
             <Modal transparent animationType="fade" visible={advancedVisible} onRequestClose={() => setAdvancedVisible(false)}>
@@ -218,13 +286,13 @@ const SearchScreen: React.FC = () => {
                                 <Text style={styles.modalSectionLabel}>Department</Text>
                                 <TextInput
                                     style={styles.modalInputFull}
-                                    placeholder=""
+                                    placeholder="e.g. BSIT, BSCS..."
                                     placeholderTextColor="#9AADCA"
                                     value={department}
                                     onChangeText={setDepartment}
                                 />
 
-                                <Text style={styles.modalSectionLabel}>Research Theme</Text>
+                                <Text style={styles.modalSectionLabel}>Study Type</Text>
                                 <View style={styles.themeRow}>
                                     {RESEARCH_THEMES.map(theme => (
                                         <TouchableOpacity
@@ -239,19 +307,11 @@ const SearchScreen: React.FC = () => {
                                 </View>
 
                                 <View style={styles.modalActions}>
-                                    <TouchableOpacity
-                                        style={styles.searchBtn}
-                                        onPress={() => { setQuery(keywords); setAdvancedVisible(false); }}
-                                        activeOpacity={0.8}
-                                    >
+                                    <TouchableOpacity style={styles.searchBtn} onPress={handleAdvancedSearch} activeOpacity={0.8}>
                                         <Ionicons name="search" size={16} color="#fff" />
                                         <Text style={styles.searchBtnText}>Search</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.clearBtn}
-                                        onPress={() => { setKeywords(''); setFromYear('2020'); setToYear('2025'); setDepartment(''); setActiveTheme('All'); }}
-                                        activeOpacity={0.8}
-                                    >
+                                    <TouchableOpacity style={styles.clearBtn} onPress={clearAdvanced} activeOpacity={0.8}>
                                         <Ionicons name="close" size={16} color="#555" />
                                         <Text style={styles.clearBtnText}>Clear</Text>
                                     </TouchableOpacity>
@@ -268,6 +328,13 @@ const SearchScreen: React.FC = () => {
 // --- Styles ---
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6FA' },
+
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: vs(10) },
+    loadingText: { fontSize: ms(13), color: '#9AADCA', fontWeight: '500' },
+
+    emptyState: { alignItems: 'center', paddingTop: vs(60), gap: vs(8) },
+    emptyTitle:    { fontSize: ms(15), fontWeight: '700', color: '#0E1F43' },
+    emptySubtitle: { fontSize: ms(13), color: '#8A97B0' },
 
     searchRow: {
         flexDirection: 'row',

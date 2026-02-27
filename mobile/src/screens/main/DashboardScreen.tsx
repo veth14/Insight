@@ -1,45 +1,97 @@
-﻿import React from 'react';
+﻿import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
-    StatusBar, Image, Dimensions,
+    StatusBar, Image, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AppHeader from '../../components/AppHeader';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
 import { scale, vs, ms, wp } from '../../utils/responsive';
+import api from '../../services/api.service';
 
-const { width } = Dimensions.get('window');
+// Types
+interface StudyCard {
+    _id: string;
+    title: string;
+    category?: string;
+    systemImageUrl?: string | null;
+    viewCount?: number;
+}
 
-// ─── Sample image assets ─────────────────────────────────────────────────────
-const IMG_ML        = require('../../../assets/images/SAMPLE/machine learning.jpg');
-const IMG_AI_EDU    = require('../../../assets/images/SAMPLE/AI in Education.png');
-const IMG_AI_EDU2   = require('../../../assets/images/SAMPLE/ai in education.jpg');
-const IMG_MOBILE    = require('../../../assets/images/SAMPLE/mobile.jpeg');
-const IMG_LOGO      = require('../../../assets/images/Insiqht_LOGO.png');
+interface DashboardStats {
+    totalApproved: number;
+    readingCount: number;
+    savedCount: number;
+}
 
-const MOCK_RECENTLY_ADDED = [
-    { _id: 'r1', title: 'Machine Learning Approaches in Predicting Student Academic Performance', category: 'Information Technology', image: IMG_ML },
-    { _id: 'r2', title: 'InsIQht: A Mobile-Based Centralized Repository for Capstone Projects', category: 'Information Technology', image: IMG_LOGO },
-];
+interface DashboardData {
+    stats: DashboardStats;
+    recentlyAdded: StudyCard[];
+    recommended: StudyCard[];
+    trending: StudyCard[];
+}
 
-const MOCK_RECOMMENDED = [
-    { _id: 'rec1', title: 'AI in Education: A Systematic Review', category: 'Artificial Intelligence', views: '1k', image: IMG_AI_EDU },
-    { _id: 'rec2', title: 'Artificial Intelligence in Education', category: 'Artificial Intelligence', views: '2k', image: IMG_AI_EDU2 },
-    { _id: 'rec3', title: 'Mobile Health Applications', category: 'Mobile App', views: '3k', image: IMG_MOBILE },
-];
-
-const MOCK_TRENDING = [
-    { _id: 't1', title: 'InsIQht: A Mobile-Based Centralized Repository for BSIT Capstone Projects', category: 'Computer Science', image: IMG_LOGO },
-    { _id: 't2', title: 'Machine Learning Approaches in Predicting Student Academic Performance 2026', category: 'Artificial Intelligent', image: IMG_ML },
-];
+// Helpers
+function fmtNum(n?: number): string {
+    if (!n) return '0';
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    return String(n);
+}
 
 const DashboardScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
+    const [data, setData]             = useState<DashboardData | null>(null);
+    const [loading, setLoading]       = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchDashboard = useCallback(async (isRefresh = false) => {
+        if (!isRefresh) setLoading(true);
+        try {
+            const res = await api.get('/studies/dashboard');
+            setData(res.data);
+        } catch (err) {
+            console.error('Dashboard fetch error:', err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchDashboard();
+        }, [fetchDashboard])
+    );
+
     const handleStudyPress = (studyId: string) => navigation.navigate('StudyDetail', { studyId });
+
+    const StudyImage = ({ uri, style }: { uri?: string | null; style: any }) =>
+        uri
+            ? <Image source={{ uri }} style={style} resizeMode="cover" />
+            : <View style={[style, styles.imgPlaceholder]}>
+                <Ionicons name="image-outline" size={24} color="#C5D0E0" />
+              </View>;
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+                <AppHeader />
+                <View style={styles.centered}>
+                    <ActivityIndicator size="large" color="#0E1F43" />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    const stats         = data?.stats;
+    const recentlyAdded = data?.recentlyAdded ?? [];
+    const recommended   = data?.recommended   ?? [];
+    const trending      = data?.trending      ?? [];
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -47,104 +99,142 @@ const DashboardScreen: React.FC = () => {
 
             <AppHeader />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scroll}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={() => { setRefreshing(true); fetchDashboard(true); }}
+                        colors={['#0E1F43']}
+                        tintColor="#0E1F43"
+                    />
+                }
+            >
 
-                {/* â”€â”€ Stat Cards â”€â”€ */}
+                {/* Stat Cards */}
                 <View style={styles.statsRow}>
                     <View style={styles.statCard}>
                         <Ionicons name="document-text-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>1,248</Text>
+                        <Text style={styles.statNumber}>{fmtNum(stats?.totalApproved)}</Text>
                         <Text style={styles.statLabel}>Studies</Text>
-                        <Text style={[styles.statChange, { color: '#E53935' }]}>-12%</Text>
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons name="eye-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>4</Text>
+                        <Text style={styles.statNumber}>{stats?.readingCount ?? 0}</Text>
                         <Text style={styles.statLabel}>Reading</Text>
-                        <Text style={[styles.statChange, { color: '#3B82F6' }]}>+2%</Text>
                     </View>
                     <View style={styles.statCard}>
                         <Ionicons name="bookmark-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>4</Text>
+                        <Text style={styles.statNumber}>{stats?.savedCount ?? 0}</Text>
                         <Text style={styles.statLabel}>Saved</Text>
-                        <Text style={[styles.statChange, { color: '#10B981' }]}>+3%</Text>
                     </View>
                 </View>
 
-                {/* â”€â”€ Recently Added â”€â”€ */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recently Added</Text>
-                </View>
-                <View style={styles.recentRow}>
-                    {MOCK_RECENTLY_ADDED.map(item => (
-                        <TouchableOpacity key={item._id} style={styles.recentCard} onPress={() => handleStudyPress(item._id)} activeOpacity={0.85}>
-                            <Image source={item.image} style={styles.recentThumb} resizeMode="cover" />
-                            <View style={styles.recentBody}>
-                                <Text style={styles.cardCategory}>{item.category}</Text>
-                                <Text style={styles.recentTitle} numberOfLines={2}>{item.title}</Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* Recently Added */}
+                {recentlyAdded.length > 0 && (
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Recently Added</Text>
+                        </View>
+                        <View style={styles.recentRow}>
+                            {recentlyAdded.slice(0, 2).map(item => (
+                                <TouchableOpacity
+                                    key={item._id}
+                                    style={styles.recentCard}
+                                    onPress={() => handleStudyPress(item._id)}
+                                    activeOpacity={0.85}
+                                >
+                                    <StudyImage uri={item.systemImageUrl} style={styles.recentThumb} />
+                                    <View style={styles.recentBody}>
+                                        <Text style={styles.cardCategory}>{item.category ?? 'General'}</Text>
+                                        <Text style={styles.recentTitle} numberOfLines={2}>{item.title}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </>
+                )}
 
-                {/* â”€â”€ Recommended For You â”€â”€ */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recommended For You</Text>
-                </View>
-                <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    data={MOCK_RECOMMENDED}
-                    keyExtractor={item => item._id}
-                    contentContainerStyle={styles.hList}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity style={styles.recCard} onPress={() => handleStudyPress(item._id)} activeOpacity={0.85}>
-                            <Image source={item.image} style={styles.recThumb} resizeMode="cover" />
-                            <View style={styles.recBody}>
-                                <Text style={styles.recTitle} numberOfLines={2}>{item.title}</Text>
-                                <Text style={styles.cardCategory}>{item.category}</Text>
-                                <View style={styles.recMeta}>
-                                    <Ionicons name="eye-outline" size={12} color="#888" />
-                                    <Text style={styles.recViews}>{item.views}</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    )}
-                />
+                {/* Recommended For You */}
+                {recommended.length > 0 && (
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Recommended For You</Text>
+                        </View>
+                        <FlatList
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            data={recommended}
+                            keyExtractor={item => item._id}
+                            contentContainerStyle={styles.hList}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.recCard}
+                                    onPress={() => handleStudyPress(item._id)}
+                                    activeOpacity={0.85}
+                                >
+                                    <StudyImage uri={item.systemImageUrl} style={styles.recThumb} />
+                                    <View style={styles.recBody}>
+                                        <Text style={styles.recTitle} numberOfLines={2}>{item.title}</Text>
+                                        <Text style={styles.cardCategory}>{item.category ?? 'General'}</Text>
+                                        <View style={styles.recMeta}>
+                                            <Ionicons name="eye-outline" size={12} color="#888" />
+                                            <Text style={styles.recViews}>{fmtNum(item.viewCount)}</Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </>
+                )}
 
-                {/* â”€â”€ Trending â”€â”€ */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Trending</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('TrendingAll')}><Text style={styles.seeAll}>See all</Text></TouchableOpacity>
-                </View>
-                <View style={styles.trendingList}>
-                    {MOCK_TRENDING.map(item => (
-                        <TouchableOpacity key={item._id} style={styles.trendRow} onPress={() => handleStudyPress(item._id)} activeOpacity={0.85}>
-                            <Image source={item.image} style={styles.trendThumb} resizeMode="cover" />
-                            <View style={styles.trendBody}>
-                                <Text style={styles.cardCategory}>{item.category}</Text>
-                                <Text style={styles.trendTitle} numberOfLines={2}>{item.title}</Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* Trending */}
+                {trending.length > 0 && (
+                    <>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Trending</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('TrendingAll')}>
+                                <Text style={styles.seeAll}>See all</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.trendingList}>
+                            {trending.map(item => (
+                                <TouchableOpacity
+                                    key={item._id}
+                                    style={styles.trendRow}
+                                    onPress={() => handleStudyPress(item._id)}
+                                    activeOpacity={0.85}
+                                >
+                                    <StudyImage uri={item.systemImageUrl} style={styles.trendThumb} />
+                                    <View style={styles.trendBody}>
+                                        <Text style={styles.cardCategory}>{item.category ?? 'General'}</Text>
+                                        <Text style={styles.trendTitle} numberOfLines={2}>{item.title}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </>
+                )}
 
             </ScrollView>
-
         </SafeAreaView>
     );
 };
 
-// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const CARD_W = wp(62);
+// Styles
 const REC_W = wp(38);
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F5F6FA' },
-
-
-
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     scroll: { paddingBottom: 100 },
+
+    imgPlaceholder: {
+        backgroundColor: '#EEF2F8',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 
     // Stats
     statsRow: {
@@ -170,7 +260,6 @@ const styles = StyleSheet.create({
     },
     statNumber: { fontSize: ms(20), fontWeight: '700', color: '#0E1F43', marginTop: vs(6) },
     statLabel: { fontSize: ms(11), color: '#888', marginTop: vs(1) },
-    statChange: { fontSize: ms(11), fontWeight: '600', marginTop: vs(3) },
 
     // Section header
     sectionHeader: {
@@ -251,9 +340,6 @@ const styles = StyleSheet.create({
     },
     trendBody: { flex: 1, padding: scale(12), justifyContent: 'center' },
     trendTitle: { fontSize: ms(13), fontWeight: '600', color: '#1A2744', lineHeight: vs(18) },
-
-
 });
 
 export default DashboardScreen;
-
