@@ -28,7 +28,7 @@ interface AuthContextType {
     sendResetOTP: (email: string) => Promise<void>;
     verifyResetOTP: (email: string, otp: string) => Promise<string>;
     resetPassword: (email: string, resetToken: string, newPassword: string) => Promise<void>;
-    register: (email: string, password: string, displayName: string, yearLevel: number, program: string, studentNumber: string, phoneNumber: string) => Promise<void>;
+    register: (email: string, password: string, displayName: string, yearLevel: number, program: string, studentNumber: string, phoneNumber: string, registrationFormUrl?: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
@@ -196,17 +196,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const register = async (
-        email: string,
-        password: string,
-        displayName: string,
-        yearLevel: number,
-        program: string,
-        studentNumber: string,
-        phoneNumber: string
+        email: string, password: string, displayName: string,
+        yearLevel: number, program: string, studentNumber: string,
+        phoneNumber: string, registrationFormUrl?: string,
     ) => {
         // Do not set global loading here to prevent navigation reset
         try {
-            const user = await authService.register(email, password, displayName, yearLevel, program, studentNumber, phoneNumber);
+            const user = await authService.register(email, password, displayName, yearLevel, program, studentNumber, phoneNumber, registrationFormUrl);
             setUser(user);
         } catch (error) {
             throw error;

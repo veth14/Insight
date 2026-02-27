@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { register, getMe, updateProfile } from '../controllers/auth.controller';
 import { sendOTP, verifyOTP } from '../controllers/otp.controller';
 import { sendResetOTP, verifyResetOTP, resetPassword } from '../controllers/reset.controller';
@@ -6,12 +7,16 @@ import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
+// Multer setup: memory storage so no temp directory is needed.
+// sharp will process the in-memory buffer and write the final file.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
 /**
  * @route   POST /api/auth/register
  * @desc    Register new user in database (after Firebase registration)
  * @access  Private (requires Firebase token)
  */
-router.post('/register', authenticate, register);
+router.post('/register', authenticate, upload.single('registrationForm'), register);
 
 /**
  * @route   GET /api/auth/me

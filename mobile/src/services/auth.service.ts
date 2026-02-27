@@ -26,7 +26,8 @@ class AuthService {
         yearLevel: number,
         program: string,
         studentNumber: string,
-        phoneNumber: string
+        phoneNumber: string,
+        registrationFormUrl?: string,
     ): Promise<User> {
         let userCredential;
         try {
@@ -53,16 +54,63 @@ class AuthService {
                 }
 
                 // Create user in backend database
-                const response = await api.post('/auth/register', {
-                    uid: firebaseUser.uid,
-                    email,
-                    displayName,
-                    role,
-                    yearLevel,
-                    program,
-                    studentNumber,
-                    phoneNumber
-                });
+                let response;
+                const isLocalFile = registrationFormUrl && (registrationFormUrl.startsWith('file:') || registrationFormUrl.startsWith('content:') || registrationFormUrl.startsWith('/'));
+
+                if (isLocalFile) {
+                    // Use native fetch for multipart/form-data — axios + Content-Type: undefined
+                    // causes ERR_NETWORK in React Native's XHR layer. fetch handles
+                    // FormData boundaries natively and reliably on Android/iOS.
+                    const form = new FormData();
+                    form.append('uid', firebaseUser.uid as any);
+                    form.append('email', email as any);
+                    form.append('displayName', displayName as any);
+                    form.append('role', role as any);
+                    form.append('yearLevel', yearLevel as any);
+                    form.append('program', program as any);
+                    form.append('studentNumber', studentNumber as any);
+                    form.append('phoneNumber', phoneNumber as any);
+
+                    const fileName = `${studentNumber.trim()}_${Date.now()}.jpg`;
+                    form.append('registrationForm', {
+                        uri: registrationFormUrl as any,
+                        name: fileName,
+                        type: 'image/jpeg',
+                    } as any);
+
+                    const fetchRes = await fetch(
+                        `${process.env.EXPO_PUBLIC_API_URL}/auth/register`,
+                        {
+                            method: 'POST',
+                            body: form as any,
+                            headers: {
+                                // Authorization only — DO NOT set Content-Type,
+                                // fetch sets multipart/form-data with boundary automatically
+                                Authorization: `Bearer ${idToken}`,
+                            },
+                        }
+                    );
+
+                    const fetchData = await fetchRes.json();
+                    if (!fetchRes.ok) {
+                        throw new Error(fetchData.message || `Server error ${fetchRes.status}`);
+                    }
+                    return fetchData.user;
+                } else {
+                    response = await api.post('/auth/register', {
+                        uid: firebaseUser.uid,
+                        email,
+                        displayName,
+                        role,
+                        yearLevel,
+                        program,
+                        studentNumber,
+                        phoneNumber,
+                        registrationFormUrl: registrationFormUrl ?? null,
+                    }, {
+                        headers: { Authorization: `Bearer ${idToken}` },
+                    });
+                }
 
                 console.log('Backend registration successful');
                 return response.data.user;
@@ -71,6 +119,7 @@ class AuthService {
                 // 3. Rollback: Delete Firebase user if backend fails
                 console.error('Backend registration failed. Rolling back Firebase user.', backendError);
                 console.error('Error details:', backendError.response?.data || backendError.message);
+                console.error('Error code:', backendError.code, '| Status:', backendError.response?.status);
                 
                 try {
                     await firebaseUser.delete();
@@ -82,10 +131,12 @@ class AuthService {
                 // Throw a user-friendly error
                 if (backendError.response) {
                     throw new Error(`Server Error: ${backendError.response.data.message || 'Registration failed'}`);
-                } else if (backendError.request) {
+                } else if (backendError.code === 'ECONNABORTED' || backendError.message?.includes('timeout')) {
+                    throw new Error('Network Error: Request timed out. The server is taking too long to respond.');
+                } else if (backendError.request || backendError.message === 'Network request failed') {
                     throw new Error('Network Error: Could not connect to the server. Please check your internet connection.');
                 } else {
-                    throw new Error('Registration failed. Please try again.');
+                    throw new Error(backendError.message || 'Registration failed. Please try again.');
                 }
             }
 

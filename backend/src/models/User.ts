@@ -9,10 +9,15 @@ export interface IUser extends Document {
     email: string;
     studentNumber: string;
     displayName: string;
-    phoneNumber: string;
+    phoneNumber?: string;
     role: UserRole;
     yearLevel?: number;
     program?: string;
+    status: 'active' | 'suspended';
+    registrationStatus: 'pending' | 'approved' | 'rejected';
+    registrationFormUrl?: string;
+    studentAccessRights: boolean;
+    lastActiveAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -49,8 +54,9 @@ const UserSchema: Schema = new Schema(
         },
         phoneNumber: {
             type: String,
-            required: true,
+            required: false,
             trim: true,
+            default: null,
         },
         role: {
             type: String,
@@ -66,6 +72,29 @@ const UserSchema: Schema = new Schema(
         program: {
             type: String,
             required: true,
+        },
+        status: {
+            type: String,
+            enum: ['active', 'suspended'],
+            default: 'active',
+            index: true,
+        },
+        studentAccessRights: {
+            type: Boolean,
+            default: true,
+        },
+        registrationStatus: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'pending',
+            index: true,
+        },
+        registrationFormUrl: {
+            type: String,
+            default: null,
+        },
+        lastActiveAt: {
+            type: Date,
         },
     },
     {

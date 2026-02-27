@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
 import { AuthRequest } from '../types';
+import path from 'path';
+import fs from 'fs';
+import sharp from 'sharp';
 
 /**
  * Register new user
@@ -10,6 +13,43 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     try {
         const authReq = req as AuthRequest;
         const { uid, email, displayName, role, yearLevel, studentNumber, phoneNumber, program } = req.body;
+        // If a file was uploaded via multipart/form-data, multer will attach it to req.file
+        const uploadedFile = (req as any).file;
+        let registrationFormUrl: string | null = null;
+        console.log(`[register] file received: ${uploadedFile ? uploadedFile.originalname + ' (' + uploadedFile.size + ' bytes)' : 'none'}, content-type: ${req.headers['content-type']?.substring(0, 60)}`);
+
+        if (uploadedFile) {
+            // Process in-memory buffer through sharp (no temp disk file needed)
+            const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
+            const finalDir = path.join(uploadsRoot, 'registrationForms');
+            if (!fs.existsSync(finalDir)) fs.mkdirSync(finalDir, { recursive: true });
+
+            const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`;
+            const finalPath = path.join(finalDir, filename);
+
+            try {
+                await sharp(uploadedFile.buffer)
+                    .rotate()                                         // auto-orient from EXIF
+                    .resize({ width: 1200, withoutEnlargement: true }) // cap width at 1200px
+                    .jpeg({ quality: 80 })                            // clear JPEG output
+                    .toFile(finalPath);
+
+                const host = req.protocol + '://' + req.get('host');
+                registrationFormUrl = `${host}/uploads/registrationForms/${filename}`;
+            } catch (procErr) {
+                console.error('Image processing failed, saving raw buffer instead:', procErr);
+                // fallback: write raw buffer as-is
+                try {
+                    fs.writeFileSync(finalPath, uploadedFile.buffer);
+                    const host = req.protocol + '://' + req.get('host');
+                    registrationFormUrl = `${host}/uploads/registrationForms/${filename}`;
+                } catch (writeErr) {
+                    console.error('Fallback write also failed:', writeErr);
+                }
+            }
+        } else if (req.body.registrationFormUrl) {
+            registrationFormUrl = req.body.registrationFormUrl;
+        }
 
         // Verify the authenticated user matches the user being registered
         if (authReq.user?.uid !== uid) {
@@ -33,7 +73,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             phoneNumber,
             role,
             yearLevel,
-            program
+            program,
+            registrationFormUrl: registrationFormUrl ?? null,
         });
 
         await user.save();
@@ -49,11 +90,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
                 program: user.program,
                 role: user.role,
                 yearLevel: user.yearLevel,
+                registrationStatus: user.registrationStatus,
             },
         });
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ message: 'Failed to register user' });
+    } catch (error: any) {
+        console.error('Registration error:', error?.message ?? error);
+        res.status(500).json({ message: 'Failed to register user', detail: error?.message });
     }
 };
 
@@ -71,6 +113,9 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        // Stamp last active time without running full document validation
+        await User.updateOne({ uid: authReq.user?.uid }, { $set: { lastActiveAt: new Date() } });
+
         res.json({
             user: {
                 uid: user.uid,
@@ -81,8 +126,11 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
                 program: user.program,
                 role: user.role,
                 yearLevel: user.yearLevel,
+                registrationStatus: user.registrationStatus,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
+                status: (user as any).status ?? 'active',
+                lastActiveAt: (user as any).lastActiveAt ?? null,
             },
         });
     } catch (error) {

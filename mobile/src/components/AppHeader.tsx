@@ -9,7 +9,17 @@ import { useAuth } from '../contexts/AuthContext';
 
 const IMG_LOGO = require('../../assets/images/insightlogox128.png');
 
-const AppHeader: React.FC = () => {
+interface AppHeaderProps {
+    onNotificationPress?: () => void;
+    notificationCount?: number;
+    onAvatarPress?: () => void;
+}
+
+const AppHeader: React.FC<AppHeaderProps> = ({
+    onNotificationPress,
+    notificationCount = 0,
+    onAvatarPress,
+}) => {
     const { user, logout } = useAuth();
     const navigation = useNavigation<any>();
     const [menuVisible, setMenuVisible] = useState(false);
@@ -17,6 +27,11 @@ const AppHeader: React.FC = () => {
     const initials = user?.displayName
         ? user.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
         : 'U';
+
+    const handleAvatarPress = () => {
+        if (onAvatarPress) onAvatarPress();
+        else setMenuVisible(true);
+    };
 
     return (
         <>
@@ -26,9 +41,23 @@ const AppHeader: React.FC = () => {
                         <Image source={IMG_LOGO} style={styles.logoImg} resizeMode="contain" />
                     </View>
                 </View>
-                <TouchableOpacity style={styles.avatar} onPress={() => setMenuVisible(true)} activeOpacity={0.8}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                </TouchableOpacity>
+                <View style={styles.headerRight}>
+                    {onNotificationPress && (
+                        <TouchableOpacity style={styles.notifBtn} onPress={onNotificationPress} activeOpacity={0.8}>
+                            <Ionicons name="notifications-outline" size={22} color="#0E1F43" />
+                            {notificationCount > 0 && (
+                                <View style={styles.notifBadge}>
+                                    <Text style={styles.notifBadgeText}>
+                                        {notificationCount > 9 ? '9+' : notificationCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.avatar} onPress={handleAvatarPress} activeOpacity={0.8}>
+                        <Text style={styles.avatarText}>{initials}</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <Modal transparent animationType="fade" visible={menuVisible} onRequestClose={() => setMenuVisible(false)}>
@@ -78,6 +107,19 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     headerLeft: { flex: 1, justifyContent: 'center' },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    notifBtn: {
+        width: 42, height: 42, borderRadius: 21,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    notifBadge: {
+        position: 'absolute', top: 7, right: 7,
+        minWidth: 15, height: 15, borderRadius: 8,
+        backgroundColor: '#E53E3E',
+        justifyContent: 'center', alignItems: 'center',
+        paddingHorizontal: 3,
+    },
+    notifBadgeText: { fontSize: 9, fontWeight: '700', color: '#fff' },
     logoContainer: {
         width: 160,
         height: 48,
@@ -102,7 +144,7 @@ const styles = StyleSheet.create({
     menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' },
     menuCard: {
         position: 'absolute',
-        top: 100,
+        top: 60,
         right: 16,
         backgroundColor: '#fff',
         borderRadius: 16,

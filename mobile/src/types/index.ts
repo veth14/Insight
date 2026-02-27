@@ -27,8 +27,9 @@ export interface User {
     displayName: string;
     phoneNumber: string;
     role: UserRole;
-    program?: AcademicProgram; // Added Program field
+    program?: AcademicProgram;
     yearLevel?: number;
+    registrationStatus?: 'pending' | 'approved' | 'rejected';
     createdAt: Date;
     updatedAt: Date;
 }
@@ -84,6 +85,7 @@ export interface ReadingHistory {
 export type RootStackParamList = {
     Auth: undefined;
     Main: undefined;
+    Admin: undefined;
 };
 
 export type AuthStackParamList = {

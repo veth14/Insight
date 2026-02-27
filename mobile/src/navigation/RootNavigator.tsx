@@ -7,6 +7,8 @@ import { RootStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
+import AdminStack from './AdminStack';
+import { UserRole } from '../types';
 import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -47,8 +49,14 @@ const RootNavigator: React.FC = () => {
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {user ? (
-                    // Authenticated — always show main app
-                    <Stack.Screen name="Main" component={MainTabs} />
+                    user.role === UserRole.ADMIN || user.role === UserRole.FACULTY ? (
+                        // Admin/Faculty — show admin dashboard
+                        <Stack.Screen name="Admin" component={AdminStack} />
+                    ) : (
+                        // All students — show main app
+                        // Upload tab is hidden for non-approved 4th year students (see MainTabs)
+                        <Stack.Screen name="Main" component={MainTabs} />
+                    )
                 ) : !hasSeenOnboarding ? (
                     // Not authenticated, first launch — show onboarding
                     <Stack.Screen name="Auth" component={AuthStack} />

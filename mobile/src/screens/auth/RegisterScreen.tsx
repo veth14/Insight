@@ -20,6 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList, AcademicProgram } from '../../types';
 import { Ionicons } from '@expo/vector-icons';
 import TermsAndConditionsModal from './TermsAndConditionsModal';
+import * as ImagePicker from 'expo-image-picker';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -35,6 +36,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     const [yearLevel, setYearLevel] = useState('');
     const [program, setProgram] = useState<AcademicProgram | ''>('');
     const [password, setPassword] = useState('');
+    // Registration form photo (4th year only)
+    const [regFormUri, setRegFormUri] = useState<string | null>(null);
 
     // UI State
     const [isSecure, setIsSecure] = useState(true);
@@ -67,14 +70,40 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             return;
         }
 
+        // 4th year must upload their registration form
+        if (yearLevel === '4' && !regFormUri) {
+            setError('4th year students must upload their Student Registration Form.');
+            return;
+        }
+
         setLoading(true);
         setError(null);
         try {
-            await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '');
+                // Pass the local file URI to the auth service; the service will upload it as multipart
+                const registrationFormLocalUri = regFormUri ?? undefined;
+                await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '', registrationFormLocalUri);
         } catch (err: any) {
             setError(err.message || 'An error occurred during registration.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    /* Pick photo from gallery */
+    const pickPhoto = async () => {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (perm.status !== 'granted') {
+            setError('Permission to access photos is required.');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: 'images' as any,
+            allowsEditing: true,
+            quality: 0.8,
+        });
+        if (!result.canceled && result.assets[0]) {
+            setRegFormUri(result.assets[0].uri);
+            setError(null);
         }
     };
 
@@ -154,10 +183,50 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Year level (1–4)"
                                     placeholderTextColor="#AABCD0"
                                     value={yearLevel}
-                                    onChangeText={t => { setYearLevel(t); setError(null); }}
-                                    keyboardType="numeric"
+                                    onChangeText={t => {
+                                        // Only allow a single digit between 1 and 4
+                                        if (t === '' || /^[1-4]$/.test(t)) {
+                                            setYearLevel(t);
+                                            setError(null);
+                                            if (t !== '4') setRegFormUri(null);
+                                        }
+                                    }}
+                                    keyboardType="number-pad"
+                                    maxLength={1}
                                 />
                             </View>
+
+                            {/* 4th Year: Student Registration Form Upload */}
+                            {yearLevel === '4' && (
+                                <View style={styles.uploadSection}>
+                                    <View style={styles.uploadHeader}>
+                                        <Ionicons name="document-attach-outline" size={ms(16)} color="#0E1F43" />
+                                        <Text style={styles.uploadTitle}>Student Registration Form</Text>
+                                        <View style={styles.uploadRequiredBadge}>
+                                            <Text style={styles.uploadRequiredText}>Required</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.uploadSub}>
+                                        4th year students must upload a photo of their official Student Registration Form for verification.
+                                    </Text>
+
+                                    {regFormUri ? (
+                                        <View style={styles.previewBox}>
+                                            <Image source={{ uri: regFormUri }} style={styles.previewImage} resizeMode="cover" />
+                                            <TouchableOpacity style={styles.changePhotoBtn} onPress={pickPhoto} activeOpacity={0.8}>
+                                                <Ionicons name="refresh-outline" size={ms(13)} color="#0E1F43" />
+                                                <Text style={styles.changePhotoText}>Change Photo</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity style={styles.uploadBtn} onPress={pickPhoto} activeOpacity={0.8}>
+                                            <Ionicons name="cloud-upload-outline" size={ms(22)} color="#9AADCA" />
+                                            <Text style={styles.uploadBtnText}>Tap to upload photo</Text>
+                                            <Text style={styles.uploadBtnSub}>JPG · PNG · max 10 MB</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            )}
 
                             {/* Program Selector */}
                             <View style={styles.programContainer}>
@@ -204,7 +273,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                             {/* Terms Checkbox */}
                             <TouchableOpacity
                                 style={styles.termsRow}
-                                onPress={() => setTermsAccepted(!termsAccepted)}
+                                onPress={() => {
+                                    if (!termsAccepted) {
+                                        // Show T&C first — checkbox is ticked only after agreeing
+                                        setShowTerms(true);
+                                    } else {
+                                        setTermsAccepted(false);
+                                    }
+                                }}
                             >
                                 <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
                                     {termsAccepted && <Ionicons name="checkmark" size={12} color="white" />}
@@ -463,6 +539,59 @@ const styles = StyleSheet.create({
     footerLink: {
         color: '#0E1F43',
         fontWeight: '700',
+    },
+
+    // 4th year upload section
+    uploadSection: {
+        width: '100%',
+        backgroundColor: '#F7F9FF',
+        borderRadius: ms(12),
+        borderWidth: 1.5,
+        borderColor: '#D8DFEE',
+        padding: scale(14),
+        marginBottom: vs(14),
+    },
+    uploadHeader: {
+        flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: vs(5),
+    },
+    uploadTitle: {
+        fontSize: ms(13), fontWeight: '700', color: '#0E1F43', flex: 1,
+    },
+    uploadRequiredBadge: {
+        backgroundColor: '#FEF3C7', borderRadius: ms(8),
+        paddingHorizontal: scale(7), paddingVertical: vs(2),
+    },
+    uploadRequiredText: {
+        fontSize: ms(10), fontWeight: '700', color: '#D97706',
+    },
+    uploadSub: {
+        fontSize: ms(11), color: '#9AADCA', lineHeight: ms(16), marginBottom: vs(10),
+    },
+    uploadBtn: {
+        borderWidth: 1.5, borderColor: '#D8DFEE', borderStyle: 'dashed',
+        borderRadius: ms(10), paddingVertical: vs(18),
+        alignItems: 'center', gap: vs(4),
+        backgroundColor: '#fff',
+    },
+    uploadBtnText: {
+        fontSize: ms(13), fontWeight: '600', color: '#9AADCA',
+    },
+    uploadBtnSub: {
+        fontSize: ms(11), color: '#C0CDE8',
+    },
+    previewBox: {
+        borderRadius: ms(10), overflow: 'hidden', borderWidth: 1, borderColor: '#D8DFEE',
+    },
+    previewImage: {
+        width: '100%', height: vs(140),
+    },
+    changePhotoBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: scale(6), paddingVertical: vs(8), backgroundColor: '#F7F9FF',
+        borderTopWidth: 1, borderTopColor: '#E8ECF4',
+    },
+    changePhotoText: {
+        fontSize: ms(12), fontWeight: '600', color: '#0E1F43',
     },
 });
 

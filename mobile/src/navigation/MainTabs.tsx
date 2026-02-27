@@ -5,12 +5,20 @@ import HomeStack from './HomeStack';
 import SearchStack from './SearchStack';
 import LibraryScreen from '../screens/main/LibraryScreen';
 import UploadScreen from '../screens/main/UploadScreen';
+import UploadLockedScreen from '../screens/main/UploadLockedScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabs: React.FC = () => {
+    const { user } = useAuth();
+    const is4thYear = user?.role === UserRole.STUDENT_4TH;
+    const isApproved = user?.registrationStatus === 'approved';
+    // 4th year: show Upload tab always, route to locked screen until approved
+    const UploadComponent = is4thYear ? (isApproved ? UploadScreen : UploadLockedScreen) : null;
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -51,7 +59,9 @@ const MainTabs: React.FC = () => {
             <Tab.Screen name="Home" component={HomeStack} options={{ tabBarLabel: 'Dashboard' }} />
             <Tab.Screen name="Search" component={SearchStack} options={{ tabBarLabel: 'Search' }} />
             <Tab.Screen name="Library" component={LibraryScreen} options={{ tabBarLabel: 'Library' }} />
-            <Tab.Screen name="Upload" component={UploadScreen} options={{ tabBarLabel: 'Upload' }} />
+            {UploadComponent && (
+                <Tab.Screen name="Upload" component={UploadComponent} options={{ tabBarLabel: 'Upload' }} />
+            )}
             <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ tabBarLabel: 'Alerts' }} />
         </Tab.Navigator>
     );
