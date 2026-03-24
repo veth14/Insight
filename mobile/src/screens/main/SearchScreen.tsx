@@ -15,9 +15,23 @@ import api from '../../services/api.service';
 
 const { width } = Dimensions.get('window');
 
-const CATEGORIES = ['All Categories', 'Computer Science', 'Data Science', 'Health Services',
-    'Education', 'Multimedia', 'IoT', 'Web System', 'Mobile Dev', 'Security'];
-const RESEARCH_THEMES = ['All', 'Thesis', 'Capstone', 'Dissertation'];
+const CATEGORIES = [
+    'All Categories',
+    'Artificial Intelligence',
+    'Computer Engineering',
+    'Computer Science',
+    'Data Science',
+    'Education',
+    'Health Services',
+    'Information Systems',
+    'IoT',
+    'Machine Learning',
+    'Mobile Dev',
+    'Multimedia',
+    'Security',
+    'Web System'
+];
+const RESEARCH_THEMES = ['All', 'Capstone', 'Case Study', 'Dissertation', 'Project', 'Thesis'];
 const TRENDING_TOPICS = [
     'Artificial Intelligence in Education',
     'Mobile Health Applications',

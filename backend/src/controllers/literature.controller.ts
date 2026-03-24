@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import { logAdminAction } from '../utils/audit';
 import { AuditAction } from '../models/AuditLog';
 import { supabase, BUCKET_NAME } from '../config/supabase';
+import { sendApprovalEmail } from '../services/email.service';
 
 /** Extract the storage path from a Supabase public/signed URL */
 function extractStoragePath(url?: string): string | null {
@@ -107,6 +108,11 @@ export const approveLiterature = async (req: Request, res: Response): Promise<vo
         study.rejectionReason = undefined;
         await study.save();
 
+        const uploader = await User.findOne({ uid: study.uploadedBy });
+        if (uploader && uploader.notificationPreferences?.emailNotif) {
+            await sendApprovalEmail(uploader.email, study.title, 'approved');
+        }
+
         await logAdminAction({
             adminUid:   authReq.user!.uid,
             action:     AuditAction.APPROVED_LITERATURE,
@@ -141,6 +147,11 @@ export const rejectLiterature = async (req: Request, res: Response): Promise<voi
         study.approvalStatus  = 'rejected';
         study.rejectionReason = reason?.trim() || undefined;
         await study.save();
+
+        const uploader = await User.findOne({ uid: study.uploadedBy });
+        if (uploader && uploader.notificationPreferences?.emailNotif) {
+            await sendApprovalEmail(uploader.email, study.title, 'rejected');
+        }
 
         await logAdminAction({
             adminUid:   authReq.user!.uid,

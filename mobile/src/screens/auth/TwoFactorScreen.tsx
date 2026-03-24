@@ -20,8 +20,7 @@ import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { scale, vs, ms, wp } from '../../utils/responsive';
-
+import { scale, vs, ms, wp } from '../../utils/responsive';import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 type TwoFactorNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'TwoFactor'>;
 type TwoFactorRouteProp = RouteProp<AuthStackParamList, 'TwoFactor'>;
 
@@ -42,8 +41,16 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
     const [loading, setLoading] = useState(false);
     const [resending, setResending] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
-    const [error, setError] = useState<string | null>(null);
     const resendCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean; title: string; message: string; buttons?: AlertButton[]; icon?: any; iconColor?: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
 
     const inputRefs = useRef<(TextInput | null)[]>([null, null, null, null]);
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -84,7 +91,6 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
         const newOtp = [...otp];
         newOtp[index] = digit;
         setOtp(newOtp);
-        setError(null);
         if (digit && index < 3) inputRefs.current[index + 1]?.focus();
     };
 
@@ -106,16 +112,15 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
     // ─── Verify ───────────────────────────────────────────────────────────────
     const handleVerify = async () => {
         const code = otp.join('');
-        if (code.length < 4) { setError('Please enter all 4 digits.'); triggerShake(); return; }
-        if (isExpired) { setError('Your code has expired. Please request a new one.'); triggerShake(); return; }
+        if (code.length < 4) { showAlert('Incomplete Validaton', 'Please enter all 4 digits.', undefined, 'alert-circle', '#E97C3A'); triggerShake(); return; }
+        if (isExpired) { showAlert('Expired', 'Your code has expired. Please request a new one.', undefined, 'time', '#EF4444'); triggerShake(); return; }
 
         setLoading(true);
-        setError(null);
         try {
             await verifyOTP(email, code);
         } catch (err: any) {
             const msg = err.response?.data?.message || 'Verification failed. Please try again.';
-            setError(msg);
+            showAlert('Verification Failed', msg, undefined, 'close-circle', '#EF4444');
             triggerShake();
             setOtp(['', '', '', '']);
             setTimeout(() => inputRefs.current[0]?.focus(), 100);
@@ -128,20 +133,20 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
     const handleResend = async () => {
         if (resending || resendCooldown > 0) return;
         setResending(true);
-        setError(null);
         setOtp(['', '', '', '']);
         try {
             await resendOTP(email);
             startResendCooldown(RESEND_COOLDOWN);
             setTimeout(() => inputRefs.current[0]?.focus(), 100);
+            showAlert('Code Sent', 'A verification code has been securely sent to your email.', undefined, 'paper-plane', '#10B981');
         } catch (err: any) {
             const status = err.response?.status;
             if (status === 429) {
                 const retryAfter: number = err.response?.data?.retryAfter ?? RESEND_COOLDOWN;
                 startResendCooldown(retryAfter);
-                setError(`Please wait before requesting a new code.`);
+                showAlert('Too Many Requests', 'Please wait before requesting a new code.', undefined, 'time', '#EF4444');
             } else {
-                Alert.alert('Error', 'Failed to resend the code. Please try again.');
+                showAlert('Error', 'Failed to resend the code. Please try again.', undefined, 'alert-circle', '#EF4444');
             }
         } finally {
             setResending(false);
@@ -209,7 +214,6 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
                                         style={[
                                             styles.otpBox,
                                             digit !== '' && styles.otpBoxFilled,
-                                            !!error && styles.otpBoxError,
                                         ]}
                                         value={digit}
                                         onChangeText={text => handleChange(text, i)}
@@ -222,9 +226,6 @@ const TwoFactorScreen: React.FC<Props> = ({ navigation, route }) => {
                                     />
                                 ))}
                             </Animated.View>
-
-                            {/* Error */}
-                            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                             {/* Verify button */}
                             <TouchableOpacity

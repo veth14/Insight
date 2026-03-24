@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, Switch, StatusBar,
@@ -8,12 +8,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { scale, vs, ms } from '../../utils/responsive';
+import api from '../../services/api.service';
 
 const AccountSettingsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const { user, logout } = useAuth();
-    const [emailNotif, setEmailNotif] = useState(false);
-    const [researchUpdates, setResearchUpdates] = useState(false);
+    const { user, logout, refreshUser } = useAuth();
+    const [emailNotif, setEmailNotif] = useState(user?.notificationPreferences?.emailNotif ?? false);
+    const [researchUpdates, setResearchUpdates] = useState(user?.notificationPreferences?.researchUpdates ?? false);
+
+    useEffect(() => {
+        if (user?.notificationPreferences) {
+            setEmailNotif(user.notificationPreferences.emailNotif ?? false);
+            setResearchUpdates(user.notificationPreferences.researchUpdates ?? false);
+        }
+    }, [user?.notificationPreferences]);
+
+    const updatePreferences = async (email: boolean, research: boolean) => {
+        try {
+            await api.put('/auth/me', {
+                notificationPreferences: {
+                    emailNotif: email,
+                    researchUpdates: research,
+                },
+            });
+            refreshUser();
+        } catch (error) {
+            console.error('Failed to update notification preferences', error);
+        }
+    };
+
+    const toggleEmailNotif = (val: boolean) => {
+        setEmailNotif(val);
+        updatePreferences(val, researchUpdates);
+    };
+
+    const toggleResearchUpdates = (val: boolean) => {
+        setResearchUpdates(val);
+        updatePreferences(emailNotif, val);
+    };
 
     const initials = user?.displayName
         ? user.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -91,7 +123,7 @@ const AccountSettingsScreen: React.FC = () => {
                         right={
                             <Switch
                                 value={emailNotif}
-                                onValueChange={setEmailNotif}
+                                onValueChange={toggleEmailNotif}
                                 trackColor={{ false: '#D0D8E8', true: '#0E1F43' }}
                                 thumbColor="#fff"
                                 ios_backgroundColor="#D0D8E8"
@@ -106,7 +138,7 @@ const AccountSettingsScreen: React.FC = () => {
                         right={
                             <Switch
                                 value={researchUpdates}
-                                onValueChange={setResearchUpdates}
+                                onValueChange={toggleResearchUpdates}
                                 trackColor={{ false: '#D0D8E8', true: '#0E1F43' }}
                                 thumbColor="#fff"
                                 ios_backgroundColor="#D0D8E8"

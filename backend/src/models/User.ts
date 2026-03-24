@@ -17,6 +17,12 @@ export interface IUser extends Document {
     registrationStatus: 'pending' | 'approved' | 'rejected';
     registrationFormUrl?: string;
     studentAccessRights: boolean;
+    notificationPreferences?: {
+        emailNotif: boolean;
+        researchUpdates: boolean;
+        newRegistrations?: boolean;
+        literatureSubmissions?: boolean;
+    };
     lastActiveAt?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -82,6 +88,12 @@ const UserSchema: Schema = new Schema(
         studentAccessRights: {
             type: Boolean,
             default: true,
+        },
+        notificationPreferences: {
+            emailNotif: { type: Boolean, default: true },
+            researchUpdates: { type: Boolean, default: true },
+            newRegistrations: { type: Boolean, default: true },
+            literatureSubmissions: { type: Boolean, default: true }
         },
         registrationStatus: {
             type: String,

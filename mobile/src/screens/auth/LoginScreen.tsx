@@ -15,11 +15,13 @@ import {
     Image,
     ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
 import { Ionicons } from '@expo/vector-icons';
 import { scale, vs, ms, wp } from '../../utils/responsive';
+import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -34,7 +36,15 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);
     const [rememberMe, setRememberMe] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean; title: string; message: string; buttons?: AlertButton[]; icon?: any; iconColor?: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
 
     // Auth State
     const [loading, setLoading] = useState(false);
@@ -49,22 +59,43 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             duration: 500,
             useNativeDriver: true,
         }).start();
+
+        // Load saved email if 'Remember Me' was previously checked
+        const loadSavedEmail = async () => {
+            try {
+                const savedEmail = await AsyncStorage.getItem('saved_email');
+                if (savedEmail) {
+                    setEmail(savedEmail);
+                    setRememberMe(true);
+                }
+            } catch (e) {
+                console.log('Error loading saved email', e);
+            }
+        };
+        loadSavedEmail();
     }, []);
 
     const handleLogin = async () => {
         if (!email || !password) {
-            setError('Please enter both email and password.');
+            showAlert('Missing Credentials', 'Please enter both email and password.', undefined, 'alert-circle', '#E97C3A');
             return;
         }
 
         setLoading(true);
-        setError(null);
         try {
             await login(email, password);
+            
+            // Save or remove email based on rememberMe toggle
+            if (rememberMe) {
+                await AsyncStorage.setItem('saved_email', email);
+            } else {
+                await AsyncStorage.removeItem('saved_email');
+            }
+
             // login() sends OTP and sets twoFactorPending — navigate to verification screen
             navigation.navigate('TwoFactor', { email });
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Invalid credentials or network error.');
+            showAlert('Login Failed', err.response?.data?.message || 'Invalid credentials or network error.', undefined, 'close-circle', '#EF4444');
         } finally {
             setLoading(false);
         }
@@ -111,7 +142,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Email address"
                                     placeholderTextColor="#AABCD0"
                                     value={email}
-                                    onChangeText={t => { setEmail(t); setError(null); }}
+                                    onChangeText={setEmail}
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     autoCorrect={false}
@@ -125,7 +156,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Password"
                                     placeholderTextColor="#AABCD0"
                                     value={password}
-                                    onChangeText={t => { setPassword(t); setError(null); }}
+                                    onChangeText={setPassword}
                                     secureTextEntry={isSecure}
                                     autoCapitalize="none"
                                 />
@@ -140,9 +171,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                                     />
                                 </TouchableOpacity>
                             </View>
-
-                            {/* Error */}
-                            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                             {/* Remember Me & Forgot Password */}
                             <View style={styles.optionsRow}>
@@ -187,6 +215,16 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                     </Animated.View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                buttons={alertConfig.buttons}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </View>
     );
 };
@@ -286,16 +324,7 @@ const styles = StyleSheet.create({
         top: vs(17),
     },
 
-    // Error
-    errorText: {
-        color: '#E53935',
-        fontSize: ms(13),
-        textAlign: 'center',
-        marginBottom: vs(10),
-        marginTop: vs(-4),
-    },
 
-    // Options row
     optionsRow: {
         width: '100%',
         flexDirection: 'row',

@@ -8,6 +8,7 @@ import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
 import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
 import PrivacyPolicyScreen from '../screens/main/PrivacyPolicyScreen';
 import TermsOfUseScreen from '../screens/main/TermsOfUseScreen';
+import AppLockSetupScreen from '../screens/auth/AppLockSetupScreen';
 
 type AdminStackParamList = {
     AdminTabs: { screen?: string } | undefined;
@@ -18,6 +19,7 @@ type AdminStackParamList = {
     ManageUsers: undefined;
     PrivacyPolicy: undefined;
     TermsOfUse: undefined;
+    AppLockSetup: undefined;
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -33,6 +35,7 @@ const AdminStack: React.FC = () => {
             <Stack.Screen name="ManageUsers" component={ManageUsersScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="TermsOfUse" component={TermsOfUseScreen} />
+            <Stack.Screen name="AppLockSetup" component={AppLockSetupScreen as any} />
         </Stack.Navigator>
     );
 };

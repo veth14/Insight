@@ -30,6 +30,12 @@ export interface User {
     program?: AcademicProgram;
     yearLevel?: number;
     registrationStatus?: 'pending' | 'approved' | 'rejected';
+    notificationPreferences?: {
+        emailNotif: boolean;
+        researchUpdates: boolean;
+        newRegistrations?: boolean;
+        literatureSubmissions?: boolean;
+    };
     createdAt: Date;
     updatedAt: Date;
 }
@@ -110,7 +116,7 @@ export type HomeStackParamList = {
     Dashboard: undefined;
     StudyDetail: { studyId: string };
     CiteGenerator: { studyId: string };
-    PDFReader: { studyId: string };
+    PDFReader: { studyId: string; offlineUrl?: string };
     AccountSettings: undefined;
     MyAccount: undefined;
     ChangePassword: undefined;

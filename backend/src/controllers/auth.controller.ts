@@ -4,6 +4,8 @@ import { AuthRequest } from '../types';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
+import { supabase } from '../config/supabase';
+import { sendAdminNewRegistrationEmail } from '../services/email.service';
 
 /**
  * Register new user
@@ -19,33 +21,39 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         console.log(`[register] file received: ${uploadedFile ? uploadedFile.originalname + ' (' + uploadedFile.size + ' bytes)' : 'none'}, content-type: ${req.headers['content-type']?.substring(0, 60)}`);
 
         if (uploadedFile) {
-            // Process in-memory buffer through sharp (no temp disk file needed)
-            const uploadsRoot = path.join(__dirname, '..', '..', 'uploads');
-            const finalDir = path.join(uploadsRoot, 'registrationForms');
-            if (!fs.existsSync(finalDir)) fs.mkdirSync(finalDir, { recursive: true });
-
-            const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`;
-            const finalPath = path.join(finalDir, filename);
+            const filename = `${studentNumber.trim()}_${Date.now()}.jpg`;
 
             try {
-                await sharp(uploadedFile.buffer)
+                // Process in-memory buffer through sharp
+                const processedBuffer = await sharp(uploadedFile.buffer)
                     .rotate()                                         // auto-orient from EXIF
                     .resize({ width: 1200, withoutEnlargement: true }) // cap width at 1200px
                     .jpeg({ quality: 80 })                            // clear JPEG output
-                    .toFile(finalPath);
+                    .toBuffer();
 
-                const host = req.protocol + '://' + req.get('host');
-                registrationFormUrl = `${host}/uploads/registrationForms/${filename}`;
-            } catch (procErr) {
-                console.error('Image processing failed, saving raw buffer instead:', procErr);
-                // fallback: write raw buffer as-is
-                try {
-                    fs.writeFileSync(finalPath, uploadedFile.buffer);
-                    const host = req.protocol + '://' + req.get('host');
-                    registrationFormUrl = `${host}/uploads/registrationForms/${filename}`;
-                } catch (writeErr) {
-                    console.error('Fallback write also failed:', writeErr);
+                // Upload to Supabase bucket 'regForms'
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('regForms')
+                    .upload(`${studentNumber.trim()}/${filename}`, processedBuffer, {
+                        contentType: 'image/jpeg',
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    throw new Error(`Supabase upload failed: ${uploadError.message}`);
                 }
+
+                const { data } = supabase.storage
+                    .from('regForms')
+                    .getPublicUrl(`${studentNumber.trim()}/${filename}`);
+                
+                registrationFormUrl = data.publicUrl;
+                console.log(`[register] File successfully uploaded to Supabase: ${registrationFormUrl}`);
+
+            } catch (procErr: any) {
+                console.error('Image processing or upload failed, failing registration:', procErr.message);
+                res.status(500).json({ message: 'Failed to process and upload registration form', detail: procErr.message });
+                return;
             }
         } else if (req.body.registrationFormUrl) {
             registrationFormUrl = req.body.registrationFormUrl;
@@ -78,6 +86,21 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         });
 
         await user.save();
+
+        // ── Fire Admin Registration Alert (Async) ──
+        if (user.registrationStatus === 'pending') {
+            User.find({ 
+                role: 'admin', 
+                'notificationPreferences.newRegistrations': true 
+            }).select('email').lean()
+            .then(admins => {
+                const adminEmails = admins.map(a => a.email);
+                if (adminEmails.length > 0) {
+                    sendAdminNewRegistrationEmail(adminEmails, user.email, user.role).catch(err => console.error(err));
+                }
+            })
+            .catch(err => console.error("Error fetching admins for notification:", err));
+        }
 
         res.status(201).json({
             message: 'User registered successfully',
@@ -127,6 +150,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
                 role: user.role,
                 yearLevel: user.yearLevel,
                 registrationStatus: user.registrationStatus,
+                notificationPreferences: user.notificationPreferences || { emailNotif: false, researchUpdates: false },
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
                 status: (user as any).status ?? 'active',
@@ -146,7 +170,7 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
     try {
         const authReq = req as AuthRequest;
-        const { displayName, phoneNumber } = req.body;
+        const { displayName, phoneNumber, notificationPreferences } = req.body;
 
         const user = await User.findOne({ uid: authReq.user?.uid });
 
@@ -157,6 +181,12 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 
         if (displayName !== undefined) user.displayName = displayName.trim();
         if (phoneNumber !== undefined) user.phoneNumber = phoneNumber.trim();
+        if (notificationPreferences !== undefined) {
+            user.notificationPreferences = {
+                ...user.notificationPreferences,
+                ...notificationPreferences
+            };
+        }
 
         await user.save();
 
@@ -171,6 +201,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
                 program: user.program,
                 role: user.role,
                 yearLevel: user.yearLevel,
+                notificationPreferences: user.notificationPreferences,
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },

@@ -11,6 +11,8 @@ import { HomeStackParamList } from '../../types';
 import { scale, vs, ms } from '../../utils/responsive';
 import api from '../../services/api.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'StudyDetail'>;
@@ -57,6 +59,15 @@ const StudyDetailScreen: React.FC = () => {
     const [saved, setSaved]       = useState(false);
     const [saving, setSaving]     = useState(false);
     const [downloading, setDownloading] = useState(false);
+    
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean; title: string; message: string; buttons?: AlertButton[]; icon?: any; iconColor?: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
 
     const fetchStudy = useCallback(async () => {
         setLoading(true);
@@ -65,8 +76,8 @@ const StudyDetailScreen: React.FC = () => {
             setStudy(res.data);
             setSaved(!!res.data.isBookmarked);
         } catch (err: any) {
-            Alert.alert('Error', 'Failed to load study details.');
-            navigation.goBack();
+            showAlert('Error', 'Failed to load study details.', undefined, 'alert-circle', '#EF4444');
+            // We can delay goBack or just let user tap ok, but for now just showing the error
         } finally {
             setLoading(false);
         }
@@ -79,36 +90,75 @@ const StudyDetailScreen: React.FC = () => {
         setSaving(true);
         try {
             await api.post(`/studies/${studyId}/bookmark`);
-            setSaved(prev => !prev);
+            const nextSaved = !saved;
+            setSaved(nextSaved);
+            if (nextSaved) {
+                showAlert('Saved', 'Study added to your library.', undefined, 'bookmark', '#E97C3A');
+            } else {
+                showAlert('Removed', 'Study removed from your library.', undefined, 'bookmark-outline', '#9AADCA');
+            }
         } catch (err) {
-            Alert.alert('Error', 'Could not update bookmark.');
+            showAlert('Error', 'Could not update bookmark.', undefined, 'alert-circle', '#EF4444');
         } finally {
             setSaving(false);
         }
     };
 
     const handleDownload = async () => {
-        if (!study || downloading) return;
+        if (!study || downloading || !study.fileUrl) {
+            showAlert('No Document', 'There is no document to download.', undefined, 'document-text-outline', '#9AADCA');
+            return;
+        }
         setDownloading(true);
         try {
             const raw = await AsyncStorage.getItem(DOWNLOADS_KEY);
             const current: any[] = raw ? JSON.parse(raw) : [];
-            const alreadyExists = current.some(d => d.id === studyId);
+            const alreadyExists = current.some((d: any) => d.id === studyId);
+            
             if (!alreadyExists) {
+                // Download file locally using expo-file-system
+                const fileName = `study_${studyId}.pdf`;
+                const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+                
+                const downloadResult = await FileSystem.downloadAsync(study.fileUrl, fileUri);
+                
+                if (downloadResult.status !== 200) throw new Error('Download failed');
+
+                // Record download count on backend
+                try {
+                    await api.post(`/studies/${studyId}/download`);
+                } catch (be) {
+                    console.log('Failed to increment download count:', be);
+                }
+
+                const fileInfo = await FileSystem.getInfoAsync(fileUri);
+                const sizeMB = fileInfo.exists && !fileInfo.isDirectory && fileInfo.size ? fileInfo.size / (1024 * 1024) : 0;
+
                 const entry = {
                     id:     studyId,
                     title:  study.title,
-                    sizeMB: 2.0,
+                    sizeMB: sizeMB,
                     date:   new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                     fileUrl: study.fileUrl,
+                    localUri: fileUri, // Save the path for offline use
                 };
                 await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify([entry, ...current]));
-                Alert.alert('Downloaded', 'Study saved to your Downloads.');
+                showAlert(
+                    'Downloaded',
+                    'Study saved to your Downloads for offline reading.',
+                    [
+                        { text: 'OK', style: 'cancel' },
+                        { text: 'Go to Downloads', style: 'default', onPress: () => navigation.navigate('Downloads') }
+                    ],
+                    'checkmark-circle',
+                    '#10B981'
+                );
             } else {
-                Alert.alert('Already Downloaded', 'This study is already in your Downloads.');
+                showAlert('Already Downloaded', 'This study is already in your Downloads.', undefined, 'information-circle', '#3B82F6');
             }
-        } catch (err) {
-            Alert.alert('Error', 'Could not save download.');
+        } catch (err: any) {
+            console.error('Download error:', err);
+            showAlert('Error', 'Could not save download.', undefined, 'alert-circle', '#EF4444');
         } finally {
             setDownloading(false);
         }
@@ -140,6 +190,7 @@ const StudyDetailScreen: React.FC = () => {
     const authors  = Array.isArray(study.authors) ? study.authors.join(', ') : study.authors;
     const year     = study.yearPublished ?? study.year ?? '';
     const category = study.category ?? study.studyType ?? '';
+    const department = study.department ?? '';
     const tools    = study.toolsUsed ?? [];
 
     return (
@@ -183,6 +234,11 @@ const StudyDetailScreen: React.FC = () => {
                     <View style={styles.metaRow}>
                         <Ionicons name="calendar-outline" size={13} color="rgba(255,255,255,0.55)" />
                         <Text style={styles.metaText}>{year}</Text>
+                        {!!department && (
+                            <View style={styles.programBadge}>
+                                <Text style={styles.programText}>{department}</Text>
+                            </View>
+                        )}
                         {!!category && (
                             <View style={styles.programBadge}>
                                 <Text style={styles.programText}>{category}</Text>
@@ -260,6 +316,16 @@ const StudyDetailScreen: React.FC = () => {
                 )}
 
             </ScrollView>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                buttons={alertConfig.buttons}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 };

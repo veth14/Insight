@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, Switch, StatusBar, TextInput,
@@ -8,22 +8,54 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSecurity } from '../../contexts/SecurityContext';
 import { scale, vs, ms } from '../../utils/responsive';
+import api from '../../services/api.service';
 
 const AdminSettingsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const { user, logout } = useAuth();
+    const { user, logout, refreshUser } = useAuth();
+    const { appLockEnabled } = useSecurity();
 
     // Notification Preferences
-    const [newRegistrations, setNewRegistrations] = useState(true);
-    const [literatureSubmissions, setLiteratureSubmissions] = useState(true);
-
-    // Security
-    const [twoFactor, setTwoFactor] = useState(true);
+    const [newRegistrations, setNewRegistrations] = useState(user?.notificationPreferences?.newRegistrations ?? true);
+    const [literatureSubmissions, setLiteratureSubmissions] = useState(user?.notificationPreferences?.literatureSubmissions ?? true);
 
     // System Limits
     const [maxUpload, setMaxUpload] = useState(10);
     const [dailyDownload, setDailyDownload] = useState(50);
+
+    useEffect(() => {
+        if (user?.notificationPreferences) {
+            setNewRegistrations(user.notificationPreferences.newRegistrations ?? true);
+            setLiteratureSubmissions(user.notificationPreferences.literatureSubmissions ?? true);
+        }
+    }, [user?.notificationPreferences]);
+
+    const updatePreferences = async (updates: { newRegistrations?: boolean, literatureSubmissions?: boolean }) => {
+        try {
+            await api.put('/auth/me', { notificationPreferences: updates });
+            await refreshUser();
+        } catch (error) {
+            console.error('Failed to update preferences', error);
+            Alert.alert('Error', 'Failed to update notification preferences.');
+            // Revert state on failure
+            if (user?.notificationPreferences) {
+                setNewRegistrations(user.notificationPreferences.newRegistrations ?? true);
+                setLiteratureSubmissions(user.notificationPreferences.literatureSubmissions ?? true);
+            }
+        }
+    };
+
+    const handleToggleRegistrations = (val: boolean) => {
+        setNewRegistrations(val);
+        updatePreferences({ newRegistrations: val, literatureSubmissions });
+    };
+
+    const handleToggleLiterature = (val: boolean) => {
+        setLiteratureSubmissions(val);
+        updatePreferences({ newRegistrations, literatureSubmissions: val });
+    };
 
     const initials = user?.displayName
         ? user.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -174,7 +206,7 @@ const AdminSettingsScreen: React.FC = () => {
                         label="New Registrations"
                         subtitle="Email alerts for new account requests"
                         value={newRegistrations}
-                        onValueChange={setNewRegistrations}
+                        onValueChange={handleToggleRegistrations}
                     />
                     <View style={styles.divider} />
                     <ToggleRow
@@ -182,7 +214,7 @@ const AdminSettingsScreen: React.FC = () => {
                         label="Literature Submissions"
                         subtitle="Email alerts for new submissions"
                         value={literatureSubmissions}
-                        onValueChange={setLiteratureSubmissions}
+                        onValueChange={handleToggleLiterature}
                     />
                 </View>
 
@@ -193,8 +225,8 @@ const AdminSettingsScreen: React.FC = () => {
                         icon="finger-print-outline"
                         label="Two-Factor Authentication"
                         subtitle="Require pin after login"
-                        value={twoFactor}
-                        onValueChange={setTwoFactor}
+                        value={appLockEnabled}
+                        onValueChange={() => navigation.navigate('AppLockSetup')}
                     />
                     <View style={styles.divider} />
                     <NavRow

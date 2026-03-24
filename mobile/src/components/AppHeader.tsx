@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, Image, TouchableOpacity,
     Modal, TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api.service';
 
 const IMG_LOGO = require('../../assets/images/insightlogox128.png');
 
@@ -17,12 +18,42 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = ({
     onNotificationPress,
-    notificationCount = 0,
+    notificationCount: propsNotificationCount = 0,
     onAvatarPress,
 }) => {
     const { user, logout } = useAuth();
     const navigation = useNavigation<any>();
+    const isFocused = useIsFocused();
     const [menuVisible, setMenuVisible] = useState(false);
+    const [localCount, setLocalCount] = useState(0);
+
+    const isStudent = user?.role !== 'admin' && user?.role !== 'faculty';
+
+    useEffect(() => {
+        if (!onNotificationPress && isStudent && isFocused) {
+            const fetchCount = async () => {
+                try {
+                    const res = await api.get('/studies/my');
+                    const studies = res.data.studies ?? [];
+                    const count = studies.filter((s: any) => s.approvalStatus === 'pending' || s.approvalStatus === 'rejected').length;
+                    setLocalCount(count);
+                } catch {
+                    // Ignore background silently
+                }
+            };
+            fetchCount();
+        }
+    }, [isStudent, onNotificationPress, isFocused]);
+
+    const activeCount = onNotificationPress ? propsNotificationCount : localCount;
+
+    const handleNotifPress = () => {
+        if (onNotificationPress) {
+            onNotificationPress();
+        } else {
+            navigation.navigate('Notifications');
+        }
+    };
 
     const initials = user?.displayName
         ? user.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -42,18 +73,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </View>
                 </View>
                 <View style={styles.headerRight}>
-                    {onNotificationPress && (
-                        <TouchableOpacity style={styles.notifBtn} onPress={onNotificationPress} activeOpacity={0.8}>
-                            <Ionicons name="notifications-outline" size={22} color="#0E1F43" />
-                            {notificationCount > 0 && (
-                                <View style={styles.notifBadge}>
-                                    <Text style={styles.notifBadgeText}>
-                                        {notificationCount > 9 ? '9+' : notificationCount}
-                                    </Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity style={styles.notifBtn} onPress={handleNotifPress} activeOpacity={0.8}>
+                        <Ionicons name="notifications-outline" size={22} color="#0E1F43" />
+                        {activeCount > 0 && (
+                            <View style={styles.notifBadge}>
+                                <Text style={styles.notifBadgeText}>
+                                    {activeCount > 9 ? '9+' : activeCount}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                     <TouchableOpacity style={styles.avatar} onPress={handleAvatarPress} activeOpacity={0.8}>
                         <Text style={styles.avatarText}>{initials}</Text>
                     </TouchableOpacity>

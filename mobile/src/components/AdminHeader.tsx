@@ -1,22 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Modal, TouchableWithoutFeedback,
+    Modal, TouchableWithoutFeedback, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import AppHeader from './AppHeader';
+import api from '../services/api.service';
 import { scale, vs, ms } from '../utils/responsive';
-
-/* ── Static mock notifications (replace with API call when ready) ── */
-const DEFAULT_NOTIFICATIONS = [
-    { id: '1', icon: 'person-add-outline',       title: 'New Account Registration',  body: 'Maria Santos has requested account access',         time: '3m ago',  read: false },
-    { id: '2', icon: 'document-text-outline',    title: 'New Literature Submission', body: 'AI-based Student Performance Prediction System',    time: '11m ago', read: false },
-    { id: '3', icon: 'checkmark-circle-outline', title: 'Account Approved',          body: 'You approved Juan Dela Cruz Registration',          time: '1h ago',  read: true  },
-];
 
 const AdminHeader: React.FC = () => {
     const [notifOpen, setNotifOpen] = useState(false);
-    const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+        const fetchAdminAlerts = async () => {
+            try {
+                const [regRes, litRes] = await Promise.all([
+                    api.get('/admin/registrations?status=pending'),
+                    api.get('/admin/literature?status=pending&limit=10')
+                ]);
+                
+                const pendingUsers = regRes.data.users || [];
+                const pendingLit = litRes.data.studies || [];
+                
+                let notifs: any[] = [];
+                
+                pendingUsers.slice(0, 5).forEach((u: any) => {
+                    notifs.push({
+                        id: 'usr_' + u.uid,
+                        icon: 'person-add-outline',
+                        title: 'Pending Account',
+                        body: `${u.displayName} requests access.`,
+                        time: new Date(u.createdAt).toLocaleDateString(),
+                        timestamp: new Date(u.createdAt).getTime(),
+                        read: false
+                    });
+                });
+                
+                pendingLit.slice(0, 5).forEach((l: any) => {
+                    notifs.push({
+                        id: 'lit_' + l._id,
+                        icon: 'document-text-outline',
+                        title: 'Pending Literature',
+                        body: l.title,
+                        time: new Date(l.createdAt).toLocaleDateString(),
+                        timestamp: new Date(l.createdAt).getTime(),
+                        read: false
+                    });
+                });
+
+                // Sort newest first
+                notifs.sort((a, b) => b.timestamp - a.timestamp);
+                setNotifications(notifs);
+            } catch (e) {
+                // Silently swallow background fetch errors
+            }
+        };
+        
+        if (isFocused) {
+            fetchAdminAlerts();
+        }
+    }, [isFocused]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
     const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -59,23 +105,29 @@ const AdminHeader: React.FC = () => {
                     </View>
 
                     {/* Notification items */}
-                    {notifications.map(n => (
-                        <View key={n.id} style={styles.item}>
-                            <View style={[styles.iconBox, { backgroundColor: n.read ? '#F5F6FA' : '#EEF2FF' }]}>
-                                <Ionicons
-                                    name={n.icon as any}
-                                    size={ms(18)}
-                                    color={n.read ? '#9AADCA' : '#5B8DEF'}
-                                />
-                            </View>
-                            <View style={styles.itemBody}>
-                                <Text style={styles.itemTitle}>{n.title}</Text>
-                                <Text style={styles.itemText} numberOfLines={1}>{n.body}</Text>
-                                <Text style={styles.itemTime}>{n.time}</Text>
-                            </View>
-                            {!n.read && <View style={styles.unreadDot} />}
-                        </View>
-                    ))}
+                    <ScrollView style={{ maxHeight: vs(300) }} showsVerticalScrollIndicator={false}>
+                        {notifications.length === 0 ? (
+                            <Text style={{ textAlign: 'center', color: '#9AADCA', paddingVertical: vs(20) }}>No new alerts</Text>
+                        ) : (
+                            notifications.map(n => (
+                                <View key={n.id} style={styles.item}>
+                                    <View style={[styles.iconBox, { backgroundColor: n.read ? '#F5F6FA' : '#EEF2FF' }]}>
+                                        <Ionicons
+                                            name={n.icon as any}
+                                            size={ms(18)}
+                                            color={n.read ? '#9AADCA' : '#5B8DEF'}
+                                        />
+                                    </View>
+                                    <View style={styles.itemBody}>
+                                        <Text style={styles.itemTitle}>{n.title}</Text>
+                                        <Text style={styles.itemText} numberOfLines={1}>{n.body}</Text>
+                                        <Text style={styles.itemTime}>{n.time}</Text>
+                                    </View>
+                                    {!n.read && <View style={styles.unreadDot} />}
+                                </View>
+                            ))
+                        )}
+                    </ScrollView>
                 </View>
             </Modal>
         </>

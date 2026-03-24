@@ -5,9 +5,11 @@ import { ActivityIndicator, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useSecurity } from '../contexts/SecurityContext'; // Added useSecurity
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
 import AdminStack from './AdminStack';
+import AppLockScreen from '../screens/auth/AppLockScreen'; // Added AppLockScreen
 import { UserRole } from '../types';
 import { COLORS } from '../constants/theme';
 
@@ -19,19 +21,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  */
 const RootNavigator: React.FC = () => {
     const { user, loading } = useAuth();
+    const { isLocked } = useSecurity(); // Get isLocked state
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
     useEffect(() => {
         const checkOnboarding = async () => {
-            // In development, always show onboarding so the full flow can be tested.
-            // Remove the __DEV__ block before releasing to production.
-            if (__DEV__) {
-                await AsyncStorage.removeItem('hasSeenOnboarding');
+            try {
+                const val = await AsyncStorage.getItem('hasSeenOnboarding');
+                setHasSeenOnboarding(val === 'true');
+            } catch (e) {
                 setHasSeenOnboarding(false);
-                return;
             }
-            const val = await AsyncStorage.getItem('hasSeenOnboarding');
-            setHasSeenOnboarding(val === 'true');
         };
         checkOnboarding();
     }, []);
@@ -43,6 +43,10 @@ const RootNavigator: React.FC = () => {
                 <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
         );
+    }
+
+    if (user && isLocked) {
+        return <AppLockScreen onUnlock={() => {}} />;
     }
 
     return (

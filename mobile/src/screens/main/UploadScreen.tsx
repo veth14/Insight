@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
-    ScrollView, StatusBar, Platform, Alert, ActivityIndicator,
+    ScrollView, StatusBar, Platform, ActivityIndicator,
     KeyboardAvoidingView, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,17 +11,30 @@ import * as ImagePicker from 'expo-image-picker';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
 import { auth } from '../../config/firebase';
+import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 
-const DEPARTMENTS = ['BSIT', 'BSCS', 'BSIS'];
-const STUDY_TYPES = ['Thesis', 'Project', 'Dissertation'];
-const CATEGORIES  = ['AI/ML', 'Mobile Dev', 'IoT', 'Web System', 'Security', 'Data Analytics', 'Multimedia'];
+const DEPARTMENTS = ['BSIT', 'BSCS', 'BSIS', 'BSEMC', 'BS CpE'];
+const STUDY_TYPES = ['Capstone', 'Case Study', 'Dissertation', 'Project', 'Thesis'];
+const CATEGORIES  = [
+    'Artificial Intelligence',
+    'Computer Engineering',
+    'Computer Science',
+    'Data Science',
+    'Information Systems',
+    'IoT',
+    'Machine Learning',
+    'Mobile Dev',
+    'Multimedia',
+    'Security',
+    'Web System'
+];
 const TOOLS_LIST  = [
-    'React Native', 'React', 'Vue.js', 'Angular', 'Next.js',
-    'Node.js', 'Express', 'Laravel', 'Django', 'Flask',
-    'Python', 'Java', 'Kotlin', 'Swift', 'PHP', 'C#', 'C++',
-    'MySQL', 'MongoDB', 'PostgreSQL', 'Firebase', 'Supabase',
-    'Arduino', 'Raspberry Pi', 'ESP32', 'TensorFlow', 'PyTorch',
-    'Flutter', 'Unity', 'Android Studio', 'Xcode', 'Figma',
+    'Android Studio', 'Angular', 'Arduino', 'AWS', 'Blockchain', 'C#', 'C++',
+    'Django', 'Docker', 'ESP32', 'Express', 'Figma', 'Firebase', 'Flask',
+    'Flutter', 'Git', 'Java', 'Kotlin', 'Laravel', 'MongoDB', 'MySQL',
+    'Next.js', 'Node.js', 'PHP', 'PostgreSQL', 'Postman', 'Python', 'PyTorch',
+    'Raspberry Pi', 'React', 'React Native', 'Supabase', 'Swift',
+    'Tailwind CSS', 'TensorFlow', 'Unity', 'Vercel', 'Vue.js', 'Xcode'
 ];
 
 interface PickedFile {
@@ -37,7 +50,7 @@ const formatSize = (bytes?: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const SectionCard = React.memo(({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
+const SectionCard = React.memo(({ icon, title, children }: { icon: string; title: string | React.ReactNode; children: React.ReactNode }) => (
     <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
             <View style={styles.sectionIconBox}>
@@ -92,11 +105,20 @@ const UploadScreen: React.FC = () => {
     const [uploading, setUploading]   = useState(false);
     const [submitted, setSubmitted]   = useState(false);
 
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean; title: string; message: string; buttons?: AlertButton[]; icon?: any; iconColor?: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
+
     /* ── Pick Image ─────────────────────────────────────────────────── */
     const handlePickImage = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-            Alert.alert('Permission Required', 'Please allow access to your photo library to upload a system image.');
+            showAlert('Permission Required', 'Please allow access to your photo library to upload a system image.', undefined, 'alert-circle', '#E97C3A');
             return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -128,18 +150,26 @@ const UploadScreen: React.FC = () => {
                 mimeType: asset.mimeType ?? 'application/pdf',
             });
         } catch (err) {
-            Alert.alert('Error', 'Could not open file picker. Please try again.');
+            showAlert('Error', 'Could not open file picker. Please try again.', undefined, 'alert-circle', '#EF4444');
         }
     };
 
     /* ── Submit ────────────────────────────────────────────────────── */
     const handleSubmit = async () => {
+        if (!title.trim() || !authors.trim() || !abstract.trim() || !year.trim()) {
+            showAlert('Missing Information', 'Please fill in all required basic information fields.', undefined, 'alert-circle', '#E97C3A');
+            return;
+        }
+        if (!activeType || !activeCategory) {
+            showAlert('Missing Classification', 'Please select a study type and research category.', undefined, 'alert-circle', '#E97C3A');
+            return;
+        }
         if (!pickedFile) {
-            Alert.alert('Missing PDF', 'Please attach a PDF file before submitting.');
+            showAlert('Missing PDF', 'Please attach a PDF file before submitting.', undefined, 'document-text', '#E97C3A');
             return;
         }
         if (!pickedImage) {
-            Alert.alert('Missing Image', 'Please upload a logo or screenshot of your system.');
+            showAlert('Missing Image', 'Please upload a logo or screenshot of your system.', undefined, 'image', '#E97C3A');
             return;
         }
 
@@ -167,6 +197,7 @@ const UploadScreen: React.FC = () => {
             form.append('keyFindings',    keyFindings.trim());
             form.append('toolsUsed',      selectedTools.join(','));
             form.append('category',      activeCategory);
+            form.append('department',    activeDept);
             form.append('studyType',     activeType);
             form.append('yearPublished', year.trim());
 
@@ -185,7 +216,7 @@ const UploadScreen: React.FC = () => {
             setSubmitted(true);
         } catch (err: any) {
             console.error('Upload error:', err);
-            Alert.alert('Upload Failed', err.message ?? 'Something went wrong. Please try again.');
+            showAlert('Upload Failed', err.message ?? 'Something went wrong. Please try again.', undefined, 'alert-circle', '#EF4444');
         } finally {
             setUploading(false);
         }
@@ -198,7 +229,8 @@ const UploadScreen: React.FC = () => {
         setPickedFile(null); setPickedImage(null); setSubmitted(false);
     };
 
-    const isReady = title && authors && abstract && year && activeType && activeCategory && pickedFile && pickedImage && !uploading;
+    // Remove strict disabling so users can tap and explicitly see which fields they missed explicitly via alerts
+    const isReady = !uploading;
 
     /* ── Success Screen ─────────────────────────────────────────────── */
     if (submitted) {
@@ -260,7 +292,7 @@ const UploadScreen: React.FC = () => {
                 </SectionCard>
 
                 {/* Abstract */}
-                <SectionCard icon="reader-outline" title="Abstract">
+                <SectionCard icon="reader-outline" title={<Text>Abstract <Text style={styles.req}>*</Text></Text>}>
                     <TextInput
                         style={[styles.input, styles.textarea]}
                         placeholder="Provide a brief summary of the research..."
@@ -347,8 +379,8 @@ const UploadScreen: React.FC = () => {
                 </SectionCard>
 
                 {/* System Image */}
-                <SectionCard icon="image-outline" title="System Image / Logo">
-                    <Text style={styles.hint}>Upload a screenshot or logo that represents your system. <Text style={styles.req}>Required</Text></Text>
+                <SectionCard icon="image-outline" title={<Text>System Image / Logo <Text style={styles.req}>*</Text></Text>}>
+                    <Text style={styles.hint}>Upload a screenshot or logo that represents your system.</Text>
                     <TouchableOpacity
                         style={[styles.imageBox, pickedImage ? styles.imageBoxFilled : null]}
                         onPress={handlePickImage}
@@ -379,7 +411,7 @@ const UploadScreen: React.FC = () => {
                 </SectionCard>
 
                 {/* Upload PDF */}
-                <SectionCard icon="attach-outline" title="Upload PDF">
+                <SectionCard icon="attach-outline" title={<Text>Upload PDF <Text style={styles.req}>*</Text></Text>}>
                     <TouchableOpacity
                         style={[styles.fileBox, pickedFile ? styles.fileBoxFilled : null]}
                         onPress={handlePickFile}
@@ -452,6 +484,16 @@ const UploadScreen: React.FC = () => {
 
             </ScrollView>
             </KeyboardAvoidingView>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                buttons={alertConfig.buttons}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 };

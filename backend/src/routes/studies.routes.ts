@@ -10,6 +10,7 @@ import {
     getDashboard,
     getStudyById,
     getTrendingTopics,
+    trackDownload,
 } from '../controllers/library.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
@@ -94,5 +95,12 @@ router.get('/trending-topics', getTrendingTopics);
  * @access  Private
  */
 router.get('/:id', getStudyById);
+
+/**
+ * @route   POST /api/studies/:id/download
+ * @desc    Increment download count for a study
+ * @access  Private
+ */
+router.post('/:id/download', trackDownload);
 
 export default router;

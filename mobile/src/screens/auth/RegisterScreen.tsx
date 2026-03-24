@@ -21,6 +21,7 @@ import { AuthStackParamList, AcademicProgram } from '../../types';
 import { Ionicons } from '@expo/vector-icons';
 import TermsAndConditionsModal from './TermsAndConditionsModal';
 import * as ImagePicker from 'expo-image-picker';
+import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -44,7 +45,15 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean; title: string; message: string; buttons?: AlertButton[]; icon?: any; iconColor?: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -61,29 +70,28 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
     const handleRegister = async () => {
         if (!fullName || !email || !studentNumber || !yearLevel || !program || !password) {
-            setError('Please fill in all fields completely.');
+            showAlert('Missing Information', 'Please fill in all fields completely.', undefined, 'alert-circle', '#E97C3A');
             return;
         }
 
         if (!termsAccepted) {
-            setError('Please accept the Terms and Conditions to continue.');
+            showAlert('Terms Required', 'Please accept the Terms and Conditions to continue.', undefined, 'alert-circle', '#E97C3A');
             return;
         }
 
         // 4th year must upload their registration form
         if (yearLevel === '4' && !regFormUri) {
-            setError('4th year students must upload their Student Registration Form.');
+            showAlert('Missing Form', '4th year students must upload their Student Registration Form.', undefined, 'document', '#E97C3A');
             return;
         }
 
         setLoading(true);
-        setError(null);
         try {
                 // Pass the local file URI to the auth service; the service will upload it as multipart
                 const registrationFormLocalUri = regFormUri ?? undefined;
-                await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '', registrationFormLocalUri);
+                await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '', registrationFormLocalUri); 
         } catch (err: any) {
-            setError(err.message || 'An error occurred during registration.');
+            showAlert('Registration Failed', err.message || 'An error occurred during registration.', undefined, 'close-circle', '#EF4444');
         } finally {
             setLoading(false);
         }
@@ -93,7 +101,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     const pickPhoto = async () => {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (perm.status !== 'granted') {
-            setError('Permission to access photos is required.');
+            showAlert('Permission Denied', 'Permission to access photos is required.', undefined, 'alert-circle', '#E97C3A');
             return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -103,7 +111,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         });
         if (!result.canceled && result.assets[0]) {
             setRegFormUri(result.assets[0].uri);
-            setError(null);
         }
     };
 
@@ -148,7 +155,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Full name"
                                     placeholderTextColor="#AABCD0"
                                     value={fullName}
-                                    onChangeText={t => { setFullName(t); setError(null); }}
+                                    onChangeText={setFullName}
                                 />
                             </View>
 
@@ -159,7 +166,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Valid email"
                                     placeholderTextColor="#AABCD0"
                                     value={email}
-                                    onChangeText={t => { setEmail(t); setError(null); }}
+                                    onChangeText={setEmail}
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                 />
@@ -172,7 +179,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Student number"
                                     placeholderTextColor="#AABCD0"
                                     value={studentNumber}
-                                    onChangeText={t => { setStudentNumber(t); setError(null); }}
+                                    onChangeText={setStudentNumber}
                                 />
                             </View>
 
@@ -187,7 +194,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                         // Only allow a single digit between 1 and 4
                                         if (t === '' || /^[1-4]$/.test(t)) {
                                             setYearLevel(t);
-                                            setError(null);
                                             if (t !== '4') setRegFormUri(null);
                                         }
                                     }}
@@ -236,7 +242,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                         <TouchableOpacity
                                             key={p}
                                             style={[styles.programChip, program === p && styles.programChipSelected]}
-                                            onPress={() => { setProgram(p); setError(null); }}
+                                            onPress={() => setProgram(p)}
                                         >
                                             <Text style={[styles.programChipText, program === p && styles.programChipTextSelected]}>{p}</Text>
                                         </TouchableOpacity>
@@ -251,7 +257,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                     placeholder="Strong password"
                                     placeholderTextColor="#AABCD0"
                                     value={password}
-                                    onChangeText={t => { setPassword(t); setError(null); }}
+                                    onChangeText={setPassword}
                                     secureTextEntry={isSecure}
                                     autoCapitalize="none"
                                 />
@@ -266,9 +272,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                                     />
                                 </TouchableOpacity>
                             </View>
-
-                            {/* Error */}
-                            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
                             {/* Terms Checkbox */}
                             <TouchableOpacity
@@ -328,6 +331,16 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                     </Animated.View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                buttons={alertConfig.buttons}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </View>
     );
 };
@@ -425,16 +438,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         right: scale(14),
         top: vs(17),
-    },
-
-    // Error
-    errorText: {
-        color: '#E53935',
-        fontSize: ms(13),
-        textAlign: 'center',
-        marginBottom: vs(10),
-        marginTop: vs(-4),
-        width: '100%',
     },
 
     // Program selector

@@ -10,13 +10,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { HomeStackParamList } from '../../types';
 import { ms, scale, vs } from '../../utils/responsive';
 import api from '../../services/api.service';
+import * as FileSystem from 'expo-file-system/legacy';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'PDFReader'>;
 
 const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
-    const { studyId } = route.params;
+    const { studyId, offlineUrl } = route.params;
 
-    const [fileUrl, setFileUrl] = useState<string | null>(null);
+    const [fileUrl, setFileUrl] = useState<string | null>(offlineUrl || null);
     const [title, setTitle]     = useState('Document');
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState<string | null>(null);
@@ -50,6 +51,11 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
     }, []);
 
     useEffect(() => {
+        if (offlineUrl) {
+            setLoading(false);
+            return;
+        }
+
         (async () => {
             try {
                 const res = await api.get(`/studies/${studyId}`);
@@ -64,7 +70,32 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
                 setLoading(false);
             }
         })();
-    }, [studyId]);
+    }, [studyId, offlineUrl]);
+
+    const getBase64Pdf = async (uri: string) => {
+        try {
+            const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+            return `data:application/pdf;base64,${base64}`;
+        } catch (error) {
+            console.error("Error reading file to base64:", error);
+            return uri; // fallback
+        }
+    };
+
+    const [htmlSource, setHtmlSource] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!fileUrl) return;
+
+        (async () => {
+            let finalUrl = fileUrl;
+            // If offline URI
+            if (finalUrl.startsWith('file://')) {
+                finalUrl = await getBase64Pdf(finalUrl);
+            }
+            setHtmlSource(pdfHtml(finalUrl, lastPage));
+        })();
+    }, [fileUrl, lastPage]);
 
     const pdfHtml = (url: string, startPage: number = 1) => `<!DOCTYPE html>
 <html>
@@ -113,8 +144,8 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
 <script>
 (function(){
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const PDF_URL=decodeURIComponent('${encodeURIComponent(url)}');
-  const START_PAGE=${startPage};
+    const PDF_URL='${url}';
+    const START_PAGE=${startPage};
   const DPR=Math.min(window.devicePixelRatio||1,3);
   const GUTTER=20;
   const CSS_WIDTH=window.innerWidth-GUTTER;
@@ -216,7 +247,7 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
                 </View>
             ) : fileUrl ? (
                 <WebView
-                    source={{ html: pdfHtml(fileUrl, lastPage) }}
+                    source={htmlSource ? { html: htmlSource } : undefined}
                     style={{ flex: 1, backgroundColor: '#e8ecf2' }}
                     originWhitelist={['*']}
                     javaScriptEnabled

@@ -7,14 +7,21 @@ import path from 'path';
 import fs from 'fs';
 import { connectDB } from './config/database';
 import { initializeFirebase } from './config/firebase';
+import { initCronJobs } from './services/cron.service';
+import mongoSanitize from 'express-mongo-sanitize';
+import { xssSanitizer } from './middleware/sanitize.middleware';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import studiesRoutes from './routes/studies.routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { globalLimiter, authLimiter } from './middleware/rateLimiter.middleware';
 
 // Initialize Express app
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
+
+// Apply Global Rate Limiting early on the pipeline
+app.use(globalLimiter);
 
 /**
  * Middleware
@@ -24,10 +31,17 @@ app.use(morgan('dev')); // Request logging
 app.use(express.json({ limit: '5mb' })); // Parse JSON bodies
 app.use(express.urlencoded({ limit: '5mb', extended: true })); // Parse URL-encoded bodies
 
+// Data sanitization
+app.use(mongoSanitize()); // Prevent NoSQL query injection
+app.use(xssSanitizer); // Prevent XSS script injection
+
 // CORS configuration
-// For development, allow all origins or specifically your mobile dev setup
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL || 'https://insight.qcu.ph'] // Replace with actual production domain
+    : true; // Allow all in dev
+
 app.use(cors({
-    origin: true, // Reflects the request origin
+    origin: allowedOrigins,
     credentials: true,
 }));
 
@@ -53,7 +67,7 @@ app.get('/health', (req, res) => {
 /**
  * API Routes
  */
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes); // Stricter limiter on sensitive endpoints
 app.use('/api/admin', adminRoutes);
 app.use('/api/studies', studiesRoutes);
 
@@ -73,6 +87,9 @@ const startServer = async () => {
 
         // Connect to MongoDB
         await connectDB();
+
+        // Initialize background tasks
+        initCronJobs();
 
         // Start listening
         app.listen(PORT, () => {

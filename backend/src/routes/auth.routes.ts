@@ -9,7 +9,18 @@ const router = Router();
 
 // Multer setup: memory storage so no temp directory is needed.
 // sharp will process the in-memory buffer and write the final file.
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ 
+    storage: multer.memoryStorage(), 
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+    fileFilter: (_req, file, cb) => {
+        const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files (jpg/png/webp) are allowed'));
+        }
+    }
+});
 
 /**
  * @route   POST /api/auth/register

@@ -405,3 +405,18 @@ export const getTrendingTopics = async (req: Request, res: Response): Promise<vo
         res.status(500).json({ message: 'Failed to fetch trending topics' });
     }
 };
+
+/**
+ * POST /api/studies/:id/download
+ * Increment download count for a study.
+ */
+export const trackDownload = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        await AcademicStudy.findByIdAndUpdate(id, { $inc: { downloadCount: 1 } });
+        res.status(200).json({ message: 'Download tracked' });
+    } catch (error: any) {
+        console.error('trackDownload error:', error);
+        res.status(500).json({ message: 'Failed to track download' });
+    }
+};

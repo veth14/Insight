@@ -11,8 +11,12 @@ const RESEND_COOLDOWN_SECONDS = 5 * 60; // 5 minutes, matches mobile cooldown
  * Uses explicit host/port instead of service shorthand for reliability.
  * Requires EMAIL_USER and EMAIL_PASS (Gmail App Password) in .env
  */
-const createTransporter = () =>
-    nodemailer.createTransport({
+const createTransporter = () => {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.error('[OTP Controller] ERROR: EMAIL_USER or EMAIL_PASS missing!');
+        return null;
+    }
+    return nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true, // use SSL
@@ -21,6 +25,7 @@ const createTransporter = () =>
             pass: process.env.EMAIL_PASS,
         },
     });
+};
 
 /**
  * Generates a secure 4-digit numeric OTP
@@ -72,6 +77,10 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
 
         // Send email
         const transporter = createTransporter();
+        if (!transporter) {
+            throw new Error('Email configuration is missing');
+        }
+
         await transporter.sendMail({
             from: `"Insight App" <${process.env.EMAIL_USER}>`,
             to: email,

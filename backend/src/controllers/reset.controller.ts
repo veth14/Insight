@@ -9,8 +9,12 @@ const OTP_EXPIRY_MINUTES = 5;
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESET_TOKEN_EXPIRY_MINUTES = 10;
 
-const createTransporter = () =>
-    nodemailer.createTransport({
+const createTransporter = () => {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.error('[Reset Controller] ERROR: EMAIL_USER or EMAIL_PASS missing!');
+        return null;
+    }
+    return nodemailer.createTransport({
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
@@ -19,6 +23,7 @@ const createTransporter = () =>
             pass: process.env.EMAIL_PASS,
         },
     });
+};
 
 const generateOTP = (): string =>
     Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
@@ -76,6 +81,10 @@ export const sendResetOTP = async (req: Request, res: Response): Promise<void> =
         });
 
         const transporter = createTransporter();
+        if (!transporter) {
+            throw new Error('Email configuration is missing');
+        }
+
         await transporter.sendMail({
             from: `"Insight App" <${process.env.EMAIL_USER}>`,
             to: email,

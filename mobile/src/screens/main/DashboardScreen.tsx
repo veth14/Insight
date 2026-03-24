@@ -19,6 +19,7 @@ interface StudyCard {
     category?: string;
     systemImageUrl?: string | null;
     viewCount?: number;
+    downloadCount?: number;
 }
 
 interface DashboardStats {
@@ -149,6 +150,16 @@ const DashboardScreen: React.FC = () => {
                                     <View style={styles.recentBody}>
                                         <Text style={styles.cardCategory}>{item.category ?? 'General'}</Text>
                                         <Text style={styles.recentTitle} numberOfLines={2}>{item.title}</Text>
+                                        <View style={styles.cardMetaRow}>
+                                            <View style={styles.metaItem}>
+                                                <Ionicons name="eye-outline" size={12} color="#888" />
+                                                <Text style={styles.metaText}>{fmtNum(item.viewCount)}</Text>
+                                            </View>
+                                            <View style={styles.metaItem}>
+                                                <Ionicons name="download-outline" size={12} color="#888" />
+                                                <Text style={styles.metaText}>{fmtNum(item.downloadCount)}</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </TouchableOpacity>
                             ))}
@@ -178,9 +189,15 @@ const DashboardScreen: React.FC = () => {
                                     <View style={styles.recBody}>
                                         <Text style={styles.recTitle} numberOfLines={2}>{item.title}</Text>
                                         <Text style={styles.cardCategory}>{item.category ?? 'General'}</Text>
-                                        <View style={styles.recMeta}>
-                                            <Ionicons name="eye-outline" size={12} color="#888" />
-                                            <Text style={styles.recViews}>{fmtNum(item.viewCount)}</Text>
+                                        <View style={styles.cardMetaRow}>
+                                            <View style={styles.metaItem}>
+                                                <Ionicons name="eye-outline" size={12} color="#888" />
+                                                <Text style={styles.metaText}>{fmtNum(item.viewCount)}</Text>
+                                            </View>
+                                            <View style={styles.metaItem}>
+                                                <Ionicons name="download-outline" size={12} color="#888" />
+                                                <Text style={styles.metaText}>{fmtNum(item.downloadCount)}</Text>
+                                            </View>
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -210,6 +227,16 @@ const DashboardScreen: React.FC = () => {
                                     <View style={styles.trendBody}>
                                         <Text style={styles.cardCategory}>{item.category ?? 'General'}</Text>
                                         <Text style={styles.trendTitle} numberOfLines={2}>{item.title}</Text>
+                                        <View style={styles.cardMetaRow}>
+                                            <View style={styles.metaItem}>
+                                                <Ionicons name="eye-outline" size={12} color="#888" />
+                                                <Text style={styles.metaText}>{fmtNum(item.viewCount)}</Text>
+                                            </View>
+                                            <View style={styles.metaItem}>
+                                                <Ionicons name="download-outline" size={12} color="#888" />
+                                                <Text style={styles.metaText}>{fmtNum(item.downloadCount)}</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </TouchableOpacity>
                             ))}
@@ -299,6 +326,11 @@ const styles = StyleSheet.create({
     cardCategory: { fontSize: ms(10), fontWeight: '600', color: '#888', marginBottom: vs(4), textTransform: 'capitalize' },
     recentTitle: { fontSize: ms(12), fontWeight: '600', color: '#1A2744', lineHeight: vs(17) },
 
+    // Reusable meta row for cards
+    cardMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: vs(6), gap: scale(12) },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: scale(4) },
+    metaText: { fontSize: ms(11), color: '#888' },
+
     // Recommended cards
     recCard: {
         width: REC_W,
@@ -316,8 +348,6 @@ const styles = StyleSheet.create({
     recThumb: { width: '100%', height: vs(90) },
     recBody: { padding: scale(10) },
     recTitle: { fontSize: ms(12), fontWeight: '600', color: '#1A2744', lineHeight: vs(17), marginBottom: vs(4) },
-    recMeta: { flexDirection: 'row', alignItems: 'center', marginTop: vs(4), gap: scale(3) },
-    recViews: { fontSize: ms(11), color: '#888' },
 
     // Trending
     trendingList: { paddingHorizontal: scale(20), gap: vs(12) },

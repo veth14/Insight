@@ -14,6 +14,7 @@ export interface IAcademicStudy extends Document {
     toolsUsed?: string[];
     keywords: string[];
     category: string;
+    department?: string;
     studyType: string;         // e.g. 'Thesis' | 'Project' | 'Dissertation'
     yearPublished: number;
     uploadedBy: string;        // User UID
@@ -58,8 +59,11 @@ const AcademicStudySchema: Schema = new Schema(
             type: String,
             required: true,
             index: true,
-        },
-        yearPublished: {
+        },        department: {
+            type: String,
+            required: false,
+            index: true,
+        },        yearPublished: {
             type: Number,
             required: true,
             index: true,

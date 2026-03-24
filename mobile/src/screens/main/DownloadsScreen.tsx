@@ -10,6 +10,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
 import { scale, vs, ms } from '../../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +26,7 @@ export interface DownloadItem {
     sizeMB:  number;
     date:    string;
     fileUrl: string;
+    localUri?: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -37,6 +40,15 @@ const DownloadsScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
     const [downloads, setDownloads] = useState<DownloadItem[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean; title: string; message: string; icon?: any; iconColor?: string; buttons?: AlertButton[];
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
 
     const loadDownloads = useCallback(async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
@@ -55,12 +67,29 @@ const DownloadsScreen: React.FC = () => {
     const usedMB   = downloads.reduce((sum, d) => sum + (d.sizeMB ?? 0), 0);
     const progress = Math.min(usedMB / TOTAL_STORAGE_MB, 1);
 
-    const handleOpen = (item: DownloadItem) => {
-        navigation.navigate('PDFReader', { studyId: item.id });
+    const handleOpen = async (item: DownloadItem) => {
+        let uriToOpen = item.fileUrl; // Fallback to online url temporarily 
+
+        if (item.localUri) {
+            try {
+                const info = await FileSystem.getInfoAsync(item.localUri);
+                if (info.exists) {
+                    uriToOpen = item.localUri;
+                    console.log('Opening locally from:', uriToOpen);
+                } else {
+                     showAlert('File Missing', 'The file could not be found locally. Please redownload.', undefined, 'alert-circle', '#EF4444');
+                     return;
+                }
+            } catch (e) {
+                console.error('Error checking file info:', e);
+            }
+        }
+
+        navigation.navigate('PDFReader', { studyId: item.id, offlineUrl: uriToOpen });
     };
 
     const handleDelete = useCallback((item: DownloadItem) => {
-        Alert.alert(
+        showAlert(
             'Remove Download',
             `Remove "${item.title.length > 50 ? item.title.slice(0, 50) + '...' : item.title}" from your downloads?`,
             [
@@ -72,15 +101,24 @@ const DownloadsScreen: React.FC = () => {
                         const updated = downloads.filter(d => d.id !== item.id);
                         setDownloads(updated);
                         await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify(updated));
+                        if (item.localUri) {
+                            try {
+                                await FileSystem.deleteAsync(item.localUri, { idempotent: true });
+                            } catch (e) {
+                                console.log('Delete local file failed', e);
+                            }
+                        }
                     },
                 },
-            ]
+            ],
+            'trash-outline',
+            '#EF4444'
         );
     }, [downloads]);
 
     const handleClearAll = () => {
         if (downloads.length === 0) return;
-        Alert.alert(
+        showAlert(
             'Clear All Downloads',
             'Remove all downloaded files from this list? This cannot be undone.',
             [
@@ -89,11 +127,21 @@ const DownloadsScreen: React.FC = () => {
                     text: 'Clear All',
                     style: 'destructive',
                     onPress: async () => {
+                        // Delete files
+                        for (const item of downloads) {
+                            if (item.localUri) {
+                                try {
+                                    await FileSystem.deleteAsync(item.localUri, { idempotent: true });
+                                } catch (e) {}
+                            }
+                        }
                         setDownloads([]);
                         await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify([]));
                     },
                 },
-            ]
+            ],
+            'trash-bin-outline',
+            '#EF4444'
         );
     };
 
@@ -186,6 +234,16 @@ const DownloadsScreen: React.FC = () => {
                     </View>
                 )}
             </ScrollView>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                buttons={alertConfig.buttons}
+                onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+            />
         </SafeAreaView>
     );
 };
