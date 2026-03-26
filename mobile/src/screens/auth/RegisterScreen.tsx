@@ -22,6 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 import TermsAndConditionsModal from './TermsAndConditionsModal';
 import * as ImagePicker from 'expo-image-picker';
 import CustomAlert, { AlertButton } from '../../components/CustomAlert';
+import api from '../../services/api.service';
+import { Modal } from 'react-native';
 
 type RegisterScreenNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
@@ -45,6 +47,11 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [showTerms, setShowTerms] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Registration OTP State
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [otpLoading, setOtpLoading] = useState(false);
 
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState<{
@@ -87,12 +94,35 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
         setLoading(true);
         try {
-                // Pass the local file URI to the auth service; the service will upload it as multipart
-                const registrationFormLocalUri = regFormUri ?? undefined;
-                await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '', registrationFormLocalUri); 
+            await api.post('/auth/send-register-otp', { email });
+            setShowOtpModal(true);
         } catch (err: any) {
-            showAlert('Registration Failed', err.message || 'An error occurred during registration.', undefined, 'close-circle', '#EF4444');
+            showAlert('Verification Failed', err.response?.data?.message || 'Could not send verification code.', undefined, 'close-circle', '#EF4444');
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyAndRegister = async () => {
+        if (otpCode.length !== 6) {
+            showAlert('Invalid Code', 'Please enter a 6-digit verification code.', undefined, 'alert-circle', '#E97C3A');
+            return;
+        }
+
+        setOtpLoading(true);
+        try {
+            // Verify OTP first
+            await api.post('/auth/verify-register-otp', { email, otp: otpCode });
+            
+            // If success, actually register the user
+            setShowOtpModal(false);
+            setLoading(true);
+            const registrationFormLocalUri = regFormUri ?? undefined;
+            await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '', registrationFormLocalUri);
+        } catch (err: any) {
+            showAlert('Registration Failed', err.response?.data?.message || err.message || 'Verification or registration failed.', undefined, 'close-circle', '#EF4444');
+        } finally {
+            setOtpLoading(false);
             setLoading(false);
         }
     };
@@ -341,11 +371,46 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                 iconColor={alertConfig.iconColor}
                 onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
             />
+
+            {/* OTP Modal */}
+            <Modal visible={showOtpModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <Ionicons name="mail-unread-outline" size={ms(48)} color="#4A90E2" style={{ marginBottom: vs(16) }} />
+                        <Text style={styles.modalTitle}>Verify Your Email</Text>
+                        <Text style={styles.modalSubtitle}>
+                            We sent a 6-digit code to <Text style={{ fontWeight: 'bold' }}>{email}</Text>. Please enter it below.
+                        </Text>
+
+                        <TextInput
+                            style={styles.otpInput}
+                            placeholder="000000"
+                            placeholderTextColor="#AABCD0"
+                            keyboardType="number-pad"
+                            maxLength={6}
+                            value={otpCode}
+                            onChangeText={setOtpCode}
+                        />
+
+                        <TouchableOpacity
+                            style={[styles.button, otpLoading && styles.buttonDisabled, { marginTop: vs(24), width: '100%' }]}
+                            onPress={handleVerifyAndRegister}
+                            disabled={otpLoading}
+                        >
+                            {otpLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify & Register</Text>}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={() => setShowOtpModal(false)} style={{ marginTop: vs(16) }} disabled={otpLoading}>
+                            <Text style={styles.footerLink}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
         </View>
     );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -595,6 +660,45 @@ const styles = StyleSheet.create({
     },
     changePhotoText: {
         fontSize: ms(12), fontWeight: '600', color: '#0E1F43',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: scale(20),
+    },
+    modalContainer: {
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: ms(20),
+        padding: scale(24),
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: ms(22),
+        fontWeight: '700',
+        color: '#0E1F43',
+        marginBottom: vs(8),
+    },
+    modalSubtitle: {
+        fontSize: ms(14),
+        color: '#5B6F96',
+        textAlign: 'center',
+        marginBottom: vs(24),
+    },
+    otpInput: {
+        width: '100%',
+        height: vs(55),
+        borderWidth: 1.5,
+        borderColor: '#D8DFEE',
+        borderRadius: ms(12),
+        backgroundColor: '#F8F9FF',
+        fontSize: ms(24),
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: '#0E1F43',
+        letterSpacing: 4,
     },
 });
 

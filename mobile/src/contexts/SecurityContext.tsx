@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from './AuthContext';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Alert } from 'react-native';
 
 interface SecurityContextType {
     isLocked: boolean;
@@ -81,17 +81,25 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const hasHardware = await LocalAuthentication.hasHardwareAsync();
             const isEnrolled = await LocalAuthentication.isEnrolledAsync();
             
-            if (hasHardware && isEnrolled) {
-                const result = await LocalAuthentication.authenticateAsync({
-                    promptMessage: 'Unlock Insight App',
-                    fallbackLabel: 'Use PIN',
-                    disableDeviceFallback: false,
-                });
-                
-                if (result.success) {
-                    setIsLocked(false);
-                    return true;
-                }
+            if (!hasHardware) {
+                Alert.alert("Hardware Not Found", "This device does not support biometric authentication.");
+                return false;
+            }
+
+            if (!isEnrolled) {
+                Alert.alert("Biometrics Not Enrolled", "Please enroll a fingerprint or Face ID in your device settings (or Emulator extended controls) to use this feature.");
+                return false;
+            }
+
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Unlock Insight App',
+                cancelLabel: 'Cancel',
+                disableDeviceFallback: true,
+            });
+
+            if (result.success) {
+                setIsLocked(false);
+                return true;
             }
         } catch (e) {
             console.error("Biometrics failed", e);

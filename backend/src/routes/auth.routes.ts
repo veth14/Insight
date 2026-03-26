@@ -3,6 +3,7 @@ import multer from 'multer';
 import { register, getMe, updateProfile } from '../controllers/auth.controller';
 import { sendOTP, verifyOTP } from '../controllers/otp.controller';
 import { sendResetOTP, verifyResetOTP, resetPassword } from '../controllers/reset.controller';
+import { sendRegisterOTP, verifyRegisterOTP } from '../controllers/register-otp.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -70,6 +71,20 @@ router.post('/forgot-password', sendResetOTP);
  * @access  Public
  */
 router.post('/verify-reset-otp', verifyResetOTP);
+
+/**
+ * @route   POST /api/auth/send-register-otp
+ * @desc    Send a 6-digit OTP for email verification before registration
+ * @access  Public
+ */
+router.post('/send-register-otp', sendRegisterOTP);
+
+/**
+ * @route   POST /api/auth/verify-register-otp
+ * @desc    Verify the 6-digit email OTP for registration
+ * @access  Public
+ */
+router.post('/verify-register-otp', verifyRegisterOTP);
 
 /**
  * @route   POST /api/auth/reset-password

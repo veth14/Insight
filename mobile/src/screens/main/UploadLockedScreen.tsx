@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { scale, vs, ms } from '../../utils/responsive';
 import { useAuth } from '../../contexts/AuthContext';
+import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 
 const POLL_INTERVAL_MS = 30_000; // re-check approval every 30 s
 
@@ -15,6 +16,21 @@ const UploadLockedScreen: React.FC = () => {
     const isRejected = user?.registrationStatus === 'rejected';
     const [checking, setChecking] = React.useState(false);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const [alertConfig, setAlertConfig] = React.useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        buttons?: AlertButton[];
+        icon?: any;
+        iconColor?: string;
+    }>({ visible: false, title: '', message: '' });
+
+    const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
+        setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
+
+    const hideAlert = () => setAlertConfig(prev => ({ ...prev, visible: false }));
 
     useFocusEffect(
         useCallback(() => {
@@ -37,7 +53,7 @@ const UploadLockedScreen: React.FC = () => {
             return () => {
                 if (intervalRef.current) clearInterval(intervalRef.current);
             };
-        }, [refreshUser]),
+        }, []),
     );
 
     return (
@@ -91,8 +107,17 @@ const UploadLockedScreen: React.FC = () => {
                         onPress={async () => {
                             try {
                                 setChecking(true);
-                                await refreshUser();
-                            } catch (_) {}
+                                const updatedUser = await refreshUser();
+                                if (updatedUser) {
+                                    if (updatedUser.registrationStatus === 'approved') {
+                                        showAlert('Approved!', 'Your account has been approved. You can now upload research papers.', [{ text: 'Great', onPress: hideAlert }], 'checkmark-circle', '#10B981');
+                                    } else {
+                                        showAlert('Still Pending', 'Your account is still pending approval. An admin will review it shortly.', [{ text: 'Okay', onPress: hideAlert }], 'time', '#F59E0B');
+                                    }
+                                }
+                            } catch (error: any) {
+                                showAlert('Check Failed', error.message || 'Failed to connect to the server.', [{ text: 'Retry', onPress: hideAlert }], 'close-circle', '#DC2626');
+                            }
                             finally { setChecking(false); }
                         }}
                         disabled={checking}
@@ -108,6 +133,16 @@ const UploadLockedScreen: React.FC = () => {
                     </TouchableOpacity>
                 )}
             </View>
+
+            <CustomAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                buttons={alertConfig.buttons}
+                icon={alertConfig.icon}
+                iconColor={alertConfig.iconColor}
+                onClose={hideAlert}
+            />
         </SafeAreaView>
     );
 };

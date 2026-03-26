@@ -232,7 +232,7 @@ const AdminAnalyticsScreen: React.FC = () => {
                                     chartConfig={chartConfig}
                                     accessor="population"
                                     backgroundColor="transparent"
-                                    paddingLeft="30"
+                                    paddingLeft="0" center={[PIE_SIZE / 4, 0]}
                                     hasLegend={false}
                                 />
                                 <View style={styles.pieHole} />
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
         width: PIE_SIZE * 0.45, height: PIE_SIZE * 0.45,
         borderRadius: PIE_SIZE * 0.225,
         backgroundColor: '#fff',
-        marginLeft: -32,
+        marginLeft: 0,
     },
     pieLegend:  { flex: 1, gap: vs(10), paddingLeft: scale(4) },
     legendRow:  { flexDirection: 'row', alignItems: 'center', gap: scale(8) },

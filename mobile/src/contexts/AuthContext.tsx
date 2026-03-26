@@ -30,7 +30,7 @@ interface AuthContextType {
     resetPassword: (email: string, resetToken: string, newPassword: string) => Promise<void>;
     register: (email: string, password: string, displayName: string, yearLevel: number, program: string, studentNumber: string, phoneNumber: string, registrationFormUrl?: string) => Promise<void>;
     logout: () => Promise<void>;
-    refreshUser: () => Promise<void>;
+    refreshUser: () => Promise<User | undefined>;
 }
 
 import { Alert } from 'react-native';
@@ -211,12 +211,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const refreshUser = async () => {
         const fbUser = auth.currentUser;
-        if (!fbUser) return;
+        if (!fbUser) return undefined;
         const idToken = await fbUser.getIdToken();
         const response = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${idToken}` },
         });
         setUser(response.data.user);
+        return response.data.user;
     };
 
     const logout = async () => {

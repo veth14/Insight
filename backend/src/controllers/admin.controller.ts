@@ -3,12 +3,30 @@ import User from '../models/User';
 import { AuthRequest, UserRole } from '../types';
 import { logAdminAction } from '../utils/audit';
 import { AuditAction } from '../models/AuditLog';
+import { supabase } from '../config/supabase';
 
 const NON_ADMIN_ROLES = [
     UserRole.STUDENT_1ST_TO_3RD,
     UserRole.STUDENT_4TH,
     UserRole.FACULTY,
 ];
+
+function extractStoragePath(url?: string): string | null {
+    if (!url) return null;
+    const marker = '/object/public/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    const afterBucket = url.slice(idx + marker.length);
+    const slashIdx = afterBucket.indexOf('/');
+    return slashIdx === -1 ? null : afterBucket.slice(slashIdx + 1).split('?')[0];
+}
+
+async function signRegFormUrl(url?: string): Promise<string | null> {
+    const path = extractStoragePath(url);
+    if (!path) return url ?? null;
+    const { data, error } = await supabase.storage.from('regForms').createSignedUrl(path, 3600);
+    return error ? (url ?? null) : (data?.signedUrl ?? null);
+}
 
 /**
  * GET /api/admin/users
@@ -139,7 +157,12 @@ export const getRegistrations = async (req: Request, res: Response): Promise<voi
             .sort({ createdAt: -1 })
             .lean();
 
-        res.json({ users });
+        const signedUsers = await Promise.all(users.map(async (user: any) => ({
+            ...user,
+            registrationFormUrl: await signRegFormUrl(user.registrationFormUrl)
+        })));
+
+        res.json({ users: signedUsers });
     } catch (error) {
         console.error('Admin getRegistrations error:', error);
         res.status(500).json({ message: 'Failed to fetch registrations' });
