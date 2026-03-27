@@ -17,10 +17,14 @@ const createTransporter = () => {
         return null;
     }
     return nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true, // use SSL
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: false, // STARTTLS on 587
+        requireTLS: true,
         family: 4, // Force IPv4 to prevent ENETUNREACH errors on Railway
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
