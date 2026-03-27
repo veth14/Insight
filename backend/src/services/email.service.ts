@@ -84,6 +84,16 @@ const sendViaResend = async (payload: SendEmailOptions): Promise<void> => {
 };
 
 export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<void> => {
+    // Prefer HTTPS provider in production when configured to avoid SMTP port issues.
+    if (process.env.RESEND_API_KEY) {
+        try {
+            await sendViaResend(payload);
+            return;
+        } catch (resendError: any) {
+            console.error('[EmailService] Resend send failed, trying SMTP fallback:', resendError?.message || resendError);
+        }
+    }
+
     const recipients = Array.isArray(payload.to) ? payload.to.join(',') : payload.to;
     const smtpTransporter = createTransporter();
 
@@ -103,6 +113,7 @@ export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<
         }
     }
 
+    // Final fallback for environments where SMTP is unavailable but RESEND_API_KEY exists.
     await sendViaResend(payload);
 };
 
