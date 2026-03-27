@@ -9,12 +9,13 @@ import { auth } from '../config/firebase';
 let baseURL = process.env.EXPO_PUBLIC_API_URL;
 
 // Auto-detect local IP in development (Expo Go)
-if (__DEV__) {
-    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoGo?.debuggerHost;
-    if (debuggerHost) {
-        baseURL = `http://${debuggerHost.split(':')[0]}:3000/api`;
-    }
-}
+// /* TEMPORARILY DISABLED to test Railway Production */
+// if (__DEV__) {
+//     const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+//     if (debuggerHost) {
+//         baseURL = `http://${debuggerHost.split(':')[0]}:3000/api`;
+//     }
+// }
 
 const api = axios.create({
     baseURL,
