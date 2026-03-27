@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
 import https from 'https';
+import dns from 'dns';
+
+// Fix Node.js 17+ resolving IPv6 first, which causes ENETUNREACH on Railway
+dns.setDefaultResultOrder('ipv4first');
 
 interface SendEmailOptions {
     to: string | string[];
