@@ -1,4 +1,12 @@
 import nodemailer from 'nodemailer';
+import https from 'https';
+
+interface SendEmailOptions {
+    to: string | string[];
+    subject: string;
+    html: string;
+    fromName?: string;
+}
 
 export const createTransporter = () => {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -19,6 +27,83 @@ export const createTransporter = () => {
             pass: process.env.EMAIL_PASS,
         },
     } as any);
+};
+
+const sendViaResend = async (payload: SendEmailOptions): Promise<void> => {
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error('RESEND_API_KEY is not configured.');
+    }
+
+    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
+    const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev';
+    const fromName = payload.fromName || 'Insight App';
+
+    const body = JSON.stringify({
+        from: `${fromName} <${fromAddress}>`,
+        to: recipients,
+        subject: payload.subject,
+        html: payload.html,
+    });
+
+    await new Promise<void>((resolve, reject) => {
+        const request = https.request(
+            {
+                hostname: 'api.resend.com',
+                path: '/emails',
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(body),
+                },
+                timeout: 15000,
+            },
+            (response) => {
+                let responseBody = '';
+                response.on('data', (chunk) => {
+                    responseBody += chunk.toString();
+                });
+                response.on('end', () => {
+                    if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
+                        resolve();
+                        return;
+                    }
+                    reject(new Error(`Resend API failed (${response.statusCode || 'unknown'}): ${responseBody}`));
+                });
+            }
+        );
+
+        request.on('timeout', () => {
+            request.destroy(new Error('Resend API timeout'));
+        });
+
+        request.on('error', (error) => reject(error));
+        request.write(body);
+        request.end();
+    });
+};
+
+export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<void> => {
+    const recipients = Array.isArray(payload.to) ? payload.to.join(',') : payload.to;
+    const smtpTransporter = createTransporter();
+
+    if (smtpTransporter) {
+        try {
+            const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+            const fromName = payload.fromName || 'Insight App';
+            await smtpTransporter.sendMail({
+                from: fromAddress ? `${fromName} <${fromAddress}>` : undefined,
+                to: recipients,
+                subject: payload.subject,
+                html: payload.html,
+            });
+            return;
+        } catch (smtpError: any) {
+            console.error('[EmailService] SMTP send failed, trying HTTPS fallback:', smtpError?.message || smtpError);
+        }
+    }
+
+    await sendViaResend(payload);
 };
 
 const wrapHtml = (title: string, content: string) => `

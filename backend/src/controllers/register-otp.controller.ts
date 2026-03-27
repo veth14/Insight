@@ -1,32 +1,10 @@
 import { Request, Response } from 'express';
-import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import RegisterOTP from '../models/RegisterOTP';
+import { sendEmailWithFallback } from '../services/email.service';
 
 const MAX_ATTEMPTS = 5;
 const OTP_EXPIRY_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 60;
-
-const createTransporter = () => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.error('[Register OTP Controller] ERROR: EMAIL_USER or EMAIL_PASS missing!');
-        return null;
-    }
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false, // STARTTLS on 587
-        requireTLS: true,
-        family: 4, // Force IPv4 to prevent ENETUNREACH errors on Railway
-        connectionTimeout: 15000,
-        greetingTimeout: 10000,
-        socketTimeout: 20000,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    } as any);
-};
 
 const generateOTP = (): string =>
     Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
@@ -60,8 +38,6 @@ export const sendRegisterOTP = async (req: Request, res: Response): Promise<void
 
         // Generate OTP
         const otpCode = generateOTP();
-        const hashParams = crypto.createHash('sha256').update(otpCode).digest('hex'); // We can store raw or hashed. Given existing pattern, we'll store raw code for simplicity or hashed if needed for higher security.
-        // Let's store plain OTP for now like the other file does for easy checking.
         
         await RegisterOTP.deleteMany({ email: normalizedEmail });
 
@@ -77,16 +53,10 @@ export const sendRegisterOTP = async (req: Request, res: Response): Promise<void
         });
 
         // Send Email
-        const transporter = createTransporter();
-        if (!transporter) {
-            res.status(500).json({ message: 'Email service misconfigured on server.' });
-            return;
-        }
-
-        const mailOptions = {
-            from: `"Insight Support" <${process.env.EMAIL_USER}>`,
+        await sendEmailWithFallback({
             to: normalizedEmail,
             subject: 'Insight Registration Verification Code',
+            fromName: 'Insight Support',
             html: `
                 <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
                     <h2>Registration Verification</h2>
@@ -96,9 +66,7 @@ export const sendRegisterOTP = async (req: Request, res: Response): Promise<void
                     <p>If you did not request this, please ignore this email.</p>
                 </div>
             `,
-        };
-
-        await transporter.sendMail(mailOptions);
+        });
 
         res.status(200).json({ message: 'A verification code has been sent to your email.' });
     } catch (error) {
