@@ -20,6 +20,9 @@ import { globalLimiter, authLimiter } from './middleware/rateLimiter.middleware'
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy required for express-rate-limit behind reverse proxies (like Railway/Heroku)
+app.set('trust proxy', 1);
+
 // Apply Global Rate Limiting early on the pipeline
 app.use(globalLimiter);
 
