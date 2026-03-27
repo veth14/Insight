@@ -1,13 +1,24 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
 import { auth } from '../config/firebase';
 
 /**
  * Axios API client instance
  * Base URL loaded from environment variables
  */
+let baseURL = process.env.EXPO_PUBLIC_API_URL;
+
+// Auto-detect local IP in development (Expo Go)
+if (__DEV__) {
+    const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoGo?.debuggerHost;
+    if (debuggerHost) {
+        baseURL = `http://${debuggerHost.split(':')[0]}:3000/api`;
+    }
+}
+
 const api = axios.create({
-    baseURL: process.env.EXPO_PUBLIC_API_URL,
-    timeout: 30000,
+    baseURL,
+    timeout: 60000, // 60s timeout for cloud hosting cold-starts
     headers: {
         'Content-Type': 'application/json',
     },
