@@ -5,6 +5,8 @@
     "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
-    "@types/pdf-parse": "^1.1.5"
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "~19.2.10",
+    "typescript": "~5.9.2"
   }
 }
