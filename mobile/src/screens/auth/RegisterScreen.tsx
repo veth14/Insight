@@ -75,9 +75,29 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         }).start();
     }, []);
 
+    // Real-time formatter for student number
+    const handleStudentNumberChange = (text: string) => {
+        // Strip out any characters that are not numbers
+        let cleanText = text.replace(/[^0-9]/g, '');
+        
+        // Auto-insert the dash after the 2nd digit
+        if (cleanText.length > 2) {
+            cleanText = `${cleanText.slice(0, 2)}-${cleanText.slice(2, 6)}`;
+        }
+        
+        setStudentNumber(cleanText);
+    };
+
     const handleRegister = async () => {
         if (!fullName || !email || !studentNumber || !yearLevel || !program || !password) {
             showAlert('Missing Information', 'Please fill in all fields completely.', undefined, 'alert-circle', '#E97C3A');
+            return;
+        }
+
+        // Validate Student Number format (XX-XXXX)
+        const studentNoRegex = /^\d{2}-\d{4}$/;
+        if (!studentNoRegex.test(studentNumber.trim())) {
+            showAlert('Invalid Format', 'Student number must be in XX-XXXX format (e.g., 23-2023). No letters allowed.', undefined, 'alert-circle', '#E97C3A');
             return;
         }
 
@@ -206,10 +226,12 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Student number"
+                                    placeholder="Student number (e.g. 23-2023)"
                                     placeholderTextColor="#AABCD0"
                                     value={studentNumber}
-                                    onChangeText={setStudentNumber}
+                                    onChangeText={handleStudentNumberChange}
+                                    maxLength={7}
+                                    keyboardType="numeric"
                                 />
                             </View>
 
