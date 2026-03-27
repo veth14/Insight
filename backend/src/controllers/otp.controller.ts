@@ -55,48 +55,40 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
         });
 
         // Send email
-        try {
-            await sendEmailWithFallback({
-                to: email,
-                fromName: 'Insight App',
-                subject: 'Insight — Your Verification Code',
-                html: `
-                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; background: #F8F9FF; border-radius: 12px;">
-                        <div style="text-align: center; margin-bottom: 24px;">
-                            <h1 style="color: #0E1F43; font-size: 22px; margin: 0;">Insight</h1>
-                            <p style="color: #666; font-size: 13px; margin-top: 4px;">CCS Academic Research Repository</p>
-                        </div>
-                        <h2 style="color: #0E1F43; font-size: 18px; text-align: center;">Two-Factor Authentication</h2>
-                        <p style="color: #444; text-align: center; font-size: 14px;">Your one-time verification code is:</p>
-                        <div style="
-                            font-size: 40px;
-                            font-weight: 700;
-                            letter-spacing: 16px;
-                            color: #0E1F43;
-                            text-align: center;
-                            padding: 24px 16px;
-                            background: #fff;
-                            border: 2px solid #CDDDFF;
-                            border-radius: 10px;
-                            margin: 20px 0;
-                        ">
-                            ${otpCode}
-                        </div>
-                        <p style="color: #888; text-align: center; font-size: 13px;">This code expires in <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
-                        <hr style="border: none; border-top: 1px solid #E5E7F5; margin: 24px 0;" />
-                        <p style="color: #aaa; font-size: 11px; text-align: center;">
-                            If you didn't request this, you can safely ignore this email.
-                        </p>
+        await sendEmailWithFallback({
+            to: email,
+            fromName: 'Insight App',
+            subject: 'Insight — Your Verification Code',
+            html: `
+                <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; background: #F8F9FF; border-radius: 12px;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <h1 style="color: #0E1F43; font-size: 22px; margin: 0;">Insight</h1>
+                        <p style="color: #666; font-size: 13px; margin-top: 4px;">CCS Academic Research Repository</p>
                     </div>
-                `,
-            });
-        } catch (emailError: any) {
-            console.log(`\n======================================================`);
-            console.log(`[DEV BYPASS] Railway blocked the email!`);
-            console.log(`🔑 Your login code for ${email} is: ${otpCode}`);
-            console.log(`======================================================\n`);
-            // We don't throw an error here so the mobile app still proceeds to the verification screen!
-        }
+                    <h2 style="color: #0E1F43; font-size: 18px; text-align: center;">Two-Factor Authentication</h2>
+                    <p style="color: #444; text-align: center; font-size: 14px;">Your one-time verification code is:</p>
+                    <div style="
+                        font-size: 40px;
+                        font-weight: 700;
+                        letter-spacing: 16px;
+                        color: #0E1F43;
+                        text-align: center;
+                        padding: 24px 16px;
+                        background: #fff;
+                        border: 2px solid #CDDDFF;
+                        border-radius: 10px;
+                        margin: 20px 0;
+                    ">
+                        ${otpCode}
+                    </div>
+                    <p style="color: #888; text-align: center; font-size: 13px;">This code expires in <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+                    <hr style="border: none; border-top: 1px solid #E5E7F5; margin: 24px 0;" />
+                    <p style="color: #aaa; font-size: 11px; text-align: center;">
+                        If you didn't request this, you can safely ignore this email.
+                    </p>
+                </div>
+            `,
+        });
 
         res.status(200).json({ message: 'OTP sent successfully' });
     } catch (error: any) {

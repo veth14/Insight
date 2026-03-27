@@ -38,7 +38,10 @@ const sendViaResend = async (payload: SendEmailOptions): Promise<void> => {
     }
 
     const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-    const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'onboarding@resend.dev';
+    
+    // VERY IMPORTANT for Resend free tier: Unless you have a verified custom domain, 
+    // the "from" address MUST strictly be onboarding@resend.dev
+    const fromAddress = 'onboarding@resend.dev';
     const fromName = payload.fromName || 'Insight App';
 
     const body = JSON.stringify({
