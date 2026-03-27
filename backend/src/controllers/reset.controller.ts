@@ -1,34 +1,13 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import PasswordResetOTP from '../models/PasswordResetOTP';
 import { admin } from '../config/firebase';
+import { sendEmailWithFallback } from '../services/email.service';
 
 const MAX_ATTEMPTS = 5;
 const OTP_EXPIRY_MINUTES = 5;
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESET_TOKEN_EXPIRY_MINUTES = 10;
-
-const createTransporter = () => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.error('[Reset Controller] ERROR: EMAIL_USER or EMAIL_PASS missing!');
-        return null;
-    }
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false, // STARTTLS on 587
-        requireTLS: true,
-        family: 4, // Force IPv4 to prevent ENETUNREACH errors on Railway
-        connectionTimeout: 15000,
-        greetingTimeout: 10000,
-        socketTimeout: 20000,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    } as any);
-};
 
 const generateOTP = (): string =>
     Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
@@ -85,14 +64,9 @@ export const sendResetOTP = async (req: Request, res: Response): Promise<void> =
             resetTokenExpiresAt: null,
         });
 
-        const transporter = createTransporter();
-        if (!transporter) {
-            throw new Error('Email configuration is missing');
-        }
-
-        await transporter.sendMail({
-            from: `"Insight App" <${process.env.EMAIL_USER}>`,
+        await sendEmailWithFallback({
             to: email,
+            fromName: 'Insight App',
             subject: 'Insight — Password Reset Code',
             html: `
                 <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; background: #F8F9FF; border-radius: 12px;">

@@ -1,36 +1,10 @@
 import { Request, Response } from 'express';
-import nodemailer from 'nodemailer';
 import OTP from '../models/OTP';
+import { sendEmailWithFallback } from '../services/email.service';
 
 const MAX_ATTEMPTS = 3;
 const OTP_EXPIRY_MINUTES = 5;
 const RESEND_COOLDOWN_SECONDS = 5 * 60; // 5 minutes, matches mobile cooldown
-
-/**
- * Creates a reusable nodemailer transporter using Gmail SMTP.
- * Uses explicit host/port instead of service shorthand for reliability.
- * Requires EMAIL_USER and EMAIL_PASS (Gmail App Password) in .env
- */
-const createTransporter = () => {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.error('[OTP Controller] ERROR: EMAIL_USER or EMAIL_PASS missing!');
-        return null;
-    }
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false, // STARTTLS on 587
-        requireTLS: true,
-        family: 4, // Force IPv4 to prevent ENETUNREACH errors on Railway
-        connectionTimeout: 15000,
-        greetingTimeout: 10000,
-        socketTimeout: 20000,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    } as any);
-};
 
 /**
  * Generates a secure 4-digit numeric OTP
@@ -81,14 +55,9 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
         });
 
         // Send email
-        const transporter = createTransporter();
-        if (!transporter) {
-            throw new Error('Email configuration is missing');
-        }
-
-        await transporter.sendMail({
-            from: `"Insight App" <${process.env.EMAIL_USER}>`,
+        await sendEmailWithFallback({
             to: email,
+            fromName: 'Insight App',
             subject: 'Insight — Your Verification Code',
             html: `
                 <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: auto; padding: 32px; background: #F8F9FF; border-radius: 12px;">
