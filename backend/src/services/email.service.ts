@@ -15,9 +15,8 @@ export const createTransporter = () => {
     }
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: false, // STARTTLS on 587
-        requireTLS: true,
+        port: Number(process.env.SMTP_PORT || 465),
+        secure: true, // Use Implicit SSL/TLS on port 465
         family: 4, // Force IPv4 to prevent ENETUNREACH errors on Railway
         connectionTimeout: 15000,
         greetingTimeout: 10000,
