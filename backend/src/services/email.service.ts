@@ -84,37 +84,42 @@ const sendViaResend = async (payload: SendEmailOptions): Promise<void> => {
 };
 
 export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<void> => {
-    // Prefer HTTPS provider in production when configured to avoid SMTP port issues.
-    if (process.env.RESEND_API_KEY) {
-        try {
-            await sendViaResend(payload);
-            return;
-        } catch (resendError: any) {
-            console.error('[EmailService] Resend send failed, trying SMTP fallback:', resendError?.message || resendError);
-        }
-    }
-
+    
+    // First, try standard SMTP through Nodemailer
     const recipients = Array.isArray(payload.to) ? payload.to.join(',') : payload.to;
     const smtpTransporter = createTransporter();
 
     if (smtpTransporter) {
         try {
-            const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+            const fromAddress = process.env.EMAIL_USER;
             const fromName = payload.fromName || 'Insight App';
             await smtpTransporter.sendMail({
-                from: fromAddress ? `${fromName} <${fromAddress}>` : undefined,
+                from: `${fromName} <${fromAddress}>`,
                 to: recipients,
                 subject: payload.subject,
                 html: payload.html,
             });
+            console.log('[EmailService] Email sent successfully via SMTP.');
             return;
         } catch (smtpError: any) {
-            console.error('[EmailService] SMTP send failed, trying HTTPS fallback:', smtpError?.message || smtpError);
+            console.error('[EmailService] SMTP send failed:', smtpError?.message || smtpError);
         }
     }
 
-    // Final fallback for environments where SMTP is unavailable but RESEND_API_KEY exists.
-    await sendViaResend(payload);
+    // Optional Fallback to Resend (only if configured and SMTP fails)
+    if (process.env.RESEND_API_KEY) {
+        try {
+            console.log('[EmailService] Trying HTTPS fallback via Resend...');
+            await sendViaResend(payload);
+            console.log('[EmailService] Email sent successfully via Resend.');
+            return;
+        } catch (resendError: any) {
+            console.error('[EmailService] Resend fallback also failed:', resendError?.message || resendError);
+            throw resendError;
+        }
+    }
+
+    throw new Error('All email delivery methods failed.');
 };
 
 const wrapHtml = (title: string, content: string) => `
