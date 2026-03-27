@@ -13,7 +13,8 @@ let baseURL = process.env.EXPO_PUBLIC_API_URL;
 // if (__DEV__) {
 //     const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoGo?.debuggerHost;
 //     if (debuggerHost) {
-//         baseURL = `http://${debuggerHost.split(':')[0]}:3000/api`;
+//         // Change from 3000 to 8080 to match your backend port
+//         baseURL = `http://${debuggerHost.split(':')[0]}:8080/api`;
 //     }
 // }
 

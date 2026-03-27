@@ -43,8 +43,11 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
     ? [process.env.FRONTEND_URL || 'https://insight.qcu.ph'] // Replace with actual production domain
     : true; // Allow all in dev
 
+// Mobile clients (like React Native/Expo) often send requests without an Origin header.
+// To support both web and mobile on production, you can allow any origin for now 
+// or implement a custom origin validation that permits requests without origins.
 app.use(cors({
-    origin: allowedOrigins,
+    origin: true, // Allows all origins temporarily to fix Mobile App CORS block
     credentials: true,
 }));
 
