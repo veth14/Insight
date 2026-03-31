@@ -32,33 +32,30 @@ export const createTransporter = () => {
     } as any);
 };
 
-const sendViaResend = async (payload: SendEmailOptions): Promise<void> => {
-    if (!process.env.RESEND_API_KEY) {
-        throw new Error('RESEND_API_KEY is not configured.');
+const sendViaBrevo = async (payload: SendEmailOptions): Promise<void> => {
+    if (!process.env.BREVO_API_KEY) {
+        throw new Error('BREVO_API_KEY is not configured.');
     }
 
-    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-    
-    // VERY IMPORTANT for Resend free tier: Unless you have a verified custom domain, 
-    // the "from" address MUST strictly be onboarding@resend.dev
-    const fromAddress = 'onboarding@resend.dev';
+    const recipients = Array.isArray(payload.to) ? payload.to.map(email => ({ email })) : [{ email: payload.to }];
+    const fromAddress = process.env.EMAIL_USER || 'insiqhtmobileapp@gmail.com';
     const fromName = payload.fromName || 'Insight App';
 
     const body = JSON.stringify({
-        from: `${fromName} <${fromAddress}>`,
+        sender: { name: fromName, email: fromAddress },
         to: recipients,
         subject: payload.subject,
-        html: payload.html,
+        htmlContent: payload.html,
     });
 
     await new Promise<void>((resolve, reject) => {
         const request = https.request(
             {
-                hostname: 'api.resend.com',
-                path: '/emails',
+                hostname: 'api.brevo.com',
+                path: '/v3/smtp/email',
                 method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+                    'api-key': process.env.BREVO_API_KEY as string,
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(body),
                 },
@@ -74,13 +71,13 @@ const sendViaResend = async (payload: SendEmailOptions): Promise<void> => {
                         resolve();
                         return;
                     }
-                    reject(new Error(`Resend API failed (${response.statusCode || 'unknown'}): ${responseBody}`));
+                    reject(new Error(`Brevo API failed (${response.statusCode || 'unknown'}): ${responseBody}`));
                 });
             }
         );
 
         request.on('timeout', () => {
-            request.destroy(new Error('Resend API timeout'));
+            request.destroy(new Error('Brevo API timeout'));
         });
 
         request.on('error', (error) => reject(error));
@@ -112,16 +109,16 @@ export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<
         }
     }
 
-    // Optional Fallback to Resend (only if configured and SMTP fails)
-    if (process.env.RESEND_API_KEY) {
+    // Optional Fallback to Brevo (only if configured and SMTP fails)
+    if (process.env.BREVO_API_KEY) {
         try {
-            console.log('[EmailService] Trying HTTPS fallback via Resend...');
-            await sendViaResend(payload);
-            console.log('[EmailService] Email sent successfully via Resend.');
+            console.log('[EmailService] Trying HTTPS fallback via Brevo...');
+            await sendViaBrevo(payload);
+            console.log('[EmailService] Email sent successfully via Brevo.');
             return;
-        } catch (resendError: any) {
-            console.error('[EmailService] Resend fallback also failed:', resendError?.message || resendError);
-            throw resendError;
+        } catch (brevoError: any) {
+            console.error('[EmailService] Brevo fallback also failed:', brevoError?.message || brevoError);
+            throw brevoError;
         }
     }
 
