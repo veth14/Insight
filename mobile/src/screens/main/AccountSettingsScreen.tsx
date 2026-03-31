@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSecurity } from '../../contexts/SecurityContext';
 import { scale, vs, ms } from '../../utils/responsive';
 import api from '../../services/api.service';
 
 const AccountSettingsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const { user, logout, refreshUser } = useAuth();
+    const { appLockEnabled } = useSecurity();
     const [emailNotif, setEmailNotif] = useState(user?.notificationPreferences?.emailNotif ?? false);
     const [researchUpdates, setResearchUpdates] = useState(user?.notificationPreferences?.researchUpdates ?? false);
 
@@ -111,11 +113,13 @@ const AccountSettingsScreen: React.FC = () => {
                     <RowItem icon="person-circle-outline" label="My Account" subtitle="Make changes to your account" onPress={() => navigation.navigate('MyAccount')} />
                     <View style={styles.divider} />
                     <RowItem icon="shield-checkmark-outline" label="Change password" subtitle="Further secure your account for safety" onPress={() => navigation.navigate('ChangePassword')} />
-                </View>
-
-                {/* Notification Preferences */}
-                <SectionLabel title="NOTIFICATION PREFERENCES" />
-                <View style={styles.card}>
+                      <View style={styles.divider} />
+                      <RowItem 
+                          icon="lock-closed-outline" 
+                          label="App Lock (PIN & Biometrics)" 
+                          subtitle={appLockEnabled ? "Enabled (Tap to change/remove)" : "Add a PIN or Fingerprint to unlock app"} 
+                          onPress={() => navigation.navigate('AppLockSetup')} 
+                      />
                     <RowItem
                         icon="mail-outline"
                         label="Email Notification"

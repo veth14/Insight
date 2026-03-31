@@ -124,6 +124,7 @@ export type HomeStackParamList = {
     PrivacyPolicy: undefined;
     TermsOfUse: undefined;
     TrendingAll: undefined;
+    AppLockSetup: undefined;
 };
 
 export type SearchStackParamList = {

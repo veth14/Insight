@@ -12,6 +12,7 @@ import DownloadsScreen from '../screens/main/DownloadsScreen';
 import PrivacyPolicyScreen from '../screens/main/PrivacyPolicyScreen';
 import TermsOfUseScreen from '../screens/main/TermsOfUseScreen';
 import TrendingAllScreen from '../screens/main/TrendingAllScreen';
+import AppLockSetupScreen from '../screens/auth/AppLockSetupScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -38,6 +39,7 @@ const HomeStack: React.FC = () => {
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="TermsOfUse" component={TermsOfUseScreen} />
             <Stack.Screen name="TrendingAll" component={TrendingAllScreen} />
+            <Stack.Screen name="AppLockSetup" component={AppLockSetupScreen as any} />
             <Stack.Screen
                 name="PDFReader"
                 component={PDFReaderScreen}
