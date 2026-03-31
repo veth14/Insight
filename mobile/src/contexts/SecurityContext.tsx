@@ -6,6 +6,7 @@ import { AppState, AppStateStatus, Alert } from 'react-native';
 
 interface SecurityContextType {
     isLocked: boolean;
+    isLoadingSecurity: boolean;
     appLockEnabled: boolean;
     biometricsEnabled: boolean;
     unlockApp: (pin: string) => Promise<boolean>;
@@ -17,8 +18,9 @@ interface SecurityContextType {
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
 
 export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { user, loading: isAuthLoading } = useAuth();
     const [isLocked, setIsLocked] = useState(false);
+    const [isLoadingSecurity, setIsLoadingSecurity] = useState(true);
     const [appLockEnabled, setAppLockEnabled] = useState(false);
     const [biometricsEnabled, setBiometricsEnabled] = useState(false);
 
@@ -28,17 +30,25 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Load initial lock state when user changes
     useEffect(() => {
         const loadSecuritySettings = async () => {
+            if (isAuthLoading) {
+                setIsLoadingSecurity(true);
+                return;
+            }
+
+            setIsLoadingSecurity(true); // Always set to true when re-evaluating
+
             if (!user) {
                 setIsLocked(false);
                 setAppLockEnabled(false);
                 setBiometricsEnabled(false);
+                setIsLoadingSecurity(false);
                 return;
             }
 
             try {
                 const savedPin = await SecureStore.getItemAsync(getPinKey());
                 const savedBio = await SecureStore.getItemAsync(getBioKey());
-                
+
                 if (savedPin) {
                     setAppLockEnabled(true);
                     setIsLocked(true); // Lock the app when first loaded and PIN exists
@@ -48,10 +58,12 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 }
             } catch (e) {
                 console.error("Failed to load security settings", e);
+            } finally {
+                setIsLoadingSecurity(false);
             }
         };
         loadSecuritySettings();
-    }, [user]);
+    }, [user, isAuthLoading]);
 
     // Handle App Background/Foreground state to re-lock
     useEffect(() => {
@@ -138,6 +150,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return (
         <SecurityContext.Provider value={{
             isLocked,
+            isLoadingSecurity,
             appLockEnabled,
             biometricsEnabled,
             unlockApp,

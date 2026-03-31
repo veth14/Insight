@@ -87,13 +87,25 @@ const sendViaBrevo = async (payload: SendEmailOptions): Promise<void> => {
 };
 
 export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<void> => {
-    
-    // First, try standard SMTP through Nodemailer
-    const recipients = Array.isArray(payload.to) ? payload.to.join(',') : payload.to;
-    const smtpTransporter = createTransporter();
+    // Primary: Try HTTPS delivery via Brevo to bypass potential SMTP port blocks (e.g. Railway)
+    if (process.env.BREVO_API_KEY) {
+        try {
+            console.log('[EmailService] Trying HTTPS delivery via Brevo...');
+            await sendViaBrevo(payload);
+            console.log('[EmailService] Email sent successfully via Brevo.');
+            return;
+        } catch (brevoError: any) {
+            console.error('[EmailService] Brevo delivery failed:', brevoError?.message || brevoError);
+            // Optionally, we could still fall through to SMTP as a backup here
+        }
+    }
 
+    // Fallback: Standard SMTP through Nodemailer
+    const smtpTransporter = createTransporter();
+    
     if (smtpTransporter) {
         try {
+            const recipients = Array.isArray(payload.to) ? payload.to.join(',') : payload.to;
             const fromAddress = process.env.EMAIL_USER;
             const fromName = payload.fromName || 'Insight App';
             await smtpTransporter.sendMail({
@@ -105,21 +117,8 @@ export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<
             console.log('[EmailService] Email sent successfully via SMTP.');
             return;
         } catch (smtpError: any) {
-            console.error('[EmailService] SMTP send failed:', smtpError?.message || smtpError);
-        }
-    }
-
-    // Optional Fallback to Brevo (only if configured and SMTP fails)
-    if (process.env.BREVO_API_KEY) {
-        try {
-            console.log('[EmailService] Trying HTTPS fallback via Brevo...');
-            await sendViaBrevo(payload);
-            console.log('[EmailService] Email sent successfully via Brevo.');
-            return;
-        } catch (brevoError: any) {
-            console.error('[EmailService] Brevo fallback also failed:', brevoError?.message || brevoError);
-            throw brevoError;
-        }
+            // Logging at debug/info level instead of an error to prevent noise
+            console.log('[EmailService] SMTP delivery skipped or failed:', smtpError?.message || smtpError);
     }
 
     throw new Error('All email delivery methods failed.');

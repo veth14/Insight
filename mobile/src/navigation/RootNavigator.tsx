@@ -21,13 +21,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  */
 const RootNavigator: React.FC = () => {
     const { user, loading } = useAuth();
-    const { isLocked } = useSecurity(); // Get isLocked state
+    const { isLocked, isLoadingSecurity } = useSecurity(); // Get isLocked state
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
     useEffect(() => {
         const checkOnboarding = async () => {
             try {
-                const val = await AsyncStorage.getItem('hasSeenOnboarding');
+                const val = await AsyncStorage.getItem('hasSeenOnboarding');    
                 setHasSeenOnboarding(val === 'true');
             } catch (e) {
                 setHasSeenOnboarding(false);
@@ -36,8 +36,8 @@ const RootNavigator: React.FC = () => {
         checkOnboarding();
     }, []);
 
-    // Show loading spinner while checking auth state or onboarding flag
-    if (loading || hasSeenOnboarding === null) {
+    // Show loading spinner while checking auth state, security state, or onboarding flag        
+    if (loading || isLoadingSecurity || hasSeenOnboarding === null) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
