@@ -370,15 +370,28 @@ const UploadScreen: React.FC = () => {
                 yearPublished: year.trim(),
                 fileUrl: pdfResult?.publicUrl || null,
                 systemImageUrl: imgResult?.publicUrl || null,
+                // Some deployments require `fullText` (schema required). Provide abstract as fallback.
+                fullText: abstract.trim() || 'No full text available.' ,
             };
+            console.log('[Upload] create payload', payload);
 
             const createRes = await fetch(apiCreate, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
                 body: JSON.stringify(payload),
             });
-            const createData = await createRes.json();
-            if (!createRes.ok) throw new Error(createData.message || `Create failed ${createRes.status}`);
+            let createData: any = null;
+            try {
+                createData = await createRes.json();
+            } catch (e) {
+                const text = await createRes.text().catch(() => '<<no body>>');
+                console.warn('[Upload] create endpoint returned non-JSON body:', text);
+            }
+            console.log('[Upload] create response', { status: createRes.status, body: createData });
+            if (!createRes.ok) {
+                const message = createData?.message || createData?.error || `Create failed ${createRes.status}`;
+                throw new Error(message);
+            }
             setUploadProgress(100);
 
             setSubmitted(true);
