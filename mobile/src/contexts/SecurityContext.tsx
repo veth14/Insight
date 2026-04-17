@@ -13,6 +13,7 @@ interface SecurityContextType {
     unlockWithBiometrics: () => Promise<boolean>;
     setupAppLock: (pin: string, useBiometrics: boolean) => Promise<void>;
     removeAppLock: (pin: string) => Promise<boolean>;
+    toggleBiometrics: (enabled: boolean) => Promise<boolean>;
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -147,6 +148,25 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return false;
     };
 
+    const toggleBiometrics = async (enabled: boolean): Promise<boolean> => {
+        if (!user) return false;
+
+        const pin = await SecureStore.getItemAsync(getPinKey());
+        if (!pin) {
+            // Cannot enable biometrics without a PIN set
+            return false;
+        }
+
+        try {
+            await SecureStore.setItemAsync(getBioKey(), enabled ? 'true' : 'false');
+            setBiometricsEnabled(enabled);
+            return true;
+        } catch (e) {
+            console.error('Failed to toggle biometrics', e);
+            return false;
+        }
+    };
+
     return (
         <SecurityContext.Provider value={{
             isLocked,
@@ -157,6 +177,7 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             unlockWithBiometrics,
             setupAppLock,
             removeAppLock
+            , toggleBiometrics
         }}>
             {children}
         </SecurityContext.Provider>

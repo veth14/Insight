@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, Switch, StatusBar,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,7 @@ import api from '../../services/api.service';
 const AccountSettingsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const { user, logout, refreshUser } = useAuth();
-    const { appLockEnabled } = useSecurity();
+    const { appLockEnabled, biometricsEnabled, toggleBiometrics } = useSecurity();
     const [emailNotif, setEmailNotif] = useState(user?.notificationPreferences?.emailNotif ?? false);
     const [researchUpdates, setResearchUpdates] = useState(user?.notificationPreferences?.researchUpdates ?? false);
 
@@ -120,6 +121,33 @@ const AccountSettingsScreen: React.FC = () => {
                           subtitle={appLockEnabled ? "Enabled (Tap to change/remove)" : "Add a PIN or Fingerprint to unlock app"} 
                           onPress={() => navigation.navigate('AppLockSetup')} 
                       />
+                    <View style={styles.divider} />
+                    <RowItem
+                        icon="finger-print-outline"
+                        label="Biometrics"
+                        subtitle={appLockEnabled ? (biometricsEnabled ? 'Use fingerprint / Face ID to unlock' : 'Enable biometric unlock') : 'Requires App Lock (PIN)'}
+                        right={
+                            <Switch
+                                value={biometricsEnabled}
+                                onValueChange={async (val) => {
+                                    // If app lock not enabled, prompt user to set up PIN first
+                                    if (!appLockEnabled && val) {
+                                        Alert.alert('Enable App Lock', 'You must set an app PIN before enabling biometrics. Tap App Lock to set a PIN now.');
+                                        return;
+                                    }
+                                    const ok = await toggleBiometrics(val);
+                                    if (!ok) {
+                                        if (val) Alert.alert('Failed', 'Could not enable biometrics. Make sure your device has an enrolled fingerprint/Face ID and try again.');
+                                        else Alert.alert('Disabled', 'Biometric unlock has been disabled.');
+                                    }
+                                }}
+                                trackColor={{ false: '#D0D8E8', true: '#0E1F43' }}
+                                thumbColor="#fff"
+                                ios_backgroundColor="#D0D8E8"
+                                disabled={!appLockEnabled}
+                            />
+                        }
+                    />
                     <RowItem
                         icon="mail-outline"
                         label="Email Notification"
