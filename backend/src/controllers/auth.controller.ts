@@ -118,6 +118,36 @@ export const register = async (req: Request, res: Response): Promise<void> => {
         });
     } catch (error: any) {
         console.error('Registration error:', error?.message ?? error);
+
+        // Handle Mongo duplicate key (E11000) to provide a friendly message
+        const isDupKey = error && (error.code === 11000 || /E11000/.test(error?.message || ''));
+        if (isDupKey) {
+            // Prefer structured keyValue if provided by mongoose
+            let field = 'value';
+            let value: any = undefined;
+            if (error.keyValue && typeof error.keyValue === 'object') {
+                field = Object.keys(error.keyValue)[0] || field;
+                value = error.keyValue[field];
+            } else {
+                // Fallback: try to parse the message for patterns like "studentNumber: \"23-2023\""
+                const m = (error.message || '').match(/dup key: \{\s*([^:\s]+)\s*:\s*\"([^\"]+)\"/);
+                if (m) {
+                    field = m[1];
+                    value = m[2];
+                } else {
+                    // try index name like "studentNumber_1"
+                    const idx = (error.message || '').match(/index:\s*([^\s]+)\s/);
+                    if (idx) {
+                        field = idx[1].replace(/_\d+$/, '') || field;
+                    }
+                }
+            }
+
+            const friendly = `${field} already registered`;
+            res.status(400).json({ message: friendly, field, value, detail: error?.message });
+            return;
+        }
+
         res.status(500).json({ message: 'Failed to register user', detail: error?.message });
     }
 };

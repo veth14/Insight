@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "97906022-b4b3-4942-b60d-08eddd23c8e1"
+      }
+    },
+    "android": {
+      "package": "com.veth14.insight"
+    }
+  }
+}

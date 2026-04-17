@@ -143,6 +143,16 @@ export const uploadStudy = async (req: Request, res: Response): Promise<void> =>
             const ext = imageFile.mimetype.split('/')[1] ?? 'jpg';
             const imagePath = `${uid}/images/${Date.now()}_${sanitizedTitle}.${ext}`;
 
+            // Log incoming image metadata for production debugging
+            try {
+                console.log('[uploadStudy] imageFile received:', {
+                    fieldname: imageFile.fieldname,
+                    originalname: imageFile.originalname,
+                    mimetype: imageFile.mimetype,
+                    size: imageFile.size,
+                });
+            } catch (_) {}
+
             const { error: imgError } = await supabase.storage
                 .from(BUCKET_NAME)
                 .upload(imagePath, imageFile.buffer, {
@@ -151,12 +161,15 @@ export const uploadStudy = async (req: Request, res: Response): Promise<void> =>
                 });
 
             if (!imgError) {
-                const { data: imgUrlData } = supabase.storage
+                const { data: imgUrlData } = await supabase.storage
                     .from(BUCKET_NAME)
                     .getPublicUrl(imagePath);
                 systemImageUrl = imgUrlData.publicUrl;
             } else {
-                console.warn('System image upload failed (non-blocking):', imgError.message);
+                console.error('[uploadStudy] System image upload failed:', imgError.message, imgError);
+                // Fail the request so the client receives a clear error in production
+                res.status(500).json({ message: 'Failed to upload system image', detail: imgError.message });
+                return;
             }
         }
 

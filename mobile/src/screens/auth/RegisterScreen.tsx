@@ -114,10 +114,17 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
         setLoading(true);
         try {
-            await api.post('/auth/send-register-otp', { email });
+            await api.post('/auth/send-register-otp', { email, studentNumber });
             setShowOtpModal(true);
         } catch (err: any) {
-            showAlert('Verification Failed', err.response?.data?.message || 'Could not send verification code.', undefined, 'close-circle', '#EF4444');
+            const server = err.response?.data;
+            let msg = server?.message || err.message || 'Could not send verification code.';
+            if (server?.field === 'studentNumber') {
+                msg = 'Student number already registered.';
+            } else if (server?.field === 'email') {
+                msg = 'Email already registered.';
+            }
+            showAlert('Verification Failed', msg, undefined, 'close-circle', '#EF4444');
         } finally {
             setLoading(false);
         }
@@ -140,7 +147,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             const registrationFormLocalUri = regFormUri ?? undefined;
             await register(email, password, fullName, parseInt(yearLevel), program, studentNumber, '', registrationFormLocalUri);
         } catch (err: any) {
-            showAlert('Registration Failed', err.response?.data?.message || err.message || 'Verification or registration failed.', undefined, 'close-circle', '#EF4444');
+            const server = err.response?.data;
+            let msg = server?.message || err.message || 'Verification or registration failed.';
+            if (server?.field === 'studentNumber') {
+                msg = 'Student number already registered.';
+            } else if (server?.field === 'email') {
+                msg = 'Email already registered.';
+            }
+            showAlert('Registration Failed', msg, undefined, 'close-circle', '#EF4444');
         } finally {
             setOtpLoading(false);
             setLoading(false);

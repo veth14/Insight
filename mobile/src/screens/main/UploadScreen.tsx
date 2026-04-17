@@ -131,6 +131,7 @@ const UploadScreen: React.FC = () => {
         const asset    = result.assets[0];
         const ext      = asset.uri.split('.').pop() ?? 'jpg';
         const mimeType = asset.mimeType ?? `image/${ext}`;
+        console.log('[Upload] picked image asset:', asset);
         setPickedImage({ uri: asset.uri, name: `system_image.${ext}`, mimeType });
     };
 
@@ -184,11 +185,21 @@ const UploadScreen: React.FC = () => {
                 name: pickedFile.name,
                 type: pickedFile.mimeType ?? 'application/pdf',
             } as any);
-            form.append('image', {
-                uri:  pickedImage.uri,
-                name: pickedImage.name,
-                type: pickedImage.mimeType,
-            } as any);
+
+            // Some Android URIs are content:// and may require fetching as a blob
+            try {
+                console.log('[Upload] preparing image for upload, uri=', pickedImage.uri);
+                const imageResp = await fetch(pickedImage.uri);
+                const imageBlob = await imageResp.blob();
+                form.append('image', imageBlob as any, pickedImage.name);
+            } catch (imgErr) {
+                console.warn('[Upload] failed to fetch image as blob, falling back to direct uri append', imgErr);
+                form.append('image', {
+                    uri: pickedImage.uri,
+                    name: pickedImage.name,
+                    type: pickedImage.mimeType,
+                } as any);
+            }
             form.append('title',         title.trim());
             form.append('authors',       authors.trim());
             form.append('abstract',      abstract.trim());

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import RegisterOTP from '../models/RegisterOTP';
+import User from '../models/User';
 import { sendEmailWithFallback } from '../services/email.service';
 
 const MAX_ATTEMPTS = 5;
@@ -16,14 +17,45 @@ const generateOTP = (): string =>
  */
 export const sendRegisterOTP = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email } = req.body;
+        const { email, studentNumber } = req.body;
 
         if (!email) {
             res.status(400).json({ message: 'Email is required.' });
             return;
         }
 
+        if (!studentNumber) {
+            res.status(400).json({ message: 'Student number is required.' });
+            return;
+        }
+
+        // Validate student number format (XX-XXXX)
+        const studentNoRegex = /^\d{2}-\d{4}$/;
+        if (!studentNoRegex.test(String(studentNumber).trim())) {
+            res.status(400).json({ message: 'Invalid student number format. Expected XX-XXXX.' });
+            return;
+        }
+
         const normalizedEmail = email.toLowerCase().trim();
+        const normalizedStudentNumber = String(studentNumber).trim();
+
+        // Check for existing user by email or student number to avoid sending OTP unnecessarily
+        const dupQuery: any = { $or: [{ email: normalizedEmail }, { studentNumber: normalizedStudentNumber }] };
+
+        const existing = await User.findOne(dupQuery).lean();
+        if (existing) {
+            if (existing.email === normalizedEmail) {
+                res.status(400).json({ message: 'Email already registered', field: 'email' });
+                return;
+            }
+            if (existing.studentNumber === normalizedStudentNumber) {
+                res.status(400).json({ message: 'Student number already registered', field: 'studentNumber' });
+                return;
+            }
+            // Generic duplicate fallback
+            res.status(400).json({ message: 'User already registered' });
+            return;
+        }
 
         // Check cooldown
         const existingOTP = await RegisterOTP.findOne({ email: normalizedEmail }).sort({ createdAt: -1 });

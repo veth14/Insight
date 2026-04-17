@@ -130,7 +130,8 @@ class AuthService {
 
                 // Throw a user-friendly error
                 if (backendError.response) {
-                    throw new Error(`Server Error: ${backendError.response.data.message || 'Registration failed'}`);
+                    // Surface server-provided message so UI can show friendly alerts
+                    throw new Error(backendError.response.data.message || 'Registration failed');
                 } else if (backendError.code === 'ECONNABORTED' || backendError.message?.includes('timeout')) {
                     throw new Error('Network Error: Request timed out. The server is taking too long to respond.');
                 } else if (backendError.request || backendError.message === 'Network request failed') {

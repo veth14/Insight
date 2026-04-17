@@ -119,6 +119,7 @@ export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<
         } catch (smtpError: any) {
             // Logging at debug/info level instead of an error to prevent noise
             console.log('[EmailService] SMTP delivery skipped or failed:', smtpError?.message || smtpError);
+        }
     }
 
     throw new Error('All email delivery methods failed.');
