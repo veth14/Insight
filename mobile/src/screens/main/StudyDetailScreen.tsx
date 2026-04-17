@@ -28,7 +28,7 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
 };
 const DEFAULT_TAG = { bg: '#ECEEF5', text: '#5A6A8A' };
 
-interface SectionProps { icon: string; title: string; children: React.ReactNode; defaultOpen?: boolean; }
+interface SectionProps { icon: string; title: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean; }
 const Section: React.FC<SectionProps> = ({ icon, title, children, defaultOpen = true }) => {
     const [open, setOpen] = useState(defaultOpen);
     return (
@@ -67,6 +67,11 @@ const StudyDetailScreen: React.FC = () => {
 
     const showAlert = (title: string, message: string, buttons?: AlertButton[], icon?: any, iconColor?: string) => {
         setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
+    };
+
+    const showAiInfo = () => {
+        showAlert('AI Summary', 'The Abstract, Methodology and Key Findings may be AI-assisted.\n\nWhen available, the server extracts text from the uploaded PDF and calls the Google Gemini generative AI to produce a structured JSON summary (abstract, methodology, key findings). If the AI call fails the original user-provided fields are used.',
+            [{ text: 'OK', style: 'cancel' }], 'information-circle', '#3B82F6');
     };
 
     const fetchStudy = useCallback(async () => {
@@ -286,20 +291,54 @@ const StudyDetailScreen: React.FC = () => {
 
                 {/* Sections */}
                 {!!study.abstract && (
-                    <Section icon="document-text-outline" title="Abstract">
+                    <Section icon="document-text-outline" title={
+                        <>
+                            Abstract
+                            <TouchableOpacity onPress={showAiInfo} style={{ marginLeft: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="information-circle" size={14} color="#9AADCA" />
+                            </TouchableOpacity>
+                        </>
+                    }>
                         <Text style={styles.bodyText}>{study.abstract}</Text>
                     </Section>
                 )}
 
                 {!!study.methodology && (
-                    <Section icon="flask-outline" title="Methodology">
+                    <Section icon="flask-outline" title={
+                        <>
+                            Methodology
+                            <TouchableOpacity onPress={showAiInfo} style={{ marginLeft: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="information-circle" size={14} color="#9AADCA" />
+                            </TouchableOpacity>
+                        </>
+                    }>
                         <Text style={styles.bodyText}>{study.methodology}</Text>
                     </Section>
                 )}
 
                 {!!study.keyFindings && (
-                    <Section icon="checkmark-done-outline" title="Key Findings">
-                        <Text style={styles.bodyText}>{study.keyFindings}</Text>
+                    <Section icon="checkmark-done-outline" title={
+                        <>
+                            Key Findings
+                            <TouchableOpacity onPress={showAiInfo} style={{ marginLeft: 8 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="information-circle" size={14} color="#9AADCA" />
+                            </TouchableOpacity>
+                        </>
+                    }>
+                        {typeof study.keyFindings === 'string' ? (
+                            study.keyFindings.split(/\r?\n|\u2022|\u2023|\u25E6|\-|\u2023/).map((line: string, idx: number) => {
+                                const text = line.trim();
+                                if (!text) return null;
+                                return (
+                                    <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: vs(6) }}>
+                                        <Text style={[styles.bodyText, { marginRight: scale(8) }]}>•</Text>
+                                        <Text style={[styles.bodyText, { flex: 1 }]}>{text}</Text>
+                                    </View>
+                                );
+                            })
+                        ) : (
+                            <Text style={styles.bodyText}>{JSON.stringify(study.keyFindings)}</Text>
+                        )}
                     </Section>
                 )}
 

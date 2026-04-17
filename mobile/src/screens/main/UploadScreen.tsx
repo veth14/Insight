@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
 import { auth } from '../../config/firebase';
@@ -114,6 +115,28 @@ const UploadScreen: React.FC = () => {
         setAlertConfig({ visible: true, title, message, buttons, icon, iconColor });
     };
 
+    /* ── Debug: Test connectivity to API and external site ───────────────── */
+    const testConnectivity = async () => {
+        const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/studies/upload`;
+        try {
+            console.log('[Test] fetching api url (HEAD):', apiUrl);
+            const r = await fetch(apiUrl, { method: 'GET' });
+            console.log('[Test] API GET status:', r.status);
+            showAlert('Test Result', `API reachable, status ${r.status}`);
+        } catch (e:any) {
+            console.error('[Test] API fetch failed:', e);
+            showAlert('Test Result', `API fetch failed: ${e.message || e}`);
+        }
+
+        try {
+            console.log('[Test] fetching https://www.google.com');
+            const r2 = await fetch('https://www.google.com');
+            console.log('[Test] Google GET status:', r2.status);
+        } catch (e:any) {
+            console.error('[Test] Google fetch failed:', e);
+        }
+    };
+
     /* ── Pick Image ─────────────────────────────────────────────────── */
     const handlePickImage = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -132,7 +155,30 @@ const UploadScreen: React.FC = () => {
         const ext      = asset.uri.split('.').pop() ?? 'jpg';
         const mimeType = asset.mimeType ?? `image/${ext}`;
         console.log('[Upload] picked image asset:', asset);
-        setPickedImage({ uri: asset.uri, name: `system_image.${ext}`, mimeType });
+        // Ensure the URI points to a readable file on Android (cropped images may return content:// URIs)
+        try {
+            const info = await FileSystem.getInfoAsync(asset.uri);
+            if (info.exists && info.size && info.size > 0) {
+                setPickedImage({ uri: asset.uri, name: `system_image.${ext}`, mimeType });
+                return;
+            }
+        } catch (e) {
+            // getInfo can fail for some content:// URIs; continue to fallback
+            console.warn('[Upload] FileSystem.getInfoAsync failed for picked uri, will try download fallback', e);
+        }
+
+        // Fallback: copy/download to cache directory and use that URI so the Image preview can read it
+        try {
+            const cacheDir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory || '';
+            const dest = `${cacheDir}picked_image_${Date.now()}.${ext}`;
+            console.log('[Upload] downloading/copying picked image to cache:', dest);
+            const downloadRes = await FileSystem.downloadAsync(asset.uri, dest);
+            console.log('[Upload] download fallback result:', downloadRes);
+            setPickedImage({ uri: downloadRes.uri, name: `system_image.${ext}`, mimeType });
+        } catch (err) {
+            console.warn('[Upload] image download fallback failed, using original uri', err);
+            setPickedImage({ uri: asset.uri, name: `system_image.${ext}`, mimeType });
+        }
     };
 
     /* ── Pick PDF ──────────────────────────────────────────────────── */
@@ -187,18 +233,30 @@ const UploadScreen: React.FC = () => {
             } as any);
 
             // Some Android URIs are content:// and may require fetching as a blob
-            try {
-                console.log('[Upload] preparing image for upload, uri=', pickedImage.uri);
-                const imageResp = await fetch(pickedImage.uri);
-                const imageBlob = await imageResp.blob();
-                form.append('image', imageBlob as any, pickedImage.name);
-            } catch (imgErr) {
-                console.warn('[Upload] failed to fetch image as blob, falling back to direct uri append', imgErr);
+            console.log('[Upload] preparing image for upload, uri=', pickedImage.uri);
+            // On Expo/React Native it's more reliable to append the local file object
+            // with { uri, name, type } rather than using Blob/fetch, especially on Android.
+            // Use direct uri for local files (file:// or content://) and fallback to blob for other platforms.
+            const isLocalFile = pickedImage.uri?.startsWith?.('file:') || pickedImage.uri?.startsWith?.('content:');
+            if (isLocalFile || Platform.OS === 'android' || Platform.OS === 'ios') {
                 form.append('image', {
                     uri: pickedImage.uri,
                     name: pickedImage.name,
-                    type: pickedImage.mimeType,
+                    type: pickedImage.mimeType || 'image/jpeg',
                 } as any);
+            } else {
+                try {
+                    const imageResp = await fetch(pickedImage.uri);
+                    const imageBlob = await imageResp.blob();
+                    form.append('image', imageBlob as any, pickedImage.name);
+                } catch (e) {
+                    console.warn('[Upload] failed to fetch image as blob, appending uri object instead', e);
+                    form.append('image', {
+                        uri: pickedImage.uri,
+                        name: pickedImage.name,
+                        type: pickedImage.mimeType || 'image/jpeg',
+                    } as any);
+                }
             }
             form.append('title',         title.trim());
             form.append('authors',       authors.trim());
@@ -212,17 +270,22 @@ const UploadScreen: React.FC = () => {
             form.append('studyType',     activeType);
             form.append('yearPublished', year.trim());
 
-            const res = await fetch(
-                `${process.env.EXPO_PUBLIC_API_URL}/studies/upload`,
-                {
-                    method:  'POST',
-                    body:    form as any,
+            const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/studies/upload`;
+            console.log('[Upload] API URL:', apiUrl);
+            try {
+                const res = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: form as any,
                     headers: { Authorization: `Bearer ${idToken}` },
-                },
-            );
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message ?? `Error ${res.status}`);
+                });
+                let data: any = null;
+                try { data = await res.json(); } catch (e) { data = null; }
+                console.log('[Upload] response status:', res.status, 'body:', data);
+                if (!res.ok) throw new Error(data?.message ?? `Error ${res.status}`);
+            } catch (networkErr: any) {
+                console.error('[Upload] network error:', networkErr);
+                throw networkErr;
+            }
 
             setSubmitted(true);
         } catch (err: any) {
@@ -483,7 +546,7 @@ const UploadScreen: React.FC = () => {
                     {uploading ? (
                         <>
                             <ActivityIndicator size="small" color="#fff" />
-                            <Text style={styles.submitBtnText}>Uploading to Supabase…</Text>
+                            <Text style={styles.submitBtnText}>Uploading…</Text>
                         </>
                     ) : (
                         <>
