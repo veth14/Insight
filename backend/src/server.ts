@@ -63,6 +63,16 @@ if (!fs.existsSync(tmpDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
+// Serve bundled app assets (logo, etc) so backend can return a default logo URL
+const mobileAssetsDir = path.join(__dirname, '..', '..', 'mobile', 'assets');
+if (fs.existsSync(mobileAssetsDir)) {
+    app.use('/assets', express.static(mobileAssetsDir));
+} else {
+    // fallback to a sibling assets folder if structure differs after build
+    const altAssets = path.join(__dirname, '..', 'assets');
+    if (fs.existsSync(altAssets)) app.use('/assets', express.static(altAssets));
+}
+
 /**
  * Health check endpoint
  */

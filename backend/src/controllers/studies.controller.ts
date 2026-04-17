@@ -156,6 +156,17 @@ export const uploadStudy = async (req: Request, res: Response): Promise<void> =>
             }
         }
 
+        // If no image provided, use project logo from /assets (served by backend) or env override
+        if (!systemImageUrl) {
+            // Prefer explicit env override if operator set it
+            if (process.env.DEFAULT_SYSTEM_IMAGE_URL) {
+                systemImageUrl = process.env.DEFAULT_SYSTEM_IMAGE_URL;
+            } else {
+                // Fallback to the Supabase-hosted logo provided by the operator
+                systemImageUrl = 'https://vsxebuwhddyotyvuqqxl.supabase.co/storage/v1/object/public/papers/x2GGQegd9bRrnA2UFoVedHkUds62/LogoFallback/Insiqht_LOGO.jpg';
+            }
+        }
+
         // ── Save to MongoDB ──────────────────────────────────────────────
         const study = await AcademicStudy.create({
             title:         title.trim(),
