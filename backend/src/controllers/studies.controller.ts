@@ -318,7 +318,8 @@ export const createStudyMetadata = async (req: Request, res: Response): Promise<
             return;
         }
 
-        const finalAbstract = (abstract || '').trim();
+        // Ensure required text fields are non-empty to satisfy schema validators.
+        const finalAbstract = ((abstract || '').trim()) || 'No abstract provided.';
         const finalMethodology = (methodology || '').trim() || undefined;
         const finalKeyFindings = (keyFindings || '').trim() || undefined;
 
@@ -339,7 +340,8 @@ export const createStudyMetadata = async (req: Request, res: Response): Promise<
             uploadedBy: uid!,
             fileUrl,
             systemImageUrl,
-            fullText: providedFullText || '',
+            // fullText is required by schema — prefer providedFullText, otherwise fallback to abstract or a placeholder.
+            fullText: (providedFullText && String(providedFullText).trim()) || finalAbstract || 'No full text available.',
             approvalStatus: 'pending',
         });
 
