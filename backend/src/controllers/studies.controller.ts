@@ -6,7 +6,7 @@ import AcademicStudy from '../models/AcademicStudy';
 import User from '../models/User';
 import { AuthRequest } from '../types';
 import { logActivity } from './activity.controller';
-import { generateStudySummary } from '../services/ai.service';
+// AI summarization removed per request — no external AI calls from upload flow
 import { sendAdminNewLiteratureEmail } from '../services/email.service';
 
 // Known tools/technologies to auto-detect by scanning PDF text
@@ -89,27 +89,10 @@ export const uploadStudy = async (req: Request, res: Response): Promise<void> =>
             fullText = abstract; // fallback
         }
 
-        // ── AI Summarization (Gemini via Generative AI) ────────────────
+        // We'll set initial fields from user input and run AI summarization asynchronously.
         let finalAbstract = abstract.trim();
         let finalMethodology = methodology?.trim() || undefined;
         let finalKeyFindings = keyFindings?.trim() || undefined;
-
-        if (fullText.length > 500) {
-            try {
-                console.log(`[AI] Generating summary for paper: "${title || 'Unknown'}"...`);
-                // Use our new AI service hooked to Google Gemini
-                const aiSummary = await generateStudySummary(fullText);
-                
-                // Override the manually provided ones ideally with AI generated
-                if (aiSummary.abstract) finalAbstract = aiSummary.abstract;
-                if (aiSummary.methodology) finalMethodology = aiSummary.methodology;
-                if (aiSummary.keyFindings) finalKeyFindings = aiSummary.keyFindings;
-                
-                console.log('[AI] Summary successfully generated and injected.');
-            } catch (error) {
-                console.warn('[AI] Summarization failed softly, falling back to manual input.', error);
-            }
-        }
 
         // ── Merge user-provided tools + auto-detected from PDF ─────────────
         const userTools     = toolsUsed ? toolsUsed.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
@@ -234,6 +217,8 @@ export const uploadStudy = async (req: Request, res: Response): Promise<void> =>
                 fileUrl:        study.fileUrl,
             },
         });
+
+        // AI summarization removed — no background AI processing performed here.
     } catch (error: any) {
         console.error('uploadStudy error:', error);
         res.status(500).json({ message: 'Upload failed', detail: error.message });
@@ -258,5 +243,114 @@ export const getMyStudies = async (req: Request, res: Response): Promise<void> =
     } catch (error: any) {
         console.error('getMyStudies error:', error);
         res.status(500).json({ message: 'Failed to fetch studies' });
+    }
+};
+
+/**
+ * POST /api/studies/upload-object
+ * Accepts single multipart file field 'file' and uploads to Supabase, returns publicUrl
+ */
+export const uploadObject = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const uid = authReq.user?.uid;
+        const file = (req as any).file as Express.Multer.File | undefined;
+        if (!file) {
+            res.status(400).json({ message: 'No file provided' });
+            return;
+        }
+        const start = Date.now();
+        const ext = file.mimetype.split('/')[1] ?? 'bin';
+        const safeName = (file.originalname || `upload_${Date.now()}`).replace(/[^a-zA-Z0-9_.-]/g, '_');
+        const storagePath = `${uid}/uploads/${Date.now()}_${safeName}`;
+
+        console.log('[uploadObject] starting upload to Supabase', { uid, originalName: file.originalname, size: file.size, path: storagePath });
+
+        const { error } = await supabase.storage
+            .from(BUCKET_NAME)
+            .upload(storagePath, file.buffer, { contentType: file.mimetype, upsert: false });
+
+        const uploadDuration = Date.now() - start;
+        if (error) {
+            console.error('[uploadObject] supabase error after', uploadDuration, 'ms:', error);
+            res.status(500).json({ message: 'Failed to upload file', detail: error.message });
+            return;
+        }
+
+        const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
+        console.log('[uploadObject] uploaded and returned publicUrl in', uploadDuration, 'ms');
+        res.json({ publicUrl: data.publicUrl });
+    } catch (err: any) {
+        console.error('uploadObject error:', err);
+        res.status(500).json({ message: 'Upload failed', detail: err.message });
+    }
+};
+
+/**
+ * POST /api/studies/create
+ * Accepts JSON metadata including fileUrl and optional systemImageUrl and creates the AcademicStudy.
+ * AI summarization runs asynchronously in background.
+ */
+export const createStudyMetadata = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const uid = authReq.user?.uid;
+
+        const {
+            title,
+            authors,
+            abstract,
+            methodology,
+            keyFindings,
+            toolsUsed,
+            keywords,
+            category,
+            department,
+            studyType,
+            yearPublished,
+            fileUrl,
+            systemImageUrl,
+            fullText: providedFullText,
+        } = req.body as any;
+
+        if (!title || !authors || !fileUrl) {
+            res.status(400).json({ message: 'title, authors and fileUrl are required' });
+            return;
+        }
+
+        const finalAbstract = (abstract || '').trim();
+        const finalMethodology = (methodology || '').trim() || undefined;
+        const finalKeyFindings = (keyFindings || '').trim() || undefined;
+
+        const mergedTools = toolsUsed ? toolsUsed.split(',').map((t: string) => t.trim()).filter(Boolean) : [];
+
+        const study = await AcademicStudy.create({
+            title: title.trim(),
+            authors: authors.split(';').map((a: string) => a.trim()).filter(Boolean),
+            abstract: finalAbstract,
+            methodology: finalMethodology,
+            keyFindings: finalKeyFindings,
+            toolsUsed: mergedTools,
+            keywords: keywords ? keywords.split(',').map((k: string) => k.trim()).filter(Boolean) : [],
+            category: category ?? 'General',
+            department: department || undefined,
+            studyType: studyType ?? 'Thesis',
+            yearPublished: parseInt(yearPublished) || new Date().getFullYear(),
+            uploadedBy: uid!,
+            fileUrl,
+            systemImageUrl,
+            fullText: providedFullText || '',
+            approvalStatus: 'pending',
+        });
+
+        // respond immediately
+        console.log('[createStudyMetadata] created study', { id: study._id, title: study.title });
+        res.status(201).json({ message: 'Study created', study: { _id: study._id, title: study.title, fileUrl: study.fileUrl } });
+
+        // AI summarization removed — no background AI processing performed here.
+
+    } catch (err: any) {
+        console.error('createStudyMetadata error:', err);
+        res.status(500).json({ message: 'Failed to create study', detail: err.message });
     }
 };

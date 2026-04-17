@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system/legacy';
 import AppHeader from '../../components/AppHeader';
 import { scale, vs, ms } from '../../utils/responsive';
@@ -105,6 +106,16 @@ const UploadScreen: React.FC = () => {
     // Upload state
     const [uploading, setUploading]   = useState(false);
     const [submitted, setSubmitted]   = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0); // 0-100
+    const [pdfProgress, setPdfProgress] = useState(0);
+    const [imageProgress, setImageProgress] = useState(0);
+
+    // Compute combined progress whenever per-file progress updates to avoid
+    // stale closures or double-counting. Simple average of the two percentages.
+    React.useEffect(() => {
+        const combined = Math.round((pdfProgress + imageProgress) / 2);
+        setUploadProgress(Math.min(100, Math.max(0, combined)));
+    }, [pdfProgress, imageProgress]);
 
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState<{
@@ -155,6 +166,22 @@ const UploadScreen: React.FC = () => {
         const ext      = asset.uri.split('.').pop() ?? 'jpg';
         const mimeType = asset.mimeType ?? `image/${ext}`;
         console.log('[Upload] picked image asset:', asset);
+
+        // Compress / resize image to speed up uploads
+        try {
+            const manipResult = await ImageManipulator.manipulateAsync(
+                asset.uri,
+                [{ resize: { width: 1024 } }],
+                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            );
+            const info = await FileSystem.getInfoAsync(manipResult.uri);
+            const infoSize = (info as any).size ?? null;
+            console.log('[Upload] compressed image uri=', manipResult.uri, 'size=', infoSize);
+            setPickedImage({ uri: manipResult.uri, name: `system_image.${ext}`, mimeType: 'image/jpeg' });
+            return;
+        } catch (e) {
+            console.warn('[Upload] image compression failed, using original asset', e);
+        }
         // Ensure the URI points to a readable file on Android (cropped images may return content:// URIs)
         try {
             const info = await FileSystem.getInfoAsync(asset.uri);
@@ -221,71 +248,138 @@ const UploadScreen: React.FC = () => {
         }
 
         setUploading(true);
+        setUploadProgress(0);
         try {
             const idToken = await auth.currentUser?.getIdToken();
             if (!idToken) throw new Error('Not authenticated');
+            // Upload PDF and image in parallel to server endpoints that accept a single file.
+            const apiBase = process.env.EXPO_PUBLIC_API_URL;
 
-            const form = new FormData();
-            form.append('pdf', {
-                uri:  pickedFile.uri,
-                name: pickedFile.name,
-                type: pickedFile.mimeType ?? 'application/pdf',
-            } as any);
+            const uploadFileWithProgress = (uri: string, name: string, fieldName = 'file', onProgress?: (p:number)=>void) => new Promise<any>((resolve, reject) => {
+                const apiUrl = `${apiBase}/studies/upload-object`;
+                const xhr = new XMLHttpRequest();
+                const form = new FormData();
+                form.append(fieldName, { uri, name, type: fieldName === 'file' ? 'application/pdf' : 'image/jpeg' } as any);
 
-            // Some Android URIs are content:// and may require fetching as a blob
-            console.log('[Upload] preparing image for upload, uri=', pickedImage.uri);
-            // On Expo/React Native it's more reliable to append the local file object
-            // with { uri, name, type } rather than using Blob/fetch, especially on Android.
-            // Use direct uri for local files (file:// or content://) and fallback to blob for other platforms.
-            const isLocalFile = pickedImage.uri?.startsWith?.('file:') || pickedImage.uri?.startsWith?.('content:');
-            if (isLocalFile || Platform.OS === 'android' || Platform.OS === 'ios') {
-                form.append('image', {
-                    uri: pickedImage.uri,
-                    name: pickedImage.name,
-                    type: pickedImage.mimeType || 'image/jpeg',
-                } as any);
-            } else {
-                try {
-                    const imageResp = await fetch(pickedImage.uri);
-                    const imageBlob = await imageResp.blob();
-                    form.append('image', imageBlob as any, pickedImage.name);
-                } catch (e) {
-                    console.warn('[Upload] failed to fetch image as blob, appending uri object instead', e);
-                    form.append('image', {
-                        uri: pickedImage.uri,
-                        name: pickedImage.name,
-                        type: pickedImage.mimeType || 'image/jpeg',
-                    } as any);
+                xhr.open('POST', apiUrl);
+                xhr.setRequestHeader('Authorization', `Bearer ${idToken}`);
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const raw = (event.loaded / event.total) * 100;
+                        const percent = Math.min(100, Math.max(0, Math.round(raw)));
+                        try { if (onProgress) onProgress(percent); } catch(_){ }
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const json = JSON.parse(xhr.responseText);
+                            resolve(json);
+                        } catch (e) { resolve({}); }
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}`));
+                    }
+                };
+                xhr.onerror = () => reject(new Error('Network error during upload'));
+                xhr.send(form as any);
+            });
+
+            // Start both uploads concurrently. Each onProgress only updates its own state;
+            // a useEffect computes the combined percent to avoid double-counting/stale closures.
+            const pdfUploadPromise = uploadFileWithProgress(pickedFile.uri, pickedFile.name, 'file', (p:number) => { setPdfProgress(Math.min(100, Math.max(0, p))); });
+            const imgUploadPromise = uploadFileWithProgress(pickedImage.uri, pickedImage.name, 'file', (p:number) => { setImageProgress(Math.min(100, Math.max(0, p))); });
+
+            let pdfResult: any = null;
+            let imgResult: any = null;
+
+            // Basic combined progress: start and wait for both
+            try {
+                pdfResult = await pdfUploadPromise.then(r => { setPdfProgress(100); return r; });
+                imgResult = await imgUploadPromise.then(r => { setImageProgress(100); return r; });
+            } catch (firstErr: any) {
+                // If upload-object endpoint is not available (404), fall back to the legacy combined `/studies/upload` endpoint
+                const status = (firstErr && firstErr.message) ? firstErr.message : '';
+                if (status.includes('404') || status.includes('Upload failed with status 404') ) {
+                    console.warn('[Upload] upload-object not found, falling back to /studies/upload');
+
+                    const combinedUpload = () => new Promise<any>((resolve, reject) => {
+                        const apiUrl = `${apiBase}/studies/upload`;
+                        const xhr2 = new XMLHttpRequest();
+                        const form2 = new FormData();
+                        // Attach metadata fields
+                        form2.append('title', title.trim());
+                        form2.append('authors', authors.trim());
+                        form2.append('abstract', abstract.trim());
+                        form2.append('methodology', methodology.trim());
+                        form2.append('keyFindings', keyFindings.trim());
+                        form2.append('toolsUsed', selectedTools.join(','));
+                        form2.append('category', activeCategory);
+                        form2.append('department', activeDept);
+                        form2.append('studyType', activeType);
+                        form2.append('yearPublished', year.trim());
+
+                        form2.append('pdf', { uri: pickedFile.uri, name: pickedFile.name, type: pickedFile.mimeType || 'application/pdf' } as any);
+                        form2.append('image', { uri: pickedImage.uri, name: pickedImage.name, type: pickedImage.mimeType || 'image/jpeg' } as any);
+
+                        xhr2.open('POST', apiUrl);
+                        xhr2.setRequestHeader('Authorization', `Bearer ${idToken}`);
+
+                        xhr2.upload.onprogress = (ev) => {
+                            if (ev.lengthComputable) {
+                                const percentage = Math.min(100, Math.max(0, Math.round((ev.loaded / ev.total) * 100)));
+                                // Apply same percent to both so UI shows progress
+                                setPdfProgress(percentage);
+                                setImageProgress(percentage);
+                            }
+                        };
+
+                        xhr2.onload = () => {
+                            if (xhr2.status >= 200 && xhr2.status < 300) {
+                                try { resolve(JSON.parse(xhr2.responseText)); } catch (e) { resolve({}); }
+                            } else {
+                                reject(new Error(`Combined upload failed with status ${xhr2.status}`));
+                            }
+                        };
+                        xhr2.onerror = () => reject(new Error('Network error during combined upload'));
+                        xhr2.send(form2 as any);
+                    });
+
+                    const combinedRes = await combinedUpload();
+                    // combined endpoint returns created study; emulate pdfResult/imgResult shape
+                    pdfResult = { publicUrl: combinedRes?.study?.fileUrl || null };
+                    imgResult = { publicUrl: combinedRes?.study?.systemImageUrl || null };
+                } else {
+                    throw firstErr;
                 }
             }
-            form.append('title',         title.trim());
-            form.append('authors',       authors.trim());
-            form.append('abstract',      abstract.trim());
-            form.append('keywords',      keywords.trim());
-            form.append('methodology',    methodology.trim());
-            form.append('keyFindings',    keyFindings.trim());
-            form.append('toolsUsed',      selectedTools.join(','));
-            form.append('category',      activeCategory);
-            form.append('department',    activeDept);
-            form.append('studyType',     activeType);
-            form.append('yearPublished', year.trim());
 
-            const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/studies/upload`;
-            console.log('[Upload] API URL:', apiUrl);
-            try {
-                const res = await fetch(apiUrl, {
-                    method: 'POST',
-                    body: form as any,
-                    headers: { Authorization: `Bearer ${idToken}` },
-                });
-                let data: any = null;
-                try { data = await res.json(); } catch (e) { data = null; }
-                console.log('[Upload] response status:', res.status, 'body:', data);
-                if (!res.ok) throw new Error(data?.message ?? `Error ${res.status}`);
-            } catch (networkErr: any) {
-                console.error('[Upload] network error:', networkErr);
-                throw networkErr;
-            }
+            // Finalize metadata creation
+            const apiCreate = `${apiBase}/studies/create`;
+            const payload = {
+                title: title.trim(),
+                authors: authors.trim(),
+                abstract: abstract.trim(),
+                methodology: methodology.trim(),
+                keyFindings: keyFindings.trim(),
+                toolsUsed: selectedTools.join(','),
+                category: activeCategory,
+                department: activeDept,
+                studyType: activeType,
+                yearPublished: year.trim(),
+                fileUrl: pdfResult?.publicUrl || null,
+                systemImageUrl: imgResult?.publicUrl || null,
+            };
+
+            const createRes = await fetch(apiCreate, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                body: JSON.stringify(payload),
+            });
+            const createData = await createRes.json();
+            if (!createRes.ok) throw new Error(createData.message || `Create failed ${createRes.status}`);
+            setUploadProgress(100);
 
             setSubmitted(true);
         } catch (err: any) {
@@ -536,6 +630,19 @@ const UploadScreen: React.FC = () => {
                     ))}
                 </View>
 
+                {/* Upload progress area */}
+                {uploading && (
+                    <View style={{ marginBottom: vs(12) }}>
+                        <View style={styles.progressBarTrack}>
+                            <View style={[styles.progressBarFill, { width: `${uploadProgress}%` }]} />
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: vs(6) }}>
+                            <Text style={{ fontSize: ms(12), color: '#5A6A8A' }}>PDF: {pdfProgress}%</Text>
+                            <Text style={{ fontSize: ms(12), color: '#5A6A8A' }}>Image: {imageProgress}%</Text>
+                        </View>
+                    </View>
+                )}
+
                 {/* Submit */}
                 <TouchableOpacity
                     style={[styles.submitBtn, !isReady && styles.submitBtnDisabled]}
@@ -725,6 +832,16 @@ const styles = StyleSheet.create({
     },
     submitBtnDisabled: { backgroundColor: '#C5D0E0', elevation: 0, shadowOpacity: 0 },
     submitBtnText: { color: '#fff', fontSize: ms(15), fontWeight: '800', letterSpacing: 0.3 },
+    progressBarTrack: {
+        height: vs(8),
+        backgroundColor: '#E6EEF8',
+        borderRadius: ms(6),
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: '#0E1F43',
+    },
 });
 
 export default UploadScreen;

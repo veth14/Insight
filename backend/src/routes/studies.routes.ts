@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { uploadStudy, getMyStudies, pdfUpload } from '../controllers/studies.controller';
+import { uploadObject, createStudyMetadata } from '../controllers/studies.controller';
 import {
     searchStudies,
     getBookmarks,
@@ -25,6 +26,12 @@ router.use(authenticate);
  * @access  Private (4th year students)
  */
 router.post('/upload', pdfUpload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'image', maxCount: 1 }]), uploadStudy);
+
+// New: upload a single file (pdf or image) and return public URL
+router.post('/upload-object', pdfUpload.single('file'), uploadObject);
+
+// New: create study record from metadata (fileUrl + systemImageUrl) and run AI in background
+router.post('/create', createStudyMetadata);
 
 /**
  * @route   GET /api/studies/my
