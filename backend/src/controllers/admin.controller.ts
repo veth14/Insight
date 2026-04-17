@@ -4,6 +4,7 @@ import { AuthRequest, UserRole } from '../types';
 import { logAdminAction } from '../utils/audit';
 import { AuditAction } from '../models/AuditLog';
 import { supabase } from '../config/supabase';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const NON_ADMIN_ROLES = [
     UserRole.STUDENT_1ST_TO_3RD,
@@ -65,6 +66,59 @@ export const getUsers = async (req: Request, res: Response): Promise<void> => {
     } catch (error) {
         console.error('Admin getUsers error:', error);
         res.status(500).json({ message: 'Failed to fetch users' });
+    }
+};
+
+/**
+ * GET /api/admin/ai/models
+ * Returns a list of available Gemini/Generative AI models from the provider.
+ * Protected: Admin / Faculty only (uses existing admin router protections).
+ */
+export const listAIModels = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            res.status(500).json({ message: 'GEMINI_API_KEY not configured on server' });
+            return;
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey as string);
+
+        // If client exposes listModels, use it.
+        if (typeof (genAI as any).listModels === 'function') {
+            try {
+                const list = await (genAI as any).listModels();
+                const models = (list?.models || list || []).map((m: any) => m.name || m.id || m.model || JSON.stringify(m));
+                res.json({ models });
+                return;
+            } catch (err) {
+                console.warn('listModels via client failed:', err);
+            }
+        }
+
+        // Fallback: call the REST models endpoint
+        try {
+            // Use global fetch if available, otherwise require node-fetch at runtime
+            const fetch: any = (globalThis as any).fetch || require('node-fetch');
+            const url = 'https://generativelanguage.googleapis.com/v1beta/models';
+            const r = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+            if (!r.ok) {
+                const text = await r.text();
+                res.status(502).json({ message: 'Failed to fetch models from provider', detail: `${r.status} ${r.statusText}: ${text}` });
+                return;
+            }
+            const json = await r.json();
+            const models = (json?.models || []).map((m: any) => m.name || JSON.stringify(m));
+            res.json({ models });
+            return;
+        } catch (err) {
+            console.error('listAIModels fallback error:', err);
+            res.status(500).json({ message: 'Failed to list AI models', detail: String(err) });
+            return;
+        }
+    } catch (error) {
+        console.error('listAIModels error:', error);
+        res.status(500).json({ message: 'Failed to list AI models' });
     }
 };
 

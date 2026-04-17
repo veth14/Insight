@@ -3,11 +3,12 @@ import pdf from 'pdf-parse';
 
 // Initialize the API using your key from .env
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-// We use the fast and cheap flash model, perfect for text processing
-const model = genAI.getGenerativeModel({ 
-    model: 'gemini-1.5-flash',
+// Allow selecting model via env var; fall back to a common default if provided
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+
+const createModel = (modelName?: string) => genAI.getGenerativeModel({
+    model: modelName || DEFAULT_GEMINI_MODEL,
     generationConfig: {
-        // Enforce JSON output for easy database insertion
         responseMimeType: 'application/json',
     }
 });
@@ -57,9 +58,11 @@ export const generateStudySummary = async (text: string): Promise<AISummaryResul
     `;
 
     try {
-        const result = await model.generateContent(prompt);
+        const modelName = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
+        const modelInstance = createModel(modelName);
+        const result = await modelInstance.generateContent(prompt);
         const responseText = result.response.text();
-        
+
         // Parse the enforced JSON output
         const parsed = JSON.parse(responseText) as AISummaryResult;
         return {
@@ -69,6 +72,25 @@ export const generateStudySummary = async (text: string): Promise<AISummaryResul
         };
     } catch (error) {
         console.error('Gemini summarization error:', error);
-        throw new Error('Failed to generate summary from AI.');
+
+        // If the error indicates the configured model is not available for this API version,
+        // attempt to list available models (if the client supports it) and provide actionable logs.
+        try {
+            if (typeof (genAI as any).listModels === 'function') {
+                const list = await (genAI as any).listModels();
+                const available = (list?.models || list || []).map((m: any) => m.name || m.id || m.model || JSON.stringify(m));
+                console.error('[Gemini] Available models:', available.slice(0, 20));
+            }
+        } catch (listErr) {
+            console.error('[Gemini] Could not list available models:', listErr);
+        }
+
+        // Provide a clearer error message for operators
+        const msg = (error as any)?.message || String(error);
+        if (/not found|is not found|Not Found/i.test(msg)) {
+            throw new Error(`Failed to generate AI summary: configured model "${process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL}" was not found for this API/version. Check GEMINI_MODEL and GEMINI_API_KEY, or call the provider's ListModels to find a supported model. Original error: ${msg}`);
+        }
+
+        throw new Error('Failed to generate summary from AI. ' + msg);
     }
 };

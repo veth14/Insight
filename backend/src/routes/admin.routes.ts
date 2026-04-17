@@ -75,4 +75,14 @@ router.patch('/literature/:id/reject', rejectLiterature);
  */
 router.get('/analytics', getAnalytics);
 
+/**
+ * GET /api/admin/ai/models
+ * Returns available generative AI models (protected admin route)
+ */
+router.get('/ai/models', (req, res) => {
+	// defer to controller (imported below to avoid circular imports)
+	const { listAIModels } = require('../controllers/admin.controller');
+	return listAIModels(req, res);
+});
+
 export default router;
