@@ -242,10 +242,6 @@ const UploadScreen: React.FC = () => {
             showAlert('Missing PDF', 'Please attach a PDF file before submitting.', undefined, 'document-text', '#E97C3A');
             return;
         }
-        if (!pickedImage) {
-            showAlert('Missing Image', 'Please upload a logo or screenshot of your system.', undefined, 'image', '#E97C3A');
-            return;
-        }
 
         setUploading(true);
         setUploadProgress(0);
@@ -289,7 +285,13 @@ const UploadScreen: React.FC = () => {
             // Start both uploads concurrently. Each onProgress only updates its own state;
             // a useEffect computes the combined percent to avoid double-counting/stale closures.
             const pdfUploadPromise = uploadFileWithProgress(pickedFile.uri, pickedFile.name, 'file', (p:number) => { setPdfProgress(Math.min(100, Math.max(0, p))); });
-            const imgUploadPromise = uploadFileWithProgress(pickedImage.uri, pickedImage.name, 'file', (p:number) => { setImageProgress(Math.min(100, Math.max(0, p))); });
+            let imgUploadPromise: Promise<any> | null = null;
+            if (pickedImage) {
+                imgUploadPromise = uploadFileWithProgress(pickedImage.uri, pickedImage.name, 'file', (p:number) => { setImageProgress(Math.min(100, Math.max(0, p))); });
+            } else {
+                // No image selected: mark image progress as 100% (will use default logo)
+                setImageProgress(100);
+            }
 
             let pdfResult: any = null;
             let imgResult: any = null;
@@ -297,7 +299,8 @@ const UploadScreen: React.FC = () => {
             // Basic combined progress: start and wait for both
             try {
                 pdfResult = await pdfUploadPromise.then(r => { setPdfProgress(100); return r; });
-                imgResult = await imgUploadPromise.then(r => { setImageProgress(100); return r; });
+                if (imgUploadPromise) imgResult = await imgUploadPromise.then(r => { setImageProgress(100); return r; });
+                else imgResult = null;
             } catch (firstErr: any) {
                 // If upload-object endpoint is not available (404), fall back to the legacy combined `/studies/upload` endpoint
                 const status = (firstErr && firstErr.message) ? firstErr.message : '';
@@ -321,7 +324,9 @@ const UploadScreen: React.FC = () => {
                         form2.append('yearPublished', year.trim());
 
                         form2.append('pdf', { uri: pickedFile.uri, name: pickedFile.name, type: pickedFile.mimeType || 'application/pdf' } as any);
-                        form2.append('image', { uri: pickedImage.uri, name: pickedImage.name, type: pickedImage.mimeType || 'image/jpeg' } as any);
+                        if (pickedImage) {
+                            form2.append('image', { uri: pickedImage.uri, name: pickedImage.name, type: pickedImage.mimeType || 'image/jpeg' } as any);
+                        }
 
                         xhr2.open('POST', apiUrl);
                         xhr2.setRequestHeader('Authorization', `Bearer ${idToken}`);
