@@ -48,7 +48,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
     // Auth State
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, continueAsGuest } = useAuth();
 
     // Animation Values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -97,6 +97,16 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         } catch (err: any) {
             showAlert('Login Failed', err.response?.data?.message || 'Invalid credentials or network error.', undefined, 'close-circle', '#EF4444');
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        setLoading(true);
+        try {
+            await continueAsGuest();
+        } catch (err: any) {
+            showAlert('Login Failed', 'Unable to continue as guest.', undefined, 'close-circle', '#EF4444');
             setLoading(false);
         }
     };
@@ -201,6 +211,24 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                                 ) : (
                                     <Text style={styles.buttonText}>Login</Text>
                                 )}
+                            </TouchableOpacity>
+
+                            {/* Divider */}
+                            <View style={styles.dividerRow}>
+                                <View style={styles.dividerLine} />
+                                <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+                                <View style={styles.dividerLine} />
+                            </View>
+
+                            {/* Guest Button */}
+                            <TouchableOpacity
+                                style={[styles.guestButton, loading && styles.buttonDisabled]}
+                                onPress={handleGuestLogin}
+                                disabled={loading}
+                                activeOpacity={0.85}
+                            >
+                                <Ionicons name="person-circle-outline" size={ms(20)} color="#0E1F43" />
+                                <Text style={styles.guestButtonText}>Continue as Guest</Text>
                             </TouchableOpacity>
 
                             {/* Footer */}
@@ -380,6 +408,45 @@ const styles = StyleSheet.create({
         fontSize: ms(15),
         fontWeight: '700',
         letterSpacing: 0.3,
+    },
+
+    // Divider
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: vs(16),
+        width: '100%',
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#E0E5F0',
+    },
+    dividerText: {
+        marginHorizontal: scale(16),
+        fontSize: ms(11),
+        color: '#9AADCA',
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    guestButton: {
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: ms(14),
+        borderWidth: 1.5,
+        borderColor: '#E0E5F0',
+        height: vs(52),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: vs(20),
+    },
+    guestButtonText: {
+        color: '#0E1F43',
+        fontSize: ms(15),
+        fontWeight: '700',
+        letterSpacing: 0.3,
+        marginLeft: scale(8),
     },
 
     // Footer

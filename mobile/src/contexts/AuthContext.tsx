@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
-import { User as FirebaseUser } from 'firebase/auth';
-import { User } from '../types';
+import { User as FirebaseUser, signInAnonymously } from 'firebase/auth';
+import { User, UserRole } from '../types';
 import authService from '../services/auth.service';
 import api from '../services/api.service';
 import { auth } from '../config/firebase';
@@ -29,6 +29,7 @@ interface AuthContextType {
     verifyResetOTP: (email: string, otp: string) => Promise<string>;
     resetPassword: (email: string, resetToken: string, newPassword: string) => Promise<void>;
     register: (email: string, password: string, displayName: string, yearLevel: number, program: string, studentNumber: string, phoneNumber: string, registrationFormUrl?: string) => Promise<void>;
+    continueAsGuest: () => Promise<void>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<User | undefined>;
 }
@@ -60,6 +61,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setFirebaseUser(fbUser);
 
             if (fbUser) {
+                // Handle Guest Login explicitly
+                if (fbUser.isAnonymous) {
+                    setUser({
+                        uid: fbUser.uid,
+                        email: 'guest@local.insight',
+                        studentNumber: 'N/A',
+                        displayName: 'Guest',
+                        phoneNumber: 'N/A',
+                        role: UserRole.GUEST,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    });
+                    setLoading(false);
+                    return;
+                }
+
                 // If 2FA is pending, hold off — verifyOTP() will complete the login
                 if (twoFactorPendingRef.current) {
                     setLoading(false);
@@ -212,12 +229,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const refreshUser = async () => {
         const fbUser = auth.currentUser;
         if (!fbUser) return undefined;
+        
+        if (fbUser.isAnonymous) {
+            return user ?? undefined; // Just return current guest state
+        }
+        
         const idToken = await fbUser.getIdToken();
         const response = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${idToken}` },
         });
         setUser(response.data.user);
         return response.data.user;
+    };
+
+    /**
+     * Continue as Guest: signs in anonymously to allow browsing capabilities.
+     */
+    const continueAsGuest = async () => {
+        setLoading(true);
+        try {
+            await signInAnonymously(auth);
+            // setFirebaseUser and setUser will be triggered by onAuthStateChanged
+        } catch (error) {
+            console.error('Guest login failed:', error);
+            throw error;
+        } finally {
+            setLoading(false);
+        }
     };
 
     const logout = async () => {
@@ -237,7 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, firebaseUser, loading, twoFactorPending, pendingOTPEmail, login, verifyOTP, resendOTP, sendResetOTP, verifyResetOTP, resetPassword, register, logout, refreshUser }}>
+        <AuthContext.Provider value={{ user, firebaseUser, loading, twoFactorPending, pendingOTPEmail, login, verifyOTP, resendOTP, sendResetOTP, verifyResetOTP, resetPassword, register, continueAsGuest, logout, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

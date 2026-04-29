@@ -15,10 +15,11 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabs: React.FC = () => {
     const { user } = useAuth();
+    const isGuest = user?.role === UserRole.GUEST;
     const is4thYear = user?.role === UserRole.STUDENT_4TH;
     const isApproved = user?.registrationStatus === 'approved';
     // 4th year: show Upload tab always, route to locked screen until approved
-    const UploadComponent = is4thYear ? (isApproved ? UploadScreen : UploadLockedScreen) : null;
+    const UploadComponent = (is4thYear && !isGuest) ? (isApproved ? UploadScreen : UploadLockedScreen) : null;
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -58,11 +59,15 @@ const MainTabs: React.FC = () => {
         >
             <Tab.Screen name="Home" component={HomeStack} options={{ tabBarLabel: 'Dashboard' }} />
             <Tab.Screen name="Search" component={SearchStack} options={{ tabBarLabel: 'Search' }} />
-            <Tab.Screen name="Library" component={LibraryScreen} options={{ tabBarLabel: 'Library' }} />
+            {!isGuest && (
+                <Tab.Screen name="Library" component={LibraryScreen} options={{ tabBarLabel: 'Library' }} />
+            )}
             {UploadComponent && (
                 <Tab.Screen name="Upload" component={UploadComponent} options={{ tabBarLabel: 'Upload' }} />
             )}
-            <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ tabBarLabel: 'Alerts' }} />
+            {!isGuest && (
+                <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ tabBarLabel: 'Alerts' }} />
+            )}
         </Tab.Navigator>
     );
 };

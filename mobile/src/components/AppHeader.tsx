@@ -73,16 +73,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </View>
                 </View>
                 <View style={styles.headerRight}>
-                    <TouchableOpacity style={styles.notifBtn} onPress={handleNotifPress} activeOpacity={0.8}>
-                        <Ionicons name="notifications-outline" size={22} color="#0E1F43" />
-                        {activeCount > 0 && (
-                            <View style={styles.notifBadge}>
-                                <Text style={styles.notifBadgeText}>
-                                    {activeCount > 9 ? '9+' : activeCount}
-                                </Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                    {user?.role !== 'guest' && (
+                        <TouchableOpacity style={styles.notifBtn} onPress={handleNotifPress} activeOpacity={0.8}>
+                            <Ionicons name="notifications-outline" size={22} color="#0E1F43" />
+                            {activeCount > 0 && (
+                                <View style={styles.notifBadge}>
+                                    <Text style={styles.notifBadgeText}>
+                                        {activeCount > 9 ? '9+' : activeCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity style={styles.avatar} onPress={handleAvatarPress} activeOpacity={0.8}>
                         <Text style={styles.avatarText}>{initials}</Text>
                     </TouchableOpacity>
@@ -103,11 +105,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                                         <Text style={styles.menuUserEmail} numberOfLines={1}>{user?.email ?? ''}</Text>
                                     </View>
                                 </View>
-                                <View style={styles.menuDivider} />
-                                <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => { setMenuVisible(false); navigation.navigate('AccountSettings'); }}>
-                                    <Ionicons name="settings-outline" size={18} color="#0E1F43" />
-                                    <Text style={styles.menuItemText}>Account Settings</Text>
-                                </TouchableOpacity>
+                                {user?.role !== 'guest' && (
+                                    <>
+                                        <View style={styles.menuDivider} />
+                                        <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => { setMenuVisible(false); navigation.navigate('AccountSettings'); }}>
+                                            <Ionicons name="settings-outline" size={18} color="#0E1F43" />
+                                            <Text style={styles.menuItemText}>Account Settings</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
                                 <View style={styles.menuDivider} />
                                 <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={async () => { setMenuVisible(false); await logout(); }}>
                                     <Ionicons name="log-out-outline" size={18} color="#E53935" />

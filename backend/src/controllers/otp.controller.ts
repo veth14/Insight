@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import OTP from '../models/OTP';
 import { sendEmailWithFallback } from '../services/email.service';
 
@@ -7,10 +8,10 @@ const OTP_EXPIRY_MINUTES = 5;
 const RESEND_COOLDOWN_SECONDS = 5 * 60; // 5 minutes, matches mobile cooldown
 
 /**
- * Generates a secure 4-digit numeric OTP
+ * Generates a cryptographically secure 4-digit numeric OTP
  */
 const generateOTP = (): string =>
-    Math.floor(1000 + Math.random() * 9000).toString();
+    crypto.randomInt(1000, 10000).toString();
 
 /**
  * POST /api/auth/send-otp

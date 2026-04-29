@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     StatusBar, ActivityIndicator, Alert,
@@ -7,12 +7,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { HomeStackParamList } from '../../types';
+import { HomeStackParamList, UserRole } from '../../types';
 import { scale, vs, ms } from '../../utils/responsive';
 import api from '../../services/api.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import CustomAlert, { AlertButton } from '../../components/CustomAlert';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'StudyDetail'>;
@@ -53,6 +55,11 @@ const StudyDetailScreen: React.FC = () => {
     const navigation = useNavigation<Nav>();
     const route      = useRoute<Route>();
     const { studyId } = route.params;
+    const { user, logout } = useAuth();
+
+    usePreventScreenCapture();
+
+    const isGuest = user?.role === UserRole.GUEST;
 
     const [study, setStudy]       = useState<any | null>(null);
     const [loading, setLoading]   = useState(true);
@@ -252,40 +259,70 @@ const StudyDetailScreen: React.FC = () => {
                     </View>
 
                     {/* Action buttons */}
-                    <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.actionBtn} onPress={handleToggleSave} activeOpacity={0.8} disabled={saving}>
-                            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={15} color={saved ? '#E97C3A' : '#fff'} />
-                            <Text style={styles.actionBtnText}>{saved ? 'Saved' : 'Save'}</Text>
-                        </TouchableOpacity>
+                    {!isGuest && (
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity style={styles.actionBtn} onPress={handleToggleSave} activeOpacity={0.8} disabled={saving}>
+                                <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={15} color={saved ? '#E97C3A' : '#fff'} />
+                                <Text style={styles.actionBtnText}>{saved ? 'Saved' : 'Save'}</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.actionBtn} onPress={handleDownload} activeOpacity={0.8} disabled={downloading}>
-                            {downloading
-                                ? <ActivityIndicator size="small" color="#fff" />
-                                : <Ionicons name="download-outline" size={15} color="#fff" />
-                            }
-                            <Text style={styles.actionBtnText}>Download</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.actionBtn} onPress={handleDownload} activeOpacity={0.8} disabled={downloading}>
+                                {downloading
+                                    ? <ActivityIndicator size="small" color="#fff" />
+                                    : <Ionicons name="download-outline" size={15} color="#fff" />
+                                }
+                                <Text style={styles.actionBtnText}>Download</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={[styles.actionBtn, styles.actionBtnAccent]}
-                            activeOpacity={0.8}
-                            onPress={() => navigation.navigate('CiteGenerator', { studyId })}
-                        >
-                            <Ionicons name="copy-outline" size={15} color="#0E1F43" />
-                            <Text style={[styles.actionBtnText, { color: '#0E1F43' }]}>Cite</Text>
-                        </TouchableOpacity>
-                    </View>
+                            <TouchableOpacity
+                                style={[styles.actionBtn, styles.actionBtnAccent]}
+                                activeOpacity={0.8}
+                                onPress={() => navigation.navigate('CiteGenerator', { studyId })}
+                            >
+                                <Ionicons name="copy-outline" size={15} color="#0E1F43" />
+                                <Text style={[styles.actionBtnText, { color: '#0E1F43' }]}>Cite</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                    {/* Read PDF button */}
-                    {!!study.fileUrl && (
-                        <TouchableOpacity
-                            style={styles.readBtn}
-                            activeOpacity={0.85}
-                            onPress={() => navigation.navigate('PDFReader', { studyId })}
-                        >
-                            <Ionicons name="reader-outline" size={16} color="#0E1F43" />
-                            <Text style={styles.readBtnText}>Read Full Document</Text>
-                        </TouchableOpacity>
+                    {/* Restricted Access Banner for Guests */}
+                    {isGuest ? (
+                        <View style={styles.guestBanner}>
+                            <Ionicons name="document-lock-outline" size={32} color="#0E1F43" style={{ marginBottom: 12 }} />
+                            <Text style={styles.guestBannerTitle}>Access Full Document</Text>
+                            <Text style={styles.guestBannerText}>
+                                This project has restricted access. Only users with an account can view the full PDF, save it, and cite it.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.guestCreateBtn}
+                                onPress={async () => {
+                                    await logout();
+                                    // RootNavigator will redirect to AuthStack
+                                }}
+                            >
+                                <Text style={styles.guestCreateBtnText}>Create Account</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.guestSignInBtn}
+                                onPress={async () => {
+                                    await logout();
+                                }}
+                            >
+                                <Text style={styles.guestSignInBtnText}>Already have an account? Sign In</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        /* Read PDF button */
+                        !!study.fileUrl && (
+                            <TouchableOpacity
+                                style={styles.readBtn}
+                                activeOpacity={0.85}
+                                onPress={() => navigation.navigate('PDFReader', { studyId })}
+                            >
+                                <Ionicons name="reader-outline" size={16} color="#0E1F43" />
+                                <Text style={styles.readBtnText}>Read Full Document</Text>
+                            </TouchableOpacity>
+                        )
                     )}
                 </View>
 
@@ -419,6 +456,62 @@ const styles = StyleSheet.create({
         marginTop: vs(4),
     },
     readBtnText: { fontSize: ms(14), fontWeight: '700', color: '#0E1F43' },
+
+    // Guest Banner Styles
+    guestBanner: {
+        backgroundColor: '#fff',
+        borderRadius: ms(16),
+        padding: scale(20),
+        marginTop: vs(16),
+        alignItems: 'center',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E0E5F0',
+    },
+    guestBannerTitle: {
+        fontSize: ms(16),
+        fontWeight: '700',
+        color: '#0E1F43',
+        marginBottom: vs(8),
+    },
+    guestBannerText: {
+        fontSize: ms(13),
+        color: '#5A6A8A',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: vs(20),
+    },
+    guestCreateBtn: {
+        width: '100%',
+        backgroundColor: '#0E1F43',
+        paddingVertical: vs(14),
+        borderRadius: ms(12),
+        alignItems: 'center',
+        marginBottom: vs(12),
+    },
+    guestCreateBtnText: {
+        color: '#fff',
+        fontSize: ms(14),
+        fontWeight: '700',
+    },
+    guestSignInBtn: {
+        width: '100%',
+        backgroundColor: '#F5F6FA',
+        paddingVertical: vs(14),
+        borderRadius: ms(12),
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E0E5F0',
+    },
+    guestSignInBtnText: {
+        color: '#0E1F43',
+        fontSize: ms(13),
+        fontWeight: '600',
+    },
 
     section: {
         backgroundColor: '#fff', borderRadius: ms(14),

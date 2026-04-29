@@ -14,40 +14,22 @@ import api from '../../services/api.service';
 
 const AccountSettingsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const { user, logout, refreshUser } = useAuth();
-    const { appLockEnabled, biometricsEnabled, toggleBiometrics } = useSecurity();
-    const [emailNotif, setEmailNotif] = useState(user?.notificationPreferences?.emailNotif ?? false);
-    const [researchUpdates, setResearchUpdates] = useState(user?.notificationPreferences?.researchUpdates ?? false);
+    const { user, logout } = useAuth();
+    const { appLockEnabled } = useSecurity();
 
-    useEffect(() => {
-        if (user?.notificationPreferences) {
-            setEmailNotif(user.notificationPreferences.emailNotif ?? false);
-            setResearchUpdates(user.notificationPreferences.researchUpdates ?? false);
-        }
-    }, [user?.notificationPreferences]);
-
-    const updatePreferences = async (email: boolean, research: boolean) => {
-        try {
-            await api.put('/auth/me', {
-                notificationPreferences: {
-                    emailNotif: email,
-                    researchUpdates: research,
-                },
-            });
-            refreshUser();
-        } catch (error) {
-            console.error('Failed to update notification preferences', error);
-        }
-    };
-
-    const toggleEmailNotif = (val: boolean) => {
-        setEmailNotif(val);
-        updatePreferences(val, researchUpdates);
-    };
-
-    const toggleResearchUpdates = (val: boolean) => {
-        setResearchUpdates(val);
-        updatePreferences(emailNotif, val);
+    const handleLogout = () => {
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to log out?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Logout', style: 'destructive', onPress: async () => {
+                        await logout();
+                    }
+                }
+            ]
+        );
     };
 
     const initials = user?.displayName
@@ -113,6 +95,8 @@ const AccountSettingsScreen: React.FC = () => {
                 <View style={styles.card}>
                     <RowItem icon="person-circle-outline" label="My Account" subtitle="Make changes to your account" onPress={() => navigation.navigate('MyAccount')} />
                     <View style={styles.divider} />
+                    <RowItem icon="bar-chart-outline" label="My Analytics" subtitle="View stats on your uploaded files" onPress={() => navigation.navigate('MyAnalytics')} />
+                    <View style={styles.divider} />
                     <RowItem icon="shield-checkmark-outline" label="Change password" subtitle="Further secure your account for safety" onPress={() => navigation.navigate('ChangePassword')} />
                       <View style={styles.divider} />
                       <RowItem 
@@ -121,62 +105,6 @@ const AccountSettingsScreen: React.FC = () => {
                           subtitle={appLockEnabled ? "Enabled (Tap to change/remove)" : "Add a PIN or Fingerprint to unlock app"} 
                           onPress={() => navigation.navigate('AppLockSetup')} 
                       />
-                    <View style={styles.divider} />
-                    <RowItem
-                        icon="finger-print-outline"
-                        label="Biometrics"
-                        subtitle={appLockEnabled ? (biometricsEnabled ? 'Use fingerprint / Face ID to unlock' : 'Enable biometric unlock') : 'Requires App Lock (PIN)'}
-                        right={
-                            <Switch
-                                value={biometricsEnabled}
-                                onValueChange={async (val) => {
-                                    // If app lock not enabled, prompt user to set up PIN first
-                                    if (!appLockEnabled && val) {
-                                        Alert.alert('Enable App Lock', 'You must set an app PIN before enabling biometrics. Tap App Lock to set a PIN now.');
-                                        return;
-                                    }
-                                    const ok = await toggleBiometrics(val);
-                                    if (!ok) {
-                                        if (val) Alert.alert('Failed', 'Could not enable biometrics. Make sure your device has an enrolled fingerprint/Face ID and try again.');
-                                        else Alert.alert('Disabled', 'Biometric unlock has been disabled.');
-                                    }
-                                }}
-                                trackColor={{ false: '#D0D8E8', true: '#0E1F43' }}
-                                thumbColor="#fff"
-                                ios_backgroundColor="#D0D8E8"
-                                disabled={!appLockEnabled}
-                            />
-                        }
-                    />
-                    <RowItem
-                        icon="mail-outline"
-                        label="Email Notification"
-                        subtitle="Receive email alerts for important updates"
-                        right={
-                            <Switch
-                                value={emailNotif}
-                                onValueChange={toggleEmailNotif}
-                                trackColor={{ false: '#D0D8E8', true: '#0E1F43' }}
-                                thumbColor="#fff"
-                                ios_backgroundColor="#D0D8E8"
-                            />
-                        }
-                    />
-                    <View style={styles.divider} />
-                    <RowItem
-                        icon="book-outline"
-                        label="Research Updates"
-                        subtitle="Notify me about new research in my field"
-                        right={
-                            <Switch
-                                value={researchUpdates}
-                                onValueChange={toggleResearchUpdates}
-                                trackColor={{ false: '#D0D8E8', true: '#0E1F43' }}
-                                thumbColor="#fff"
-                                ios_backgroundColor="#D0D8E8"
-                            />
-                        }
-                    />
                 </View>
 
                 {/* Library */}

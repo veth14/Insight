@@ -9,8 +9,11 @@ const OTP_EXPIRY_MINUTES = 5;
 const RESEND_COOLDOWN_SECONDS = 60;
 const RESET_TOKEN_EXPIRY_MINUTES = 10;
 
+/**
+ * Generates a cryptographically secure 6-digit numeric OTP
+ */
 const generateOTP = (): string =>
-    Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
+    crypto.randomInt(100000, 1000000).toString(); // 6-digit
 
 /**
  * POST /api/auth/forgot-password

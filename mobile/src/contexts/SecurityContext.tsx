@@ -9,11 +9,13 @@ interface SecurityContextType {
     isLoadingSecurity: boolean;
     appLockEnabled: boolean;
     biometricsEnabled: boolean;
+    hasPin: boolean;
     unlockApp: (pin: string) => Promise<boolean>;
     unlockWithBiometrics: () => Promise<boolean>;
     setupAppLock: (pin: string, useBiometrics: boolean) => Promise<void>;
     removeAppLock: (pin: string) => Promise<boolean>;
     toggleBiometrics: (enabled: boolean) => Promise<boolean>;
+    enableAppLock: () => Promise<void>;
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -24,8 +26,10 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [isLoadingSecurity, setIsLoadingSecurity] = useState(true);
     const [appLockEnabled, setAppLockEnabled] = useState(false);
     const [biometricsEnabled, setBiometricsEnabled] = useState(false);
+    const [hasPin, setHasPin] = useState(false);
 
     const getPinKey = () => `app_pin_${user?.uid}`;
+    const getPinEnabledKey = () => `app_lock_enabled_${user?.uid}`;
     const getBioKey = () => `app_bio_${user?.uid}`;
 
     // Load initial lock state when user changes
@@ -42,18 +46,33 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 setIsLocked(false);
                 setAppLockEnabled(false);
                 setBiometricsEnabled(false);
+                setHasPin(false);
                 setIsLoadingSecurity(false);
                 return;
             }
 
             try {
                 const savedPin = await SecureStore.getItemAsync(getPinKey());
+                const isEnabled = await SecureStore.getItemAsync(getPinEnabledKey());
                 const savedBio = await SecureStore.getItemAsync(getBioKey());
 
                 if (savedPin) {
-                    setAppLockEnabled(true);
-                    setIsLocked(true); // Lock the app when first loaded and PIN exists
+                    setHasPin(true);
+                    
+                    // If previously not explicitly set, let's treat existing savedPin as enabled to migrate old users
+                    if (isEnabled === 'true' || isEnabled === null) {
+                        setAppLockEnabled(true);
+                        setIsLocked(true); // Lock the app when first loaded and PIN exists and enabled
+                    } else {
+                        setAppLockEnabled(false);
+                        setIsLocked(false);
+                    }
+                } else {
+                    setHasPin(false);
+                    setAppLockEnabled(false);
+                    setIsLocked(false);
                 }
+                
                 if (savedBio === 'true') {
                     setBiometricsEnabled(true);
                 }
@@ -124,10 +143,12 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (!user) return;
         
         await SecureStore.setItemAsync(getPinKey(), pin);
+        await SecureStore.setItemAsync(getPinEnabledKey(), 'true');
         await SecureStore.setItemAsync(getBioKey(), useBiometrics ? 'true' : 'false');
         
         setAppLockEnabled(true);
         setBiometricsEnabled(useBiometrics);
+        setHasPin(true);
         setIsLocked(false); // Automatically unlocked upon setup
     };
 
@@ -137,15 +158,23 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Verify PIN first before allowing removal
         const savedPin = await SecureStore.getItemAsync(getPinKey());
         if (savedPin === pin) {
-            await SecureStore.deleteItemAsync(getPinKey());
-            await SecureStore.deleteItemAsync(getBioKey());
+            // We only disable the lock, we do NOT delete the PIN!
+            await SecureStore.setItemAsync(getPinEnabledKey(), 'false');
             
             setAppLockEnabled(false);
-            setBiometricsEnabled(false);
+            // We keep biometrics enabled state so if they turn it back on, it remembers? 
+            // Or maybe biometrics should only work when app lock is on.
+            // But we don't delete the bio key.
             setIsLocked(false);
             return true;
         }
         return false;
+    };
+
+    const enableAppLock = async () => {
+        if (!user) return;
+        await SecureStore.setItemAsync(getPinEnabledKey(), 'true');
+        setAppLockEnabled(true);
     };
 
     const toggleBiometrics = async (enabled: boolean): Promise<boolean> => {
@@ -173,11 +202,13 @@ export const SecurityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             isLoadingSecurity,
             appLockEnabled,
             biometricsEnabled,
+            hasPin,
             unlockApp,
             unlockWithBiometrics,
             setupAppLock,
-            removeAppLock
-            , toggleBiometrics
+            removeAppLock,
+            toggleBiometrics,
+            enableAppLock
         }}>
             {children}
         </SecurityContext.Provider>

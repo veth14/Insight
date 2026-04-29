@@ -243,7 +243,7 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
 
         const FIELDS = '-fullText -methodology -keyFindings -abstract';
 
-        const [totalApproved, readingCount, savedCount, recentStudies, trendingStudies] = await Promise.all([
+        const [totalApproved, readingCount, savedCount, recentStudies, trendingStudies, maxStats] = await Promise.all([
             AcademicStudy.countDocuments(APPROVED),
             ReadingHistory.countDocuments({ userId: uid, progress: { $gt: 0, $lt: 100 } }),
             Bookmark.countDocuments({ userId: uid }),
@@ -257,6 +257,10 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
                 .sort({ viewCount: -1 })
                 .limit(3)
                 .lean(),
+            AcademicStudy.aggregate([
+                { $match: APPROVED },
+                { $group: { _id: null, maxDownloads: { $max: "$downloadCount" }, maxViews: { $max: "$viewCount" } } }
+            ])
         ]);
 
         // Recommended = separate query excluding trending IDs, sorted by newest viewCount
@@ -287,7 +291,7 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
         const recommended = recommendedSigned;
 
         res.json({
-            stats: { totalApproved, readingCount, savedCount },
+            stats: { totalApproved, readingCount, savedCount, maxDownloads: maxStats[0]?.maxDownloads || 0, maxViews: maxStats[0]?.maxViews || 0 },
             recentlyAdded: recentSigned,
             recommended,
             trending,

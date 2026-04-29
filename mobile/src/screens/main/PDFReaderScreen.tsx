@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ActivityIndicator,
     TouchableOpacity, Platform, StatusBar,
@@ -11,6 +11,7 @@ import { HomeStackParamList } from '../../types';
 import { ms, scale, vs } from '../../utils/responsive';
 import api from '../../services/api.service';
 import * as FileSystem from 'expo-file-system/legacy';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'PDFReader'>;
 
@@ -23,6 +24,8 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
     const [error, setError]     = useState<string | null>(null);
     const [lastPage, setLastPage] = useState(1);
     const progressTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    usePreventScreenCapture();
 
     // Debounced progress reporter — fires 2 s after the last page change
     const handleMessage = useCallback((event: any) => {

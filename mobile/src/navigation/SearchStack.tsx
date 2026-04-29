@@ -10,6 +10,7 @@ import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
 import DownloadsScreen from '../screens/main/DownloadsScreen';
 import PrivacyPolicyScreen from '../screens/main/PrivacyPolicyScreen';
 import TermsOfUseScreen from '../screens/main/TermsOfUseScreen';
+import MyAnalyticsScreen from '../screens/main/MyAnalyticsScreen';
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
 
@@ -25,6 +26,7 @@ const SearchStack: React.FC = () => {
             <Stack.Screen name="Downloads" component={DownloadsScreen} />
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="TermsOfUse" component={TermsOfUseScreen} />
+            <Stack.Screen name="MyAnalytics" component={MyAnalyticsScreen} />
         </Stack.Navigator>
     );
 };

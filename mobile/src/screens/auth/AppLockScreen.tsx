@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingVi
 import { useSecurity } from '../../contexts/SecurityContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 
 interface AppLockScreenProps {
     onUnlock: () => void;
@@ -14,6 +15,8 @@ const AppLockScreen: React.FC<AppLockScreenProps> = ({ onUnlock }) => {
     const { unlockApp, unlockWithBiometrics, biometricsEnabled } = useSecurity();
     const [pin, setPin] = useState('');
     const [error, setError] = useState(false);
+
+    usePreventScreenCapture();
 
     useEffect(() => {
         // Attempt biometrics automatically upon load if enabled

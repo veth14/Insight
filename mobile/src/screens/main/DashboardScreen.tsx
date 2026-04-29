@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList,
     StatusBar, Image, ActivityIndicator, RefreshControl,
@@ -26,6 +26,8 @@ interface DashboardStats {
     totalApproved: number;
     readingCount: number;
     savedCount: number;
+    maxDownloads: number;
+    maxViews: number;
 }
 
 interface DashboardData {
@@ -94,6 +96,22 @@ const DashboardScreen: React.FC = () => {
     const recommended   = data?.recommended   ?? [];
     const trending      = data?.trending      ?? [];
 
+    // Fallback: calculate max views/downloads from the available data
+    // (Useful since the mobile app is pointing to the production Railway backend which hasn't been updated yet)
+    const backendMaxViews = stats?.maxViews;
+    const backendMaxDownloads = stats?.maxDownloads;
+    
+    const allStudies = [...recentlyAdded, ...recommended, ...trending];
+    const computedMaxViews = trending.length > 0 
+        ? Math.max(...trending.map(s => s.viewCount || 0)) 
+        : (allStudies.length > 0 ? Math.max(...allStudies.map(s => s.viewCount || 0)) : 0);
+    const computedMaxDownloads = allStudies.length > 0 
+        ? Math.max(...allStudies.map(s => s.downloadCount || 0)) 
+        : 0;
+
+    const displayMaxViews = backendMaxViews !== undefined ? backendMaxViews : computedMaxViews;
+    const displayMaxDownloads = backendMaxDownloads !== undefined ? backendMaxDownloads : computedMaxDownloads;
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -121,14 +139,14 @@ const DashboardScreen: React.FC = () => {
                         <Text style={styles.statLabel}>Studies</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Ionicons name="eye-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>{stats?.readingCount ?? 0}</Text>
-                        <Text style={styles.statLabel}>Reading</Text>
+                        <Ionicons name="download-outline" size={20} color="#0E1F43" />
+                        <Text style={styles.statNumber}>{fmtNum(displayMaxDownloads)}</Text>
+                        <Text style={styles.statLabel}>Most Downloaded</Text>
                     </View>
                     <View style={styles.statCard}>
-                        <Ionicons name="bookmark-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>{stats?.savedCount ?? 0}</Text>
-                        <Text style={styles.statLabel}>Saved</Text>
+                        <Ionicons name="eye-outline" size={20} color="#0E1F43" />
+                        <Text style={styles.statNumber}>{fmtNum(displayMaxViews)}</Text>
+                        <Text style={styles.statLabel}>Most Viewed</Text>
                     </View>
                 </View>
 

@@ -16,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api.service';
 import { auth } from '../../config/firebase';
 import { scale, vs, ms } from '../../utils/responsive';
+import { usePreventScreenCapture } from 'expo-screen-capture';
 
 // ── PasswordRow (defined outside screen to avoid remount on every keystroke) ───
 
@@ -51,6 +52,8 @@ const ChangePasswordScreen: React.FC = () => {
     const navigation = useNavigation();
     const { user, sendResetOTP, verifyResetOTP, resetPassword } = useAuth();
     const insets = useSafeAreaInsets();
+
+    usePreventScreenCapture();
 
     // ── Form state ───────────────────────────────────────────────────────────
     const [currentPassword, setCurrentPassword] = useState('');

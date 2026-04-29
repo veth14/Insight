@@ -5,7 +5,8 @@ export enum UserRole {
     STUDENT_1ST_TO_3RD = 'student_1_3',
     STUDENT_4TH = 'student_4',
     ADMIN = 'admin',
-    FACULTY = 'faculty'
+    FACULTY = 'faculty',
+    GUEST = 'guest'
 }
 
 /**
@@ -58,6 +59,7 @@ export interface AcademicStudy {
     fullText: string;
     downloadCount: number;
     viewCount: number;
+    approvalStatus?: 'pending' | 'approved' | 'rejected';
     createdAt: Date;
     updatedAt: Date;
 }
@@ -125,6 +127,7 @@ export type HomeStackParamList = {
     TermsOfUse: undefined;
     TrendingAll: undefined;
     AppLockSetup: undefined;
+    MyAnalytics: undefined;
 };
 
 export type SearchStackParamList = {
@@ -137,4 +140,5 @@ export type SearchStackParamList = {
     Downloads: undefined;
     PrivacyPolicy: undefined;
     TermsOfUse: undefined;
+    MyAnalytics: undefined;
 };
