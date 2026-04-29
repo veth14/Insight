@@ -16,14 +16,17 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.university.insight"
+      "bundleIdentifier": "com.veth14.insight",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.university.insight",
+      "package": "com.veth14.insight",
       "usesCleartextTraffic": true
     },
     "web": {
