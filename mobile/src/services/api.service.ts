@@ -7,7 +7,8 @@ import { auth } from '../config/firebase';
  * Base URL loaded from environment variables
  */
 // Use the production Railway URL even in development
-let baseURL = process.env.EXPO_PUBLIC_API_URL;
+// Priority: Environment Variable -> Hardcoded Production Fallback
+let baseURL = process.env.EXPO_PUBLIC_API_URL || 'https://insight-production-77f2.up.railway.app/api';
 
 if (__DEV__) {
     console.log('[API] Connecting to:', baseURL);
