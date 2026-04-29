@@ -36,7 +36,16 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-document-picker",
+      "expo-screen-capture",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to allow you to upload research documents and system images.",
+          "cameraPermission": "The app accesses your camera to allow you to take photos of your research documents."
+        }
+      ]
     ],
     "extra": {
       "eas": {
