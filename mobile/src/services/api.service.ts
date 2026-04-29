@@ -6,17 +6,13 @@ import { auth } from '../config/firebase';
  * Axios API client instance
  * Base URL loaded from environment variables
  */
+// Use the production Railway URL even in development
 let baseURL = process.env.EXPO_PUBLIC_API_URL;
 
-// Auto-detect local IP in development (Expo Go)
-// /* TEMPORARILY DISABLED to test Railway Production */
-// if (__DEV__) {
-//     const debuggerHost = Constants.expoConfig?.hostUri || Constants.manifest?.debuggerHost || Constants.manifest2?.extra?.expoGo?.debuggerHost;
-//     if (debuggerHost) {
-//         // Change from 3000 to 8080 to match your backend port
-//         baseURL = `http://${debuggerHost.split(':')[0]}:8080/api`;
-//     }
-// }
+if (__DEV__) {
+    console.log('[API] Connecting to:', baseURL);
+}
+
 
 const api = axios.create({
     baseURL,
