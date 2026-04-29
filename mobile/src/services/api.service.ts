@@ -4,16 +4,11 @@ import { auth } from '../config/firebase';
 
 /**
  * Axios API client instance
- * Base URL loaded from environment variables
+ * Base URL forced to Railway Production
  */
-// Use the production Railway URL even in development
-// Priority: Environment Variable -> Hardcoded Production Fallback
-let baseURL = process.env.EXPO_PUBLIC_API_URL || 'https://insight-production-77f2.up.railway.app/api';
+const baseURL = 'https://insight-production-77f2.up.railway.app/api';
 
-if (__DEV__) {
-    console.log('[API] Connecting to:', baseURL);
-}
-
+console.log('[API] Connecting to:', baseURL);
 
 const api = axios.create({
     baseURL,
@@ -51,21 +46,20 @@ api.interceptors.response.use(
         if (error.response) {
             // Server responded with error status
             const { status, data } = error.response;
+            console.error('[API Error Response]', { status, data, url: error.config?.url });
 
             if (status === 401) {
-                // Unauthorized - token expired or invalid
-                // Could trigger logout here
                 console.error('Unauthorized request');
             } else if (status === 403) {
-                // Forbidden - user doesn't have permission
                 console.error('Forbidden access');
             } else if (status >= 500) {
-                // Server error
-                console.error('Server error:', data.message);
+                console.error('Server error:', data?.message);
             }
         } else if (error.request) {
             // Request made but no response received
-            console.error('Network error - no response received');
+            console.error('[API Network Error] No response received from:', baseURL + (error.config?.url || ''));
+        } else {
+            console.error('[API Error]', error.message);
         }
 
         return Promise.reject(error);

@@ -149,13 +149,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 { email },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-        } catch (error) {
+        } catch (error: any) {
+            // Log full error details for debugging
+            console.error('[Login Error]', error.response?.data || error.message);
+            
             // Reset 2FA state on error so the listener resumes normally
             twoFactorPendingRef.current = false;
             setTwoFactorPending(false);
             setPendingOTPEmail(null);
+            
             // Also sign out from Firebase so there's no dangling auth state
             try { await authService.logout(); } catch (_) {}
+            
+            // Customize the error message to be more helpful
+            if (!error.response) {
+                error.message = 'Network Error: Cannot reach server. Please check your internet connection or Railway server status.';
+            } else if (error.response.data?.message) {
+                error.message = error.response.data.message;
+            }
+            
             throw error;
         }
     };
