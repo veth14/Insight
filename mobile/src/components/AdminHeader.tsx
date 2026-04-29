@@ -3,8 +3,9 @@ import {
     View, Text, StyleSheet, TouchableOpacity,
     Modal, TouchableWithoutFeedback, ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import AppHeader from './AppHeader';
 import api from '../services/api.service';
 import { scale, vs, ms } from '../utils/responsive';
@@ -12,11 +13,18 @@ import { scale, vs, ms } from '../utils/responsive';
 const AdminHeader: React.FC = () => {
     const [notifOpen, setNotifOpen] = useState(false);
     const [notifications, setNotifications] = useState<any[]>([]);
+    const [readIds, setReadIds] = useState<string[]>([]);
     const isFocused = useIsFocused();
+    const navigation = useNavigation<any>();
 
     useEffect(() => {
         const fetchAdminAlerts = async () => {
             try {
+                // Fetch stored read IDs first to ensure sync
+                const stored = await AsyncStorage.getItem('admin_read_notif_ids');
+                const currentReadIds = stored ? JSON.parse(stored) : [];
+                setReadIds(currentReadIds);
+
                 const [regRes, litRes] = await Promise.all([
                     api.get('/admin/registrations?status=pending'),
                     api.get('/admin/literature?status=pending&limit=10')
@@ -28,26 +36,28 @@ const AdminHeader: React.FC = () => {
                 let notifs: any[] = [];
                 
                 pendingUsers.slice(0, 5).forEach((u: any) => {
+                    const id = 'usr_' + u.uid;
                     notifs.push({
-                        id: 'usr_' + u.uid,
+                        id,
                         icon: 'person-add-outline',
                         title: 'Pending Account',
                         body: `${u.displayName} requests access.`,
                         time: new Date(u.createdAt).toLocaleDateString(),
                         timestamp: new Date(u.createdAt).getTime(),
-                        read: false
+                        read: currentReadIds.includes(id)
                     });
                 });
                 
                 pendingLit.slice(0, 5).forEach((l: any) => {
+                    const id = 'lit_' + l._id;
                     notifs.push({
-                        id: 'lit_' + l._id,
+                        id,
                         icon: 'document-text-outline',
                         title: 'Pending Literature',
                         body: l.title,
                         time: new Date(l.createdAt).toLocaleDateString(),
                         timestamp: new Date(l.createdAt).getTime(),
-                        read: false
+                        read: currentReadIds.includes(id)
                     });
                 });
 
@@ -65,7 +75,36 @@ const AdminHeader: React.FC = () => {
     }, [isFocused]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
-    const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+    const handleNotificationPress = async (notif: any) => {
+        setNotifOpen(false);
+        
+        // Mark as read and persist
+        if (!readIds.includes(notif.id)) {
+            const newReadIds = [...readIds, notif.id];
+            setReadIds(newReadIds);
+            setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+            try {
+                await AsyncStorage.setItem('admin_read_notif_ids', JSON.stringify(newReadIds));
+            } catch (e) { /* ignore */ }
+        }
+
+        if (notif.id.startsWith('usr_')) {
+            navigation.navigate('AdminTabs', { screen: 'Accounts' });
+        } else if (notif.id.startsWith('lit_')) {
+            navigation.navigate('AdminTabs', { screen: 'Literature' });
+        }
+    };
+
+    const markAllRead = async () => {
+        const allIds = notifications.map(n => n.id);
+        const newReadIds = Array.from(new Set([...readIds, ...allIds]));
+        setReadIds(newReadIds);
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        try {
+            await AsyncStorage.setItem('admin_read_notif_ids', JSON.stringify(newReadIds));
+        } catch (e) { /* ignore */ }
+    };
 
     return (
         <>
@@ -110,7 +149,12 @@ const AdminHeader: React.FC = () => {
                             <Text style={{ textAlign: 'center', color: '#9AADCA', paddingVertical: vs(20) }}>No new alerts</Text>
                         ) : (
                             notifications.map(n => (
-                                <View key={n.id} style={styles.item}>
+                                <TouchableOpacity 
+                                    key={n.id} 
+                                    style={styles.item}
+                                    onPress={() => handleNotificationPress(n)}
+                                    activeOpacity={0.7}
+                                >
                                     <View style={[styles.iconBox, { backgroundColor: n.read ? '#F5F6FA' : '#EEF2FF' }]}>
                                         <Ionicons
                                             name={n.icon as any}
@@ -124,7 +168,7 @@ const AdminHeader: React.FC = () => {
                                         <Text style={styles.itemTime}>{n.time}</Text>
                                     </View>
                                     {!n.read && <View style={styles.unreadDot} />}
-                                </View>
+                                </TouchableOpacity>
                             ))
                         )}
                     </ScrollView>

@@ -21,9 +21,6 @@ const AdminSettingsScreen: React.FC = () => {
     const [newRegistrations, setNewRegistrations] = useState(user?.notificationPreferences?.newRegistrations ?? true);
     const [literatureSubmissions, setLiteratureSubmissions] = useState(user?.notificationPreferences?.literatureSubmissions ?? true);
 
-    // System Limits
-    const [maxUpload, setMaxUpload] = useState(10);
-    const [dailyDownload, setDailyDownload] = useState(50);
 
     useEffect(() => {
         if (user?.notificationPreferences) {
@@ -110,43 +107,6 @@ const AdminSettingsScreen: React.FC = () => {
         </TouchableOpacity>
     );
 
-    const Stepper = ({
-        label, value, onChange,
-    }: {
-        label: string; value: number; onChange: (v: number) => void;
-    }) => (
-        <View style={styles.stepperBlock}>
-            <Text style={styles.stepperLabel}>{label}</Text>
-            <View style={styles.stepperRow}>
-                <TextInput
-                    style={styles.stepperInput}
-                    value={String(value)}
-                    keyboardType="numeric"
-                    onChangeText={t => {
-                        const n = parseInt(t, 10);
-                        if (!isNaN(n) && n > 0) onChange(n);
-                    }}
-                />
-                <View style={styles.stepperBtns}>
-                    <TouchableOpacity
-                        style={styles.stepperBtn}
-                        onPress={() => onChange(value + 1)}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="chevron-up" size={14} color="#0E1F43" />
-                    </TouchableOpacity>
-                    <View style={styles.stepperBtnDivider} />
-                    <TouchableOpacity
-                        style={styles.stepperBtn}
-                        onPress={() => onChange(Math.max(1, value - 1))}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="chevron-down" size={14} color="#0E1F43" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </View>
-    );
 
     /* ------------------------------------------------------------------ */
     /* Render                                                               */
@@ -244,28 +204,6 @@ const AdminSettingsScreen: React.FC = () => {
                     />
                 </View>
 
-                {/* System Limits */}
-                <SectionLabel title="System Limits" />
-                <View style={styles.limitsCard}>
-                    <Stepper
-                        label="Max Upload Size (MB)"
-                        value={maxUpload}
-                        onChange={setMaxUpload}
-                    />
-                    <View style={styles.limitsDivider} />
-                    <Stepper
-                        label="Daily Download Limit per User"
-                        value={dailyDownload}
-                        onChange={setDailyDownload}
-                    />
-                    <TouchableOpacity
-                        style={styles.saveBtn}
-                        activeOpacity={0.85}
-                        onPress={() => Alert.alert('Saved', 'System limits have been updated.')}
-                    >
-                        <Text style={styles.saveBtnText}>Save Limits</Text>
-                    </TouchableOpacity>
-                </View>
 
             </ScrollView>
         </SafeAreaView>
@@ -344,44 +282,6 @@ const styles = StyleSheet.create({
     rowBody: { flex: 1 },
     rowLabel: { fontSize: ms(13), fontWeight: '700', color: '#0E1F43' },
     rowSub: { fontSize: ms(11), color: '#9AADCA', marginTop: vs(1) },
-
-    /* System Limits card */
-    limitsCard: {
-        backgroundColor: '#fff', borderRadius: ms(14),
-        borderWidth: 1, borderColor: '#F0F2F8',
-        shadowColor: '#0E1F43', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
-        overflow: 'hidden',
-        padding: scale(16), gap: vs(12),
-    },
-    limitsDivider: { height: vs(1), backgroundColor: '#F5F6FA' },
-    stepperBlock: { gap: vs(6) },
-    stepperLabel: { fontSize: ms(12), fontWeight: '600', color: '#0E1F43' },
-    stepperRow: {
-        flexDirection: 'row', alignItems: 'center',
-        borderWidth: 1, borderColor: '#E0E5F0', borderRadius: ms(8),
-        overflow: 'hidden',
-    },
-    stepperInput: {
-        flex: 1, paddingHorizontal: scale(12), paddingVertical: vs(10),
-        fontSize: ms(14), color: '#0E1F43', fontWeight: '600',
-    },
-    stepperBtns: {
-        borderLeftWidth: 1, borderLeftColor: '#E0E5F0',
-        width: scale(36),
-    },
-    stepperBtn: {
-        flex: 1, justifyContent: 'center', alignItems: 'center',
-        paddingVertical: vs(4),
-    },
-    stepperBtnDivider: { height: vs(1), backgroundColor: '#E0E5F0' },
-
-    /* Save button */
-    saveBtn: {
-        backgroundColor: '#0E1F43', borderRadius: ms(12),
-        paddingVertical: vs(14), alignItems: 'center', marginTop: vs(4),
-    },
-    saveBtnText: { color: '#fff', fontSize: ms(14), fontWeight: '800' },
 });
 
 export default AdminSettingsScreen;
