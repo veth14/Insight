@@ -87,7 +87,7 @@ const sendViaBrevo = async (payload: SendEmailOptions): Promise<void> => {
 };
 
 export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<void> => {
-    // Primary: Try HTTPS delivery via Brevo to bypass potential SMTP port blocks (e.g. Railway)
+    // Primary: HTTPS delivery via Brevo (Fast and reliable for cloud)
     if (process.env.BREVO_API_KEY) {
         try {
             console.log('[EmailService] Trying HTTPS delivery via Brevo...');
@@ -95,16 +95,15 @@ export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<
             console.log('[EmailService] Email sent successfully via Brevo.');
             return;
         } catch (brevoError: any) {
-            console.error('[EmailService] Brevo delivery failed:', brevoError?.message || brevoError);
-            // Optionally, we could still fall through to SMTP as a backup here
+            console.error('[EmailService] Brevo delivery failed, trying SMTP fallback:', brevoError?.message || brevoError);
         }
     }
 
-    // Fallback: Standard SMTP through Nodemailer
+    // Secondary/Fallback: Standard SMTP through Nodemailer
     const smtpTransporter = createTransporter();
-    
     if (smtpTransporter) {
         try {
+            console.log('[EmailService] Attempting SMTP delivery...');
             const recipients = Array.isArray(payload.to) ? payload.to.join(',') : payload.to;
             const fromAddress = process.env.EMAIL_USER;
             const fromName = payload.fromName || 'Insight App';
@@ -117,8 +116,7 @@ export const sendEmailWithFallback = async (payload: SendEmailOptions): Promise<
             console.log('[EmailService] Email sent successfully via SMTP.');
             return;
         } catch (smtpError: any) {
-            // Logging at debug/info level instead of an error to prevent noise
-            console.log('[EmailService] SMTP delivery skipped or failed:', smtpError?.message || smtpError);
+            console.error('[EmailService] All delivery methods failed:', smtpError?.message || smtpError);
         }
     }
 
