@@ -130,7 +130,8 @@ const DashboardScreen: React.FC = () => {
                     <View style={styles.statCard}>
                         <Ionicons name="document-text-outline" size={20} color="#0E1F43" />
                         <Text style={styles.statNumber}>{fmtNum(stats?.totalApproved)}</Text>
-                        <Text style={styles.statLabel}>Studies</Text>
+                        <Text style={styles.statLabel}>Total Studies</Text>
+                        <Text style={styles.statStudyTitle}>Active research papers</Text>
                     </View>
                     <View style={[styles.statCard, styles.statCardWide]}>
                         <Ionicons name="download-outline" size={20} color="#0E1F43" />
@@ -295,6 +296,7 @@ const styles = StyleSheet.create({
         borderRadius: ms(14),
         padding: scale(12),
         alignItems: 'flex-start',
+        minHeight: vs(105), // Ensure uniform height
         shadowColor: '#0E1F43',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.07,
@@ -304,13 +306,13 @@ const styles = StyleSheet.create({
         borderColor: '#F0F2F8',
     },
     statNumber: { fontSize: ms(20), fontWeight: '700', color: '#0E1F43', marginTop: vs(6) },
-    statLabel: { fontSize: ms(11), color: '#888', marginTop: vs(1) },
+    statLabel: { fontSize: ms(11), color: '#888', marginTop: vs(1), fontWeight: '600' },
     statStudyTitle: {
-        fontSize: ms(10), color: '#5A6A8A', marginTop: vs(4),
+        fontSize: ms(10), color: '#5A6A8A', marginTop: vs(6),
         fontStyle: 'italic', lineHeight: vs(13),
     },
     statCardWide: {
-        flex: 1.4,
+        flex: 1.3,
     },
 
     // Section header
