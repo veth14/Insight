@@ -107,14 +107,10 @@ export const getBookmarks = async (req: Request, res: Response): Promise<void> =
                 .lean(),
         ]);
 
-        // Build a progress map keyed by studyId
-        const progressMap = new Map(
-            readingHistory.map(r => [String(r.studyId), r])
-        );
+        const progressMap = new Map(readingHistory.map(r => [String(r.studyId), r]));
+        const studyMap    = new Map(studies.map(s => [String(s._id), s]));
 
-        // Preserve bookmark order and merge progress
-        const studyMap = new Map(studies.map(s => [String(s._id), s]));
-        const ordered  = studyIds
+        const ordered = studyIds
             .map(id => {
                 const study    = studyMap.get(String(id));
                 const progress = progressMap.get(String(id));
@@ -161,7 +157,6 @@ export const toggleBookmark = async (req: Request, res: Response): Promise<void>
             res.json({ bookmarked: true });
         }
     } catch (error: any) {
-        // handle duplicate key (race condition)
         if (error.code === 11000) {
             res.json({ bookmarked: true });
             return;
@@ -211,11 +206,11 @@ export const getReadingHistory = async (req: Request, res: Response): Promise<vo
         const result = history.map(h => ({
             ...studyMap.get(String(h.studyId)),
             _readingId: h._id,
-            progress:   h.progress,   // 0-100
+            progress:   h.progress,
             lastPage:   h.lastPage,
             totalPages: h.totalPages,
             lastReadAt: h.lastReadAt,
-        })).filter(r => r._id); // omit deleted studies
+        })).filter(r => r._id);
 
         res.json({ history: result });
     } catch (error: any) {
@@ -224,57 +219,56 @@ export const getReadingHistory = async (req: Request, res: Response): Promise<vo
     }
 };
 
-/**
- * PUT /api/studies/:id/progress
- * Body: { lastPage, totalPages, progress }
- * Upserts a ReadingHistory record for the current user.
- */
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 /**
  * GET /api/studies/dashboard
- * Returns personalised dashboard data for the current user:
- *   stats, recentlyAdded, recommended, trending
+ * Returns personalised dashboard data:
+ *   - stats: totalApproved, readingCount, savedCount,
+ *            mostDownloaded { title, count }, mostViewed { title, count }
+ *   - recentlyAdded, recommended, trending (all with signed image URLs)
  */
 export const getDashboard = async (req: Request, res: Response): Promise<void> => {
     try {
         const uid = (req as AuthRequest).user?.uid;
         const APPROVED = { approvalStatus: 'approved' };
+        const FIELDS   = '-fullText -methodology -keyFindings -abstract';
 
-        const FIELDS = '-fullText -methodology -keyFindings -abstract';
-
-        const [totalApproved, readingCount, savedCount, recentStudies, trendingStudies, maxStats] = await Promise.all([
+        const [
+            totalApproved,
+            readingCount,
+            savedCount,
+            recentStudies,
+            trendingStudies,
+            mostDownloadedArr,
+            mostViewedArr,
+        ] = await Promise.all([
             AcademicStudy.countDocuments(APPROVED),
             ReadingHistory.countDocuments({ userId: uid, progress: { $gt: 0, $lt: 100 } }),
             Bookmark.countDocuments({ userId: uid }),
-            AcademicStudy.find(APPROVED)
-                .select(FIELDS)
-                .sort({ createdAt: -1 })
-                .limit(6)
-                .lean(),
-            AcademicStudy.find(APPROVED)
-                .select(FIELDS)
-                .sort({ viewCount: -1 })
-                .limit(3)
-                .lean(),
-            AcademicStudy.aggregate([
-                { $match: APPROVED },
-                { $group: { _id: null, maxDownloads: { $max: "$downloadCount" }, maxViews: { $max: "$viewCount" } } }
-            ])
+            AcademicStudy.find(APPROVED).select(FIELDS).sort({ createdAt: -1 }).limit(6).lean(),
+            AcademicStudy.find(APPROVED).select(FIELDS).sort({ viewCount: -1 }).limit(3).lean(),
+            // Top 1 most downloaded study
+            AcademicStudy.find(APPROVED).select('title downloadCount').sort({ downloadCount: -1 }).limit(1).lean(),
+            // Top 1 most viewed study
+            AcademicStudy.find(APPROVED).select('title viewCount').sort({ viewCount: -1 }).limit(1).lean(),
         ]);
 
-        // Recommended = separate query excluding trending IDs, sorted by newest viewCount
-        const trendingIds = trendingStudies.map(s => s._id);
+        const mostDownloaded = mostDownloadedArr[0]
+            ? { title: (mostDownloadedArr[0] as any).title, count: (mostDownloadedArr[0] as any).downloadCount || 0 }
+            : { title: 'N/A', count: 0 };
+
+        const mostViewed = mostViewedArr[0]
+            ? { title: (mostViewedArr[0] as any).title, count: (mostViewedArr[0] as any).viewCount || 0 }
+            : { title: 'N/A', count: 0 };
+
+        // Recommended = exclude trending, sorted by viewCount
+        const trendingIds       = trendingStudies.map(s => s._id);
         const recommendedStudies = await AcademicStudy.find({
             ...APPROVED,
             _id: { $nin: trendingIds },
-        })
-            .select(FIELDS)
-            .sort({ viewCount: -1, createdAt: -1 })
-            .limit(6)
-            .lean();
+        }).select(FIELDS).sort({ viewCount: -1, createdAt: -1 }).limit(6).lean();
 
-        // Sign image URLs for all cards in parallel
         const signStudies = async (list: any[]) =>
             Promise.all(list.map(async s => ({
                 ...s,
@@ -287,14 +281,20 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
             signStudies(recommendedStudies),
         ]);
 
-        const trending    = trendingSigned;
-        const recommended = recommendedSigned;
-
         res.json({
-            stats: { totalApproved, readingCount, savedCount, maxDownloads: maxStats[0]?.maxDownloads || 0, maxViews: maxStats[0]?.maxViews || 0 },
+            stats: {
+                totalApproved,
+                readingCount,
+                savedCount,
+                mostDownloaded,
+                mostViewed,
+                // Keep legacy fields for backward compat
+                maxDownloads: mostDownloaded.count,
+                maxViews:     mostViewed.count,
+            },
             recentlyAdded: recentSigned,
-            recommended,
-            trending,
+            recommended:   recommendedSigned,
+            trending:      trendingSigned,
         });
     } catch (error: any) {
         console.error('getDashboard error:', error);
@@ -302,6 +302,11 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
     }
 };
 
+/**
+ * PUT /api/studies/:id/progress
+ * Body: { lastPage, totalPages, progress }
+ * Upserts a ReadingHistory record for the current user.
+ */
 export const updateProgress = async (req: Request, res: Response): Promise<void> => {
     try {
         const uid     = (req as AuthRequest).user?.uid;
@@ -357,7 +362,6 @@ export const getStudyById = async (req: Request, res: Response): Promise<void> =
         // Increment view count (fire-and-forget)
         AcademicStudy.findByIdAndUpdate(id, { $inc: { viewCount: 1 } }).catch(() => {});
 
-        // Check bookmark status + reading progress for current user
         const [isBookmarkedDoc, readingRecord] = await Promise.all([
             uid ? Bookmark.exists({ userId: uid, studyId: id }) : Promise.resolve(null),
             uid ? ReadingHistory.findOne({ userId: uid, studyId: id })
@@ -366,7 +370,6 @@ export const getStudyById = async (req: Request, res: Response): Promise<void> =
         ]);
         const isBookmarked = !!isBookmarkedDoc;
 
-        // Sign both image and PDF URLs
         const [signedFileUrl, signedImageUrl] = await Promise.all([
             signUrl((study as any).fileUrl),
             signUrl((study as any).systemImageUrl),
@@ -377,7 +380,6 @@ export const getStudyById = async (req: Request, res: Response): Promise<void> =
             fileUrl:        signedFileUrl,
             systemImageUrl: signedImageUrl,
             isBookmarked,
-            // Reading-resume data (null when user has never opened the PDF)
             lastPage:   (readingRecord as any)?.lastPage   ?? null,
             totalPages: (readingRecord as any)?.totalPages ?? null,
             progress:   (readingRecord as any)?.progress   ?? null,

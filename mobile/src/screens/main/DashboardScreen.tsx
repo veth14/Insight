@@ -22,12 +22,20 @@ interface StudyCard {
     downloadCount?: number;
 }
 
+interface StudyKPI {
+    title: string;
+    count: number;
+}
+
 interface DashboardStats {
     totalApproved: number;
     readingCount: number;
     savedCount: number;
-    maxDownloads: number;
-    maxViews: number;
+    mostDownloaded: StudyKPI;
+    mostViewed: StudyKPI;
+    // Legacy fallback fields
+    maxDownloads?: number;
+    maxViews?: number;
 }
 
 interface DashboardData {
@@ -96,21 +104,7 @@ const DashboardScreen: React.FC = () => {
     const recommended   = data?.recommended   ?? [];
     const trending      = data?.trending      ?? [];
 
-    // Fallback: calculate max views/downloads from the available data
-    // (Useful since the mobile app is pointing to the production Railway backend which hasn't been updated yet)
-    const backendMaxViews = stats?.maxViews;
-    const backendMaxDownloads = stats?.maxDownloads;
-    
-    const allStudies = [...recentlyAdded, ...recommended, ...trending];
-    const computedMaxViews = trending.length > 0 
-        ? Math.max(...trending.map(s => s.viewCount || 0)) 
-        : (allStudies.length > 0 ? Math.max(...allStudies.map(s => s.viewCount || 0)) : 0);
-    const computedMaxDownloads = allStudies.length > 0 
-        ? Math.max(...allStudies.map(s => s.downloadCount || 0)) 
-        : 0;
 
-    const displayMaxViews = backendMaxViews !== undefined ? backendMaxViews : computedMaxViews;
-    const displayMaxDownloads = backendMaxDownloads !== undefined ? backendMaxDownloads : computedMaxDownloads;
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -138,15 +132,21 @@ const DashboardScreen: React.FC = () => {
                         <Text style={styles.statNumber}>{fmtNum(stats?.totalApproved)}</Text>
                         <Text style={styles.statLabel}>Studies</Text>
                     </View>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, styles.statCardWide]}>
                         <Ionicons name="download-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>{fmtNum(displayMaxDownloads)}</Text>
+                        <Text style={styles.statNumber}>{fmtNum(stats?.mostDownloaded?.count ?? stats?.maxDownloads)}</Text>
                         <Text style={styles.statLabel}>Most Downloaded</Text>
+                        {stats?.mostDownloaded?.title && stats.mostDownloaded.title !== 'N/A' && (
+                            <Text style={styles.statStudyTitle} numberOfLines={2}>{stats.mostDownloaded.title}</Text>
+                        )}
                     </View>
-                    <View style={styles.statCard}>
+                    <View style={[styles.statCard, styles.statCardWide]}>
                         <Ionicons name="eye-outline" size={20} color="#0E1F43" />
-                        <Text style={styles.statNumber}>{fmtNum(displayMaxViews)}</Text>
+                        <Text style={styles.statNumber}>{fmtNum(stats?.mostViewed?.count ?? stats?.maxViews)}</Text>
                         <Text style={styles.statLabel}>Most Viewed</Text>
+                        {stats?.mostViewed?.title && stats.mostViewed.title !== 'N/A' && (
+                            <Text style={styles.statStudyTitle} numberOfLines={2}>{stats.mostViewed.title}</Text>
+                        )}
                     </View>
                 </View>
 
@@ -305,6 +305,13 @@ const styles = StyleSheet.create({
     },
     statNumber: { fontSize: ms(20), fontWeight: '700', color: '#0E1F43', marginTop: vs(6) },
     statLabel: { fontSize: ms(11), color: '#888', marginTop: vs(1) },
+    statStudyTitle: {
+        fontSize: ms(10), color: '#5A6A8A', marginTop: vs(4),
+        fontStyle: 'italic', lineHeight: vs(13),
+    },
+    statCardWide: {
+        flex: 1.4,
+    },
 
     // Section header
     sectionHeader: {

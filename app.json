@@ -7,6 +7,12 @@
     },
     "android": {
       "package": "com.veth14.insight"
+    },
+    "ios": {
+      "bundleIdentifier": "com.veth14.insight",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }
