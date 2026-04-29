@@ -57,6 +57,7 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
 
         // Send email
         try {
+            console.log(`[OTP] Attempting to send email to: ${email}`);
             await sendEmailWithFallback({
                 to: email,
                 fromName: 'Insight App',
@@ -91,15 +92,18 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
                     </div>
                 `,
             });
+            console.log(`[OTP] Email service success for: ${email}`);
         } catch (emailError: any) {
+            console.error(`[OTP] Email service FAILED for ${email}:`, emailError?.message || emailError);
             // Clean up the OTP record if email failed, so user isn't rate-limited on retry
             await OTP.deleteMany({ email: email.toLowerCase() });
+            console.log(`[OTP] Cleanup: Deleted failed OTP record for ${email}`);
             throw emailError; // rethrow to be caught by outer catch block
         }
 
         res.status(200).json({ message: 'OTP sent successfully' });
     } catch (error: any) {
-        console.error('Send OTP error:', error?.message || error);
+        console.error('[OTP] Main Controller Error:', error?.message || error);
         res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
     }
 };
