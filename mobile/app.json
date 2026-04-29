@@ -38,7 +38,6 @@
       "expo-asset",
       "expo-secure-store",
       "expo-document-picker",
-      "expo-screen-capture",
       [
         "expo-image-picker",
         {
