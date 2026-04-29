@@ -1,8 +1,9 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ScrollView, Clipboard, StatusBar, ActivityIndicator,
+    ScrollView, StatusBar, ActivityIndicator,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -110,9 +111,17 @@ const CiteGeneratorScreen: React.FC = () => {
 
     const citation = study ? buildCitation(activeStyle, study) : '';
 
-    const handleCopy = () => {
-        Clipboard.setString(citation);
+    const handleCopy = async () => {
+        await Clipboard.setStringAsync(citation);
         setCopied(true);
+        
+        // Track citation in backend
+        if (studyId) {
+            api.post(`/studies/${studyId}/cite`).catch(err => {
+                console.error('Failed to track citation:', err);
+            });
+        }
+
         setTimeout(() => setCopied(false), 2500);
     };
 

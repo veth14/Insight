@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
     FlatList, Modal, ScrollView, TouchableWithoutFeedback,
@@ -18,12 +18,9 @@ const { width } = Dimensions.get('window');
 const CATEGORIES = [
     'All Categories',
     'Artificial Intelligence',
-    'Computer Engineering',
-    'Computer Science',
     'Data Science',
     'Education',
     'Health Services',
-    'Information Systems',
     'IoT',
     'Machine Learning',
     'Mobile Dev',
@@ -331,7 +328,7 @@ const SearchScreen: React.FC = () => {
                                 <Text style={styles.modalSectionLabel}>Department</Text>
                                 <TextInput
                                     style={styles.modalInputFull}
-                                    placeholder="e.g. BSIT, BSCS..."
+                                    placeholder="e.g. BSIT"
                                     placeholderTextColor="#9AADCA"
                                     value={department}
                                     onChangeText={setDepartment}

@@ -426,3 +426,18 @@ export const trackDownload = async (req: Request, res: Response): Promise<void> 
         res.status(500).json({ message: 'Failed to track download' });
     }
 };
+
+/**
+ * POST /api/studies/:id/cite
+ * Increment citation count for a study.
+ */
+export const trackCitation = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        await AcademicStudy.findByIdAndUpdate(id, { $inc: { citationCount: 1 } });
+        res.status(200).json({ message: 'Citation tracked' });
+    } catch (error: any) {
+        console.error('trackCitation error:', error);
+        res.status(500).json({ message: 'Failed to track citation' });
+    }
+};

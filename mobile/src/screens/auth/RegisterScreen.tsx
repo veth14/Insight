@@ -304,7 +304,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                             <View style={styles.programContainer}>
                                 <Text style={styles.label}>Program</Text>
                                 <View style={styles.programRow}>
-                                    {[AcademicProgram.BSIS, AcademicProgram.BSIT, AcademicProgram.BSCS].map((p) => (
+                                    {[AcademicProgram.BSIT].map((p) => (
                                         <TouchableOpacity
                                             key={p}
                                             style={[styles.programChip, program === p && styles.programChipSelected]}

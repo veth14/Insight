@@ -13,9 +13,7 @@ export enum UserRole {
  * CCS Programs
  */
 export enum AcademicProgram {
-    BSIS = 'BSIS',
-    BSIT = 'BSIT',
-    BSCS = 'BSCS'
+    BSIT = 'BSIT'
 }
 
 /**
@@ -59,6 +57,7 @@ export interface AcademicStudy {
     fullText: string;
     downloadCount: number;
     viewCount: number;
+    citationCount: number;
     approvalStatus?: 'pending' | 'approved' | 'rejected';
     createdAt: Date;
     updatedAt: Date;

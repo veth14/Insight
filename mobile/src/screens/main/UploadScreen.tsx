@@ -16,14 +16,11 @@ import { auth } from '../../config/firebase';
 import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 
-const DEPARTMENTS = ['BSIT', 'BSCS', 'BSIS', 'BSEMC', 'BS CpE'];
+const DEPARTMENTS = ['BSIT'];
 const STUDY_TYPES = ['Capstone', 'Case Study', 'Dissertation', 'Project', 'Thesis'];
 const CATEGORIES  = [
     'Artificial Intelligence',
-    'Computer Engineering',
-    'Computer Science',
     'Data Science',
-    'Information Systems',
     'IoT',
     'Machine Learning',
     'Mobile Dev',

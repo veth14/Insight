@@ -24,6 +24,7 @@ export interface IAcademicStudy extends Document {
     fullText: string;
     downloadCount: number;
     viewCount: number;
+    citationCount: number;
     approvalStatus: ApprovalStatus;
     rejectionReason?: string;
     createdAt: Date;
@@ -110,6 +111,10 @@ const AcademicStudySchema: Schema = new Schema(
             default: 0,
         },
         viewCount: {
+            type: Number,
+            default: 0,
+        },
+        citationCount: {
             type: Number,
             default: 0,
         },

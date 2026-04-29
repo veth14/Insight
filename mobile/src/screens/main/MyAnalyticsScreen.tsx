@@ -36,10 +36,12 @@ const MyAnalyticsScreen: React.FC = () => {
         }, [fetchMyStudies])
     );
 
-    const totalViews = studies.reduce((acc, curr) => acc + curr.viewCount, 0);
-    const totalSaves = studies.reduce((acc, curr) => acc + (curr.downloadCount || 0), 0); // Using downloads as proxy for saves if needed
-    const totalCitations = studies.length * 15; // Placeholder
-    const uploadedCount = studies.length;
+    const approvedStudies = studies.filter(s => s.approvalStatus === 'approved');
+    const totalViews      = approvedStudies.reduce((acc, curr) => acc + (curr.viewCount || 0), 0);
+    const totalSaves      = approvedStudies.reduce((acc, curr) => acc + (curr.downloadCount || 0), 0);
+    const totalCitations  = approvedStudies.reduce((acc, curr) => acc + (curr.citationCount || 0), 0);
+    const uploadedCount   = approvedStudies.length;
+    const totalUploaded   = studies.length;
 
     const processChartData = () => {
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -55,7 +57,7 @@ const MyAnalyticsScreen: React.FC = () => {
         const viewsData = [0, 0, 0, 0, 0, 0];
         const savesData = [0, 0, 0, 0, 0, 0];
 
-        studies.forEach(study => {
+        approvedStudies.forEach(study => {
             if (!study.createdAt) return;
             const studyDate = new Date(study.createdAt);
             const monthDiff = (new Date().getFullYear() - studyDate.getFullYear()) * 12 + (new Date().getMonth() - studyDate.getMonth());
@@ -201,7 +203,7 @@ const MyAnalyticsScreen: React.FC = () => {
 
                 {/* My Projects */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>My Projects ({uploadedCount})</Text>
+                    <Text style={styles.sectionTitle}>My Projects ({totalUploaded})</Text>
                     <TouchableOpacity style={styles.periodBadge}>
                         <Text style={styles.periodText}>Last 12 Months</Text>
                     </TouchableOpacity>
@@ -241,7 +243,7 @@ const MyAnalyticsScreen: React.FC = () => {
                             <View style={styles.projectStat}>
                                 <Ionicons name="document-text-outline" size={12} color="#888" />
                                 <Text style={styles.projectStatLabel}>CITATIONS</Text>
-                                <Text style={styles.projectStatVal}>{Math.floor(Math.random() * 50)}</Text>
+                                <Text style={styles.projectStatVal}>{study.citationCount || 0}</Text>
                             </View>
                         </View>
                     </TouchableOpacity>

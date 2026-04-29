@@ -9,8 +9,35 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSecurity } from '../../contexts/SecurityContext';
+import { UserRole } from '../../types';
 import { scale, vs, ms } from '../../utils/responsive';
 import api from '../../services/api.service';
+
+const RowItem = ({
+    icon, label, subtitle, onPress, right,
+}: {
+    icon: string; label: string; subtitle?: string;
+    onPress?: () => void; right?: React.ReactNode;
+}) => (
+    <TouchableOpacity
+        style={styles.row}
+        onPress={onPress}
+        activeOpacity={onPress ? 0.7 : 1}
+    >
+        <View style={styles.rowIconBox}>
+            <Ionicons name={icon as any} size={18} color="#0E1F43" />
+        </View>
+        <View style={styles.rowBody}>
+            <Text style={styles.rowLabel}>{label}</Text>
+            {subtitle && <Text style={styles.rowSub}>{subtitle}</Text>}
+        </View>
+        {right ?? <Ionicons name="chevron-forward" size={16} color="#C0CDE8" />}
+    </TouchableOpacity>
+);
+
+const SectionLabel = ({ title }: { title: string }) => (
+    <Text style={styles.sectionLabel}>{title}</Text>
+);
 
 const AccountSettingsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -36,31 +63,9 @@ const AccountSettingsScreen: React.FC = () => {
         ? user.displayName.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
         : 'U';
 
-    const RowItem = ({
-        icon, label, subtitle, onPress, right,
-    }: {
-        icon: string; label: string; subtitle?: string;
-        onPress?: () => void; right?: React.ReactNode;
-    }) => (
-        <TouchableOpacity
-            style={styles.row}
-            onPress={onPress}
-            activeOpacity={onPress ? 0.7 : 1}
-        >
-            <View style={styles.rowIconBox}>
-                <Ionicons name={icon as any} size={18} color="#0E1F43" />
-            </View>
-            <View style={styles.rowBody}>
-                <Text style={styles.rowLabel}>{label}</Text>
-                {subtitle && <Text style={styles.rowSub}>{subtitle}</Text>}
-            </View>
-            {right ?? <Ionicons name="chevron-forward" size={16} color="#C0CDE8" />}
-        </TouchableOpacity>
-    );
+    const canSeeAnalytics = user?.role === UserRole.STUDENT_4TH || user?.role === UserRole.ADMIN;
 
-    const SectionLabel = ({ title }: { title: string }) => (
-        <Text style={styles.sectionLabel}>{title}</Text>
-    );
+// ── Render ───────────────────────────────────────────────────────────────
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -94,17 +99,23 @@ const AccountSettingsScreen: React.FC = () => {
                 {/* Account */}
                 <View style={styles.card}>
                     <RowItem icon="person-circle-outline" label="My Account" subtitle="Make changes to your account" onPress={() => navigation.navigate('MyAccount')} />
-                    <View style={styles.divider} />
-                    <RowItem icon="bar-chart-outline" label="My Analytics" subtitle="View stats on your uploaded files" onPress={() => navigation.navigate('MyAnalytics')} />
+                    
+                    {canSeeAnalytics && (
+                        <>
+                            <View style={styles.divider} />
+                            <RowItem icon="bar-chart-outline" label="My Analytics" subtitle="View stats on your uploaded files" onPress={() => navigation.navigate('MyAnalytics')} />
+                        </>
+                    )}
+
                     <View style={styles.divider} />
                     <RowItem icon="shield-checkmark-outline" label="Change password" subtitle="Further secure your account for safety" onPress={() => navigation.navigate('ChangePassword')} />
-                      <View style={styles.divider} />
-                      <RowItem 
-                          icon="lock-closed-outline" 
-                          label="App Lock (PIN & Biometrics)" 
-                          subtitle={appLockEnabled ? "Enabled (Tap to change/remove)" : "Add a PIN or Fingerprint to unlock app"} 
-                          onPress={() => navigation.navigate('AppLockSetup')} 
-                      />
+                    <View style={styles.divider} />
+                    <RowItem 
+                        icon="lock-closed-outline" 
+                        label="App Lock (PIN & Biometrics)" 
+                        subtitle={appLockEnabled ? "Enabled (Tap to change/remove)" : "Add a PIN or Fingerprint to unlock app"} 
+                        onPress={() => navigation.navigate('AppLockSetup')} 
+                    />
                 </View>
 
                 {/* Library */}

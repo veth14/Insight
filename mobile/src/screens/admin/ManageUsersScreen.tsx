@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
     TextInput, StatusBar, ActivityIndicator, RefreshControl,
@@ -77,6 +77,48 @@ const YEAR_OPTIONS = [
     { label: '3rd Year', value: 3 },
     { label: '4th Year', value: 4 },
 ];
+
+/* -- User Card ---- */
+const UserCard: React.FC<{ 
+    item: AdminUser; 
+    menuBtnRefs: React.MutableRefObject<Record<string, any>>;
+    openMenu: (user: AdminUser, ref: any) => void;
+}> = ({ item, menuBtnRefs, openMenu }) => {
+    const btnRef = useRef<any>(null);
+    menuBtnRefs.current[item.uid] = btnRef;
+    const yearLine = [yearLabel(item.yearLevel), item.program].filter(Boolean).join(' \u2022 ');
+
+    return (
+        <View style={styles.card}>
+            <View style={[styles.avatar, { backgroundColor: getColor(item.displayName) }]}>
+                <Text style={styles.avatarText}>{getInitials(item.displayName)}</Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+                <Text style={styles.userName}>{item.displayName}</Text>
+                <Text style={styles.userEmail} numberOfLines={1}>{item.email}</Text>
+                {!!yearLine && <Text style={styles.userMeta}>{yearLine}</Text>}
+                <View style={styles.cardFooter}>
+                    <View style={[styles.statusDot, { backgroundColor: item.status === 'active' ? '#22C55E' : '#F59E0B' }]} />
+                    <Text style={styles.statusText}>
+                        {item.status === 'active' ? 'Active' : 'Suspended'}
+                    </Text>
+                    <Text style={styles.lastActive}> \u00b7 {timeAgo(item.lastActiveAt)}</Text>
+                </View>
+            </View>
+
+            {/* Three-dot menu button */}
+            <TouchableOpacity
+                ref={btnRef}
+                style={styles.menuBtn}
+                onPress={() => openMenu(item, btnRef)}
+                activeOpacity={0.7}
+            >
+                <Ionicons name="ellipsis-vertical" size={ms(18)} color="#9AADCA" />
+            </TouchableOpacity>
+        </View>
+    );
+};
 
 /* -- Screen -------------------------------------------------------------- */
 
@@ -177,44 +219,6 @@ const ManageUsersScreen: React.FC = () => {
         finally { setEditLoading(false); }
     };
 
-    /* -- User Card ---- */
-    const UserCard: React.FC<{ item: AdminUser }> = ({ item }) => {
-        const btnRef = useRef<any>(null);
-        menuBtnRefs.current[item.uid] = btnRef;
-        const yearLine = [yearLabel(item.yearLevel), item.program].filter(Boolean).join(' \u2022 ');
-
-        return (
-            <View style={styles.card}>
-                <View style={[styles.avatar, { backgroundColor: getColor(item.displayName) }]}>
-                    <Text style={styles.avatarText}>{getInitials(item.displayName)}</Text>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.userName}>{item.displayName}</Text>
-                    <Text style={styles.userEmail} numberOfLines={1}>{item.email}</Text>
-                    {!!yearLine && <Text style={styles.userMeta}>{yearLine}</Text>}
-                    <View style={styles.cardFooter}>
-                        <View style={[styles.statusDot, { backgroundColor: item.status === 'active' ? '#22C55E' : '#F59E0B' }]} />
-                        <Text style={styles.statusText}>
-                            {item.status === 'active' ? 'Active' : 'Suspended'}
-                        </Text>
-                        <Text style={styles.lastActive}> \u00b7 {timeAgo(item.lastActiveAt)}</Text>
-                    </View>
-                </View>
-
-                {/* Three-dot menu button */}
-                <TouchableOpacity
-                    ref={btnRef}
-                    style={styles.menuBtn}
-                    onPress={() => openMenu(item, btnRef)}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="ellipsis-vertical" size={ms(18)} color="#9AADCA" />
-                </TouchableOpacity>
-            </View>
-        );
-    };
-
     const TABS: { key: FilterTab; label: string }[] = [
         { key: 'all',       label: 'All' },
         { key: 'active',    label: 'Active' },
@@ -271,7 +275,7 @@ const ManageUsersScreen: React.FC = () => {
                 <FlatList
                     data={users}
                     keyExtractor={item => item.uid}
-                    renderItem={({ item }) => <UserCard item={item} />}
+                    renderItem={({ item }) => <UserCard item={item} menuBtnRefs={menuBtnRefs} openMenu={openMenu} />}
                     contentContainerStyle={styles.list}
                     showsVerticalScrollIndicator={false}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0E1F43" />}

@@ -14,8 +14,6 @@ import { scale, vs, ms } from '../../utils/responsive';
 
 const PROGRAM_LABELS: Record<string, string> = {
     BSIT: 'Bachelor of Science in Information Technology',
-    BSCS: 'Bachelor of Science in Computer Science',
-    BSIS: 'Bachelor of Science in Information Systems',
 };
 
 const YEAR_LABELS: Record<number, string> = {
@@ -25,6 +23,37 @@ const YEAR_LABELS: Record<number, string> = {
     4: '4th Year',
     5: '5th Year',
 };
+
+// ── Field helpers ────────────────────────────────────────────────────────
+
+const EditableField = ({
+    label, value, onChangeText, keyboardType = 'default', left,
+}: {
+    label: string; value: string; onChangeText: (t: string) => void;
+    keyboardType?: any; left?: React.ReactNode;
+}) => (
+    <View style={styles.inputBox}>
+        {left}
+        <TextInput
+            style={[styles.input, !!left && { paddingLeft: 6 }]}
+            value={value}
+            onChangeText={onChangeText}
+            keyboardType={keyboardType}
+            placeholderTextColor="#9AADCA"
+            placeholder={label}
+        />
+    </View>
+);
+
+const ReadOnlyField = ({ value, left }: { value: string; left?: React.ReactNode }) => (
+    <View style={styles.inputBox}>
+        {left}
+        <View style={styles.readOnlyInner}>
+            <Text style={styles.readOnlyText} numberOfLines={2}>{value}</Text>
+            <Ionicons name="lock-closed-outline" size={14} color="#C8D3E6" style={{ marginLeft: 6 }} />
+        </View>
+    </View>
+);
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
@@ -61,37 +90,6 @@ const MyAccountScreen: React.FC = () => {
             setSaving(false);
         }
     };
-
-    // ── Field helpers ────────────────────────────────────────────────────────
-
-    const EditableField = ({
-        label, value, onChangeText, keyboardType = 'default', left,
-    }: {
-        label: string; value: string; onChangeText: (t: string) => void;
-        keyboardType?: any; left?: React.ReactNode;
-    }) => (
-        <View style={styles.inputBox}>
-            {left}
-            <TextInput
-                style={[styles.input, !!left && { paddingLeft: 6 }]}
-                value={value}
-                onChangeText={onChangeText}
-                keyboardType={keyboardType}
-                placeholderTextColor="#9AADCA"
-                placeholder={label}
-            />
-        </View>
-    );
-
-    const ReadOnlyField = ({ value, left }: { value: string; left?: React.ReactNode }) => (
-        <View style={styles.inputBox}>
-            {left}
-            <View style={styles.readOnlyInner}>
-                <Text style={styles.readOnlyText} numberOfLines={2}>{value}</Text>
-                <Ionicons name="lock-closed-outline" size={14} color="#C8D3E6" style={{ marginLeft: 6 }} />
-            </View>
-        </View>
-    );
 
     // ── Render ───────────────────────────────────────────────────────────────
 
