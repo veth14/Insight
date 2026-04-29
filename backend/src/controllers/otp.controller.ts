@@ -41,6 +41,18 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
             }
         }
 
+        // Check if user already verified OTP recently (within 7 days)
+        const User = (await import('../models/User')).default;
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (user && user.otpVerifiedUntil && user.otpVerifiedUntil > new Date()) {
+            console.log(`[OTP] Skipping OTP for ${email} (verified until ${user.otpVerifiedUntil})`);
+            res.status(200).json({ 
+                message: 'OTP verification skipped (recently verified)', 
+                skipped: true 
+            });
+            return;
+        }
+
         // Delete any previous OTPs for this email to keep collection clean
         await OTP.deleteMany({ email: email.toLowerCase() });
 
@@ -166,6 +178,14 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
 
         // ✅ OTP is correct — delete the record
         await OTP.deleteOne({ _id: record._id });
+
+        // Update user's trusted status for 7 days
+        const User = (await import('../models/User')).default;
+        const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await User.updateOne(
+            { email: email.toLowerCase() },
+            { $set: { otpVerifiedUntil: sevenDaysFromNow } }
+        );
 
         res.status(200).json({ message: 'OTP verified successfully', verified: true });
     } catch (error) {

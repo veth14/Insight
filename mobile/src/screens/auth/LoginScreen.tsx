@@ -83,7 +83,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
         setLoading(true);
         try {
-            await login(email, password);
+            const needs2FA = await login(email, password);
             
             // Save or remove email based on rememberMe toggle
             if (rememberMe) {
@@ -92,8 +92,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 await AsyncStorage.removeItem('saved_email');
             }
 
-            // login() sends OTP and sets twoFactorPending — navigate to verification screen
-            navigation.navigate('TwoFactor', { email });
+            // Only navigate to TwoFactor if it's actually required
+            if (needs2FA) {
+                navigation.navigate('TwoFactor', { email });
+            }
         } catch (err: any) {
             showAlert('Login Failed', err.response?.data?.message || 'Invalid credentials or network error.', undefined, 'close-circle', '#EF4444');
         } finally {

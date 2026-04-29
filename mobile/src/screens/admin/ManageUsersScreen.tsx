@@ -219,6 +219,11 @@ const ManageUsersScreen: React.FC = () => {
         finally { setEditLoading(false); }
     };
 
+    const handlePhoneChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '').slice(0, 11);
+        setEditForm(f => ({ ...f, phoneNumber: cleaned }));
+    };
+
     const TABS: { key: FilterTab; label: string }[] = [
         { key: 'all',       label: 'All' },
         { key: 'active',    label: 'Active' },
@@ -369,10 +374,11 @@ const ManageUsersScreen: React.FC = () => {
                             <TextInput
                                 style={styles.fieldInput}
                                 value={editForm.phoneNumber}
-                                onChangeText={v => setEditForm(f => ({ ...f, phoneNumber: v }))}
+                                onChangeText={handlePhoneChange}
                                 placeholder="Phone number"
                                 placeholderTextColor="#C0CDE8"
                                 keyboardType="phone-pad"
+                                maxLength={11}
                             />
 
                             {/* Student ID (disabled) */}

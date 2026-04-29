@@ -22,7 +22,7 @@ interface AuthContextType {
     loading: boolean;
     twoFactorPending: boolean;
     pendingOTPEmail: string | null;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<boolean>;
     verifyOTP: (email: string, otp: string) => Promise<void>;
     resendOTP: (email: string) => Promise<void>;
     sendResetOTP: (email: string) => Promise<void>;
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
      * Login: Firebase sign-in → send OTP → set 2FA pending
      * Does NOT set user state — that happens after OTP verification.
      */
-    const login = async (email: string, password: string) => {
+    const login = async (email: string, password: string): Promise<boolean> => {
         // Set ref BEFORE Firebase call to block onAuthStateChanged from auto-completing login
         twoFactorPendingRef.current = true;
         setTwoFactorPending(true);
@@ -144,11 +144,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Firebase login succeeded — get the token and send OTP
             const token = await auth.currentUser?.getIdToken();
 
-            await api.post(
+            const response = await api.post(
                 '/auth/send-otp',
                 { email },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+
+            if (response.data.skipped) {
+                // OTP was skipped — complete login immediately
+                twoFactorPendingRef.current = false;
+                setTwoFactorPending(false);
+                setPendingOTPEmail(null);
+
+                const profileRes = await api.get('/auth/me', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setUser(profileRes.data.user);
+                return false; // 2FA NOT required
+            }
+
+            return true; // 2FA required
         } catch (error: any) {
             // Log full error details for debugging
             console.error('[Login Error]', error.response?.data || error.message);

@@ -24,6 +24,7 @@ export interface IUser extends Document {
         literatureSubmissions?: boolean;
     };
     lastActiveAt?: Date;
+    otpVerifiedUntil?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -107,6 +108,10 @@ const UserSchema: Schema = new Schema(
         },
         lastActiveAt: {
             type: Date,
+        },
+        otpVerifiedUntil: {
+            type: Date,
+            default: null,
         },
     },
     {

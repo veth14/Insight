@@ -27,10 +27,10 @@ const YEAR_LABELS: Record<number, string> = {
 // ── Field helpers ────────────────────────────────────────────────────────
 
 const EditableField = ({
-    label, value, onChangeText, keyboardType = 'default', left,
+    label, value, onChangeText, keyboardType = 'default', left, maxLength,
 }: {
     label: string; value: string; onChangeText: (t: string) => void;
-    keyboardType?: any; left?: React.ReactNode;
+    keyboardType?: any; left?: React.ReactNode; maxLength?: number;
 }) => (
     <View style={styles.inputBox}>
         {left}
@@ -41,6 +41,7 @@ const EditableField = ({
             keyboardType={keyboardType}
             placeholderTextColor="#9AADCA"
             placeholder={label}
+            maxLength={maxLength}
         />
     </View>
 );
@@ -67,6 +68,13 @@ const MyAccountScreen: React.FC = () => {
 
     // Editable fields
     const [phone, setPhone] = useState(user?.phoneNumber ?? '');
+
+    const handlePhoneChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        if (cleaned.length <= 11) {
+            setPhone(cleaned);
+        }
+    };
 
     // Read-only values derived from user
     const studentNo = user?.studentNumber ?? '—';
@@ -126,8 +134,9 @@ const MyAccountScreen: React.FC = () => {
                     <EditableField
                         label="Phone number"
                         value={phone}
-                        onChangeText={setPhone}
+                        onChangeText={handlePhoneChange}
                         keyboardType="phone-pad"
+                        maxLength={11}
                         left={
                             <View style={styles.flagBox}>
                                 <Text style={styles.flagEmoji}>🇵🇭</Text>
