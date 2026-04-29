@@ -150,7 +150,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
+            console.log(`[AuthContext] OTP check response:`, response.data);
+
             if (response.data.skipped) {
+                console.log('[AuthContext] OTP skipped by server, completing login...');
                 // OTP was skipped — complete login immediately
                 twoFactorPendingRef.current = false;
                 setTwoFactorPending(false);
@@ -159,12 +162,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const profileRes = await api.get('/auth/me', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+                console.log('[AuthContext] Profile fetched after skip:', profileRes.data.user.email);
                 setUser(profileRes.data.user);
                 return false; // 2FA NOT required
             }
 
+            console.log('[AuthContext] 2FA required by server');
             return true; // 2FA required
         } catch (error: any) {
+            console.error('[AuthContext] Login error details:', error.response?.data || error.message);
             // Log full error details for debugging
             console.error('[Login Error]', error.response?.data || error.message);
             
