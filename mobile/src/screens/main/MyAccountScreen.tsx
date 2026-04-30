@@ -84,11 +84,23 @@ const MyAccountScreen: React.FC = () => {
     const [saving, setSaving] = useState(false);
 
     const handleUpdate = async () => {
+        const trimmedPhone = phone.trim();
+        
+        if (!trimmedPhone) {
+            Alert.alert('Validation Error', 'Please enter a phone number.');
+            return;
+        }
+
+        if (trimmedPhone.length !== 11 || !trimmedPhone.startsWith('09')) {
+            Alert.alert('Invalid Format', 'Please enter a valid 11-digit mobile number (e.g., 09xxxxxxxxx).');
+            return;
+        }
+
         try {
             setSaving(true);
             await api.put('/auth/me', {
                 displayName: user?.displayName,
-                phoneNumber: phone.trim(),
+                phoneNumber: trimmedPhone,
             });
             await refreshUser();
             Alert.alert('Success', 'Phone number updated successfully.');
