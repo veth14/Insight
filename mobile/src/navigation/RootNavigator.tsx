@@ -6,14 +6,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useSecurity } from '../contexts/SecurityContext'; // Added useSecurity
+import { useOffline } from '../contexts/OfflineContext';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
 import AdminStack from './AdminStack';
 import AppLockScreen from '../screens/auth/AppLockScreen'; // Added AppLockScreen
+import DownloadsScreen from '../screens/main/DownloadsScreen';
 import { UserRole } from '../types';
 import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const OfflineStack = () => (
+    <Stack.Navigator>
+        <Stack.Screen name="Downloads" component={DownloadsScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
+);
 
 /**
  * RootNavigator Component
@@ -22,6 +30,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const RootNavigator: React.FC = () => {
     const { user, loading } = useAuth();
     const { isLocked, isLoadingSecurity } = useSecurity(); // Get isLocked state
+    const { isOffline } = useOffline();
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -52,7 +61,9 @@ const RootNavigator: React.FC = () => {
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {user ? (
+                {isOffline && !user ? (
+                    <Stack.Screen name="Offline" component={OfflineStack} />
+                ) : user ? (
                     user.role === UserRole.ADMIN || user.role === UserRole.FACULTY ? (
                         // Admin/Faculty — show admin dashboard
                         <Stack.Screen name="Admin" component={AdminStack} />

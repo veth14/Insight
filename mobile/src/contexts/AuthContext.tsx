@@ -4,6 +4,7 @@ import { User as FirebaseUser, signInAnonymously } from 'firebase/auth';
 import { User, UserRole } from '../types';
 import authService from '../services/auth.service';
 import api from '../services/api.service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 
 // Public axios instance (no auth token)
@@ -13,6 +14,8 @@ const publicApi = axios.create({
     headers: { 'Content-Type': 'application/json' },
 });
 
+const USER_STORAGE_KEY = '@insight_user_data';
+
 /**
  * Auth Context Type
  */
@@ -20,6 +23,7 @@ interface AuthContextType {
     user: User | null;
     firebaseUser: FirebaseUser | null;
     loading: boolean;
+    isOffline: boolean;
     twoFactorPending: boolean;
     pendingOTPEmail: string | null;
     login: (email: string, password: string) => Promise<boolean>;
@@ -46,6 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isOffline, setIsOffline] = useState(false);
     const [twoFactorPending, setTwoFactorPending] = useState(false);
     const [pendingOTPEmail, setPendingOTPEmail] = useState<string | null>(null);
 
@@ -63,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (fbUser) {
                 // Handle Guest Login explicitly
                 if (fbUser.isAnonymous) {
-                    setUser({
+                    const guestUser: User = {
                         uid: fbUser.uid,
                         email: 'guest@local.insight',
                         studentNumber: 'N/A',
@@ -72,7 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         role: UserRole.GUEST,
                         createdAt: new Date(),
                         updatedAt: new Date(),
-                    });
+                    };
+                    setUser(guestUser);
                     setLoading(false);
                     return;
                 }
@@ -91,11 +97,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             Authorization: `Bearer ${idToken}`
                         }
                     });
-                    setUser(response.data.user);
+                    
+                    const userData = response.data.user;
+                    setUser(userData);
+                    setIsOffline(false);
+                    
+                    // Cache user data for offline access
+                    await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+                    
                 } catch (error: any) {
-                    // Handle 404 Not Found (User exists in Firebase but not Backend)
-                    if (error.response && error.response.status === 404) {
-                        // Check if user was just created (Race condition handling)
+                    // Check if error is network related (offline)
+                    const isNetworkError = !error.response || error.message === 'Network Error' || error.code === 'ECONNABORTED';
+                    
+                    if (isNetworkError) {
+                        setIsOffline(true);
+                        console.log('[AuthContext] Network error, attempting to load cached user data...');
+                        
+                        // Try to load cached user
+                        const cachedUser = await AsyncStorage.getItem(USER_STORAGE_KEY);
+                        if (cachedUser) {
+                            try {
+                                const parsedUser = JSON.parse(cachedUser);
+                                // Verify it's the same user as the Firebase one
+                                if (parsedUser.uid === fbUser.uid) {
+                                    console.log('[AuthContext] Restored user from cache for offline access');
+                                    setUser(parsedUser);
+                                } else {
+                                    setUser(null);
+                                }
+                            } catch (e) {
+                                setUser(null);
+                            }
+                        } else {
+                            setUser(null);
+                        }
+                    } else if (error.response && error.response.status === 404) {
+                        // Handle 404 Not Found (User exists in Firebase but not Backend)
                         const creationTime = fbUser.metadata.creationTime 
                             ? new Date(fbUser.metadata.creationTime).getTime() 
                             : 0;
@@ -111,14 +148,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             );
                             authService.logout();
                         }
+                        setUser(null);
                     } else {
                         console.error('Error fetching user data:', error);
+                        setUser(null);
                     }
-                    setUser(null);
                 }
             } else {
                 // User is signed out
                 setUser(null);
+                setIsOffline(false);
+                // We keep the cache so they can log back in offline? 
+                // No, for security if they logout we should probably clear it.
+                await AsyncStorage.removeItem(USER_STORAGE_KEY);
             }
 
             setLoading(false);
@@ -163,7 +205,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 console.log('[AuthContext] Profile fetched after skip:', profileRes.data.user.email);
-                setUser(profileRes.data.user);
+                const userData = profileRes.data.user;
+                setUser(userData);
+                await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
                 return false; // 2FA NOT required
             }
 
@@ -215,7 +259,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${token}` }
         });
-        setUser(response.data.user);
+        const userData = response.data.user;
+        setUser(userData);
+        await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
     };
 
     /**
@@ -252,8 +298,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ) => {
         // Do not set global loading here to prevent navigation reset
         try {
-            const user = await authService.register(email, password, displayName, yearLevel, program, studentNumber, phoneNumber, registrationFormUrl);
-            setUser(user);
+            const registeredUser = await authService.register(email, password, displayName, yearLevel, program, studentNumber, phoneNumber, registrationFormUrl);
+            setUser(registeredUser);
+            await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(registeredUser));
         } catch (error) {
             throw error;
         }
@@ -271,8 +318,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${idToken}` },
         });
-        setUser(response.data.user);
-        return response.data.user;
+        const userData = response.data.user;
+        setUser(userData);
+        await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+        return userData;
     };
 
     /**
@@ -297,9 +346,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await authService.logout();
             setUser(null);
             setFirebaseUser(null);
+            setIsOffline(false);
             twoFactorPendingRef.current = false;
             setTwoFactorPending(false);
             setPendingOTPEmail(null);
+            await AsyncStorage.removeItem(USER_STORAGE_KEY);
         } catch (error) {
             throw error;
         } finally {
@@ -308,7 +359,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, firebaseUser, loading, twoFactorPending, pendingOTPEmail, login, verifyOTP, resendOTP, sendResetOTP, verifyResetOTP, resetPassword, register, continueAsGuest, logout, refreshUser }}>
+        <AuthContext.Provider value={{ user, firebaseUser, loading, isOffline, twoFactorPending, pendingOTPEmail, login, verifyOTP, resendOTP, sendResetOTP, verifyResetOTP, resetPassword, register, continueAsGuest, logout, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

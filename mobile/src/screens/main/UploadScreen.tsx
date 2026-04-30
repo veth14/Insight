@@ -216,6 +216,12 @@ const UploadScreen: React.FC = () => {
             });
             if (result.canceled || !result.assets || result.assets.length === 0) return;
             const asset = result.assets[0];
+
+            if (asset.mimeType !== 'application/pdf' && !asset.name.toLowerCase().endsWith('.pdf')) {
+                showAlert('Invalid File', 'Only PDF files are allowed.', undefined, 'alert-circle', '#EF4444');
+                return;
+            }
+
             setPickedFile({
                 uri:      asset.uri,
                 name:     asset.name,

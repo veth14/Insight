@@ -11,6 +11,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../../types';
 import { scale, vs, ms, wp } from '../../utils/responsive';
 import api from '../../services/api.service';
+import { useOffline } from '../../contexts/OfflineContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const DASHBOARD_CACHE_KEY = '@insight_dashboard_cache';
 
 // Types
 interface StudyCard {
@@ -55,6 +59,7 @@ function fmtNum(n?: number): string {
 const DashboardScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<HomeStackParamList>>();
 
+    const { isOffline } = useOffline();
     const [data, setData]             = useState<DashboardData | null>(null);
     const [loading, setLoading]       = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -64,8 +69,15 @@ const DashboardScreen: React.FC = () => {
         try {
             const res = await api.get('/studies/dashboard');
             setData(res.data);
+            // Cache data for offline use
+            await AsyncStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(res.data));
         } catch (err) {
             console.error('Dashboard fetch error:', err);
+            // If offline or fetch fails, try loading from cache
+            const cached = await AsyncStorage.getItem(DASHBOARD_CACHE_KEY);
+            if (cached) {
+                setData(JSON.parse(cached));
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -124,6 +136,13 @@ const DashboardScreen: React.FC = () => {
                     />
                 }
             >
+                {/* Offline Banner */}
+                {isOffline && (
+                    <View style={styles.offlineBanner}>
+                        <Ionicons name="cloud-offline-outline" size={16} color="#fff" />
+                        <Text style={styles.offlineBannerText}>You're offline. Access your downloads below.</Text>
+                    </View>
+                )}
 
                 {/* Stat Cards */}
                 <View style={styles.statsRow}>
@@ -263,6 +282,26 @@ const DashboardScreen: React.FC = () => {
                     </>
                 )}
 
+                {/* Quick Access Downloads */}
+                {isOffline && (
+                    <TouchableOpacity 
+                        style={[styles.downloadsBtn, styles.downloadsBtnOffline]} 
+                        activeOpacity={0.8}
+                        onPress={() => navigation.navigate('Downloads')}
+                    >
+                        <View style={styles.downloadsBtnContent}>
+                            <View style={styles.downloadsIconCircle}>
+                                <Ionicons name="download" size={20} color="#fff" />
+                            </View>
+                            <View>
+                                <Text style={[styles.downloadsBtnTitle, { color: '#fff' }]}>My Downloads</Text>
+                                <Text style={[styles.downloadsBtnSub, { color: 'rgba(255,255,255,0.7)' }]}>Access saved papers offline</Text>
+                            </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color="#fff" />
+                    </TouchableOpacity>
+                )}
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -397,6 +436,66 @@ const styles = StyleSheet.create({
     },
     trendBody: { flex: 1, padding: scale(12), justifyContent: 'center' },
     trendTitle: { fontSize: ms(13), fontWeight: '600', color: '#1A2744', lineHeight: vs(18) },
+
+    // Offline Banner
+    offlineBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#E53E3E',
+        paddingVertical: vs(8),
+        gap: scale(8),
+    },
+    offlineBannerText: {
+        color: '#fff',
+        fontSize: ms(12),
+        fontWeight: '600',
+    },
+
+    // Downloads Button
+    downloadsBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        marginHorizontal: scale(16),
+        marginTop: vs(16),
+        padding: scale(16),
+        borderRadius: ms(16),
+        borderWidth: 1,
+        borderColor: '#F0F2F8',
+        shadowColor: '#0E1F43',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    downloadsBtnOffline: {
+        backgroundColor: '#0E1F43',
+        borderColor: '#0E1F43',
+    },
+    downloadsBtnContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: scale(12),
+    },
+    downloadsIconCircle: {
+        width: scale(40),
+        height: vs(40),
+        borderRadius: ms(20),
+        backgroundColor: '#E97C3A',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    downloadsBtnTitle: {
+        fontSize: ms(15),
+        fontWeight: '700',
+        color: '#0E1F43',
+    },
+    downloadsBtnSub: {
+        fontSize: ms(12),
+        color: '#8A97B0',
+    },
 });
 
 export default DashboardScreen;

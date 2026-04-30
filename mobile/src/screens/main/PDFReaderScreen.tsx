@@ -149,7 +149,7 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const PDF_URL='${url}';
     const START_PAGE=${startPage};
-  const DPR=Math.min(window.devicePixelRatio||1,3);
+  const DPR=Math.min(window.devicePixelRatio||1, 1.5); // Reduced from 3 to 1.5 to prevent Out-Of-Memory (blank pages)
   const GUTTER=20;
   const CSS_WIDTH=window.innerWidth-GUTTER;
   const splash=document.getElementById('splash');
@@ -207,7 +207,13 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
       },400);
     });
   }
-  const task=pdfjsLib.getDocument({url:PDF_URL,withCredentials:false});
+  const task=pdfjsLib.getDocument({
+    url:PDF_URL,
+    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+    cMapPacked: true,
+    standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
+    withCredentials:false
+  });
   task.onProgress=({loaded,total})=>{if(total>0)splashBar.style.width=Math.round((loaded/total)*90)+'%'};
   task.promise.then(buildPages).catch(err=>{
     splash.classList.add('hide');

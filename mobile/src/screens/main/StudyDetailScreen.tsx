@@ -50,12 +50,13 @@ const Section: React.FC<SectionProps> = ({ icon, title, children, defaultOpen = 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DOWNLOADS_KEY = '@insight_downloads';
+const STUDY_CACHE_PREFIX = '@insight_study_cache_';
 
 const StudyDetailScreen: React.FC = () => {
     const navigation = useNavigation<Nav>();
     const route      = useRoute<Route>();
     const { studyId } = route.params;
-    const { user, logout } = useAuth();
+    const { user, logout, isOffline } = useAuth();
 
     usePreventScreenCapture();
 
@@ -66,6 +67,8 @@ const StudyDetailScreen: React.FC = () => {
     const [saved, setSaved]       = useState(false);
     const [saving, setSaving]     = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [isLocal, setIsLocal]         = useState(false);
+    const [localPath, setLocalPath]     = useState<string | null>(null);
     
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState<{
@@ -84,16 +87,52 @@ const StudyDetailScreen: React.FC = () => {
     const fetchStudy = useCallback(async () => {
         setLoading(true);
         try {
+            // Check if we have it locally first (for offline/speed)
+            const rawDownloads = await AsyncStorage.getItem(DOWNLOADS_KEY);
+            const downloads = rawDownloads ? JSON.parse(rawDownloads) : [];
+            const localEntry = downloads.find((d: any) => d.id === studyId);
+            
+            if (localEntry && localEntry.localUri) {
+                setIsLocal(true);
+                setLocalPath(localEntry.localUri);
+            }
+
             const res = await api.get(`/studies/${studyId}`);
             setStudy(res.data);
             setSaved(!!res.data.isBookmarked);
+            
+            // Cache it
+            await AsyncStorage.setItem(`${STUDY_CACHE_PREFIX}${studyId}`, JSON.stringify(res.data));
         } catch (err: any) {
-            showAlert('Error', 'Failed to load study details.', undefined, 'alert-circle', '#EF4444');
-            // We can delay goBack or just let user tap ok, but for now just showing the error
+            console.log('[StudyDetail] Fetch error:', err.message);
+            
+            // Try loading from cache
+            const cached = await AsyncStorage.getItem(`${STUDY_CACHE_PREFIX}${studyId}`);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                setStudy(parsed);
+                setSaved(!!parsed.isBookmarked);
+            } else if (isLocal) {
+                // We have the file but no metadata cache? 
+                // Create a minimal study object from the download entry
+                const rawDownloads = await AsyncStorage.getItem(DOWNLOADS_KEY);
+                const downloads = rawDownloads ? JSON.parse(rawDownloads) : [];
+                const localEntry = downloads.find((d: any) => d.id === studyId);
+                if (localEntry) {
+                    setStudy({
+                        _id: studyId,
+                        title: localEntry.title,
+                        fileUrl: localEntry.fileUrl,
+                        abstract: 'Offline mode: Metadata not cached. You can still read the downloaded document.',
+                    });
+                }
+            } else {
+                showAlert('Offline', 'This study is not available offline. Please connect to the internet.', undefined, 'cloud-offline', '#EF4444');
+            }
         } finally {
             setLoading(false);
         }
-    }, [studyId]);
+    }, [studyId, isLocal]);
 
     useEffect(() => { fetchStudy(); }, [fetchStudy]);
 
@@ -155,6 +194,11 @@ const StudyDetailScreen: React.FC = () => {
                     localUri: fileUri, // Save the path for offline use
                 };
                 await AsyncStorage.setItem(DOWNLOADS_KEY, JSON.stringify([entry, ...current]));
+                
+                // Update local state immediately so UI changes
+                setIsLocal(true);
+                setLocalPath(fileUri);
+
                 showAlert(
                     'Downloaded',
                     'Study saved to your Downloads for offline reading.',
@@ -219,6 +263,16 @@ const StudyDetailScreen: React.FC = () => {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+                
+                {/* Offline Banner */}
+                {isOffline && (
+                    <View style={styles.offlineBanner}>
+                        <Ionicons name="cloud-offline-outline" size={16} color="#fff" />
+                        <Text style={styles.offlineBannerText}>
+                            {isLocal ? "Viewing downloaded version" : "You're offline"}
+                        </Text>
+                    </View>
+                )}
 
                 {/* Hero card */}
                 <View style={styles.heroCard}>
@@ -266,12 +320,19 @@ const StudyDetailScreen: React.FC = () => {
                                 <Text style={styles.actionBtnText}>{saved ? 'Saved' : 'Save'}</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.actionBtn} onPress={handleDownload} activeOpacity={0.8} disabled={downloading}>
+                            <TouchableOpacity 
+                                style={[styles.actionBtn, isLocal && { backgroundColor: 'rgba(255,255,255,0.1)' } ]} 
+                                onPress={handleDownload} 
+                                activeOpacity={0.8} 
+                                disabled={downloading || isLocal}
+                            >
                                 {downloading
                                     ? <ActivityIndicator size="small" color="#fff" />
-                                    : <Ionicons name="download-outline" size={15} color="#fff" />
+                                    : <Ionicons name={isLocal ? "checkmark-outline" : "download-outline"} size={15} color={isLocal ? "#10B981" : "#fff"} />
                                 }
-                                <Text style={styles.actionBtnText}>Download</Text>
+                                <Text style={[styles.actionBtnText, isLocal && { color: '#10B981' }]}>
+                                    {isLocal ? 'Downloaded' : 'Download'}
+                                </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -313,14 +374,19 @@ const StudyDetailScreen: React.FC = () => {
                         </View>
                     ) : (
                         /* Read PDF button */
-                        !!study.fileUrl && (
+                        (study.fileUrl || isLocal) && (
                             <TouchableOpacity
                                 style={styles.readBtn}
                                 activeOpacity={0.85}
-                                onPress={() => navigation.navigate('PDFReader', { studyId })}
+                                onPress={() => navigation.navigate('PDFReader', { 
+                                    studyId, 
+                                    offlineUrl: localPath || undefined 
+                                })}
                             >
                                 <Ionicons name="reader-outline" size={16} color="#0E1F43" />
-                                <Text style={styles.readBtnText}>Read Full Document</Text>
+                                <Text style={styles.readBtnText}>
+                                    {isLocal ? 'Read Downloaded PDF' : 'Read Full Document'}
+                                </Text>
                             </TouchableOpacity>
                         )
                     )}
@@ -540,6 +606,23 @@ const styles = StyleSheet.create({
         paddingHorizontal: scale(11), paddingVertical: vs(5),
     },
     toolChipText: { fontSize: ms(11), fontWeight: '600', color: '#3B4F70' },
+
+    // Offline Banner
+    offlineBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#E53E3E',
+        paddingVertical: vs(8),
+        borderRadius: ms(12),
+        marginBottom: vs(12),
+        gap: scale(8),
+    },
+    offlineBannerText: {
+        color: '#fff',
+        fontSize: ms(12),
+        fontWeight: '600',
+    },
 });
 
 export default StudyDetailScreen;
