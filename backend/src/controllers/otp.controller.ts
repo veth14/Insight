@@ -43,18 +43,24 @@ export const sendOTP = async (req: Request, res: Response): Promise<void> => {
 
         // Check if user already verified OTP recently (within 7 days)
         const User = (await import('../models/User')).default;
-        const user = await User.findOne({ email: email.toLowerCase() });
-        if (user && user.otpVerifiedUntil && user.otpVerifiedUntil > new Date()) {
-            console.log(`[OTP] Skipping OTP for ${email} (verified until ${user.otpVerifiedUntil})`);
-            res.status(200).json({ 
-                message: 'OTP verification skipped (recently verified)', 
-                skipped: true 
-            });
-            return;
+        const searchEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: searchEmail });
+        
+        console.log(`[OTP] Checking trust for ${searchEmail}. User found: ${!!user}`);
+        if (user) {
+            console.log(`[OTP] Trust expires: ${user.otpVerifiedUntil}`);
+            if (user.otpVerifiedUntil && user.otpVerifiedUntil > new Date()) {
+                console.log(`[OTP] Skipping OTP for ${searchEmail} (Trusted until ${user.otpVerifiedUntil})`);
+                res.status(200).json({ 
+                    message: 'OTP verification skipped (recently verified)', 
+                    skipped: true 
+                });
+                return;
+            }
         }
 
         // Delete any previous OTPs for this email to keep collection clean
-        await OTP.deleteMany({ email: email.toLowerCase() });
+        await OTP.deleteMany({ email: searchEmail });
 
         const otpCode = generateOTP();
         const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
@@ -181,11 +187,15 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
 
         // Update user's trusted status for 7 days
         const User = (await import('../models/User')).default;
+        const searchEmail = email.trim().toLowerCase();
         const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        await User.updateOne(
-            { email: email.toLowerCase() },
+        
+        console.log(`[OTP] Updating trust for ${searchEmail} until ${sevenDaysFromNow}`);
+        const updateResult = await User.updateOne(
+            { email: searchEmail },
             { $set: { otpVerifiedUntil: sevenDaysFromNow } }
         );
+        console.log(`[OTP] Update result: ${JSON.stringify(updateResult)}`);
 
         res.status(200).json({ message: 'OTP verified successfully', verified: true });
     } catch (error) {
