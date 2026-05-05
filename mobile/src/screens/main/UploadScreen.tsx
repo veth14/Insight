@@ -16,6 +16,8 @@ import { auth } from '../../config/firebase';
 import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 
+const PUBLIC_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://insight-production-77f2.up.railway.app/api';
+
 const DEPARTMENTS = ['BSIT'];
 const STUDY_TYPES = ['Capstone', 'Case Study', 'Dissertation', 'Project', 'Thesis'];
 const CATEGORIES  = [
@@ -131,7 +133,7 @@ const UploadScreen: React.FC = () => {
 
     /* ── Debug: Test connectivity to API and external site ───────────────── */
     const testConnectivity = async () => {
-        const apiUrl = `${process.env.EXPO_PUBLIC_API_URL}/studies/upload`;
+        const apiUrl = `${PUBLIC_API_BASE_URL}/studies/upload`;
         try {
             console.log('[Test] fetching api url (HEAD):', apiUrl);
             const r = await fetch(apiUrl, { method: 'GET' });
@@ -254,7 +256,7 @@ const UploadScreen: React.FC = () => {
             const idToken = await auth.currentUser?.getIdToken();
             if (!idToken) throw new Error('Not authenticated');
             // Upload PDF and image in parallel to server endpoints that accept a single file.
-            const apiBase = process.env.EXPO_PUBLIC_API_URL;
+            const apiBase = PUBLIC_API_BASE_URL;
 
             const uploadFileWithProgress = (uri: string, name: string, fieldName = 'file', onProgress?: (p:number)=>void) => new Promise<any>((resolve, reject) => {
                 const apiUrl = `${apiBase}/studies/upload-object`;

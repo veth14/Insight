@@ -8,8 +8,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 
 // Public axios instance (no auth token)
+const PUBLIC_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://insight-production-77f2.up.railway.app/api';
+
+console.log('[AuthContext] Public API URL:', PUBLIC_API_BASE_URL);
+
 const publicApi = axios.create({
-    baseURL: process.env.EXPO_PUBLIC_API_URL,
+    baseURL: PUBLIC_API_BASE_URL,
     timeout: 10000,
     headers: { 'Content-Type': 'application/json' },
 });

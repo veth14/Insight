@@ -9,6 +9,8 @@ import { auth } from '../config/firebase';
 import { User, UserRole } from '../types';
 import api from './api.service';
 
+const PUBLIC_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://insight-production-77f2.up.railway.app/api';
+
 /**
  * AuthService
  * Handles Firebase Authentication and syncs with backend
@@ -79,7 +81,7 @@ class AuthService {
                     } as any);
 
                     const fetchRes = await fetch(
-                        `${process.env.EXPO_PUBLIC_API_URL}/auth/register`,
+                        `${PUBLIC_API_BASE_URL}/auth/register`,
                         {
                             method: 'POST',
                             body: form as any,
