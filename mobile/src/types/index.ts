@@ -93,6 +93,7 @@ export type RootStackParamList = {
     Auth: undefined;
     Main: undefined;
     Admin: undefined;
+    Offline: undefined;
 };
 
 export type AuthStackParamList = {

@@ -16,11 +16,12 @@ import { UserRole } from '../types';
 import { COLORS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+const OfflineStackNavigator = createNativeStackNavigator<{ Downloads: undefined }>();
 
 const OfflineStack = () => (
-    <Stack.Navigator>
-        <Stack.Screen name="Downloads" component={DownloadsScreen} options={{ headerShown: false }} />
-    </Stack.Navigator>
+    <OfflineStackNavigator.Navigator>
+        <OfflineStackNavigator.Screen name="Downloads" component={DownloadsScreen} options={{ headerShown: false }} />
+    </OfflineStackNavigator.Navigator>
 );
 
 /**
