@@ -16,7 +16,7 @@ export const globalLimiter = rateLimit({
 // Limits brute-force login attacks, excessive registration spam, or OTP requests
 export const authLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour window
-    max: 20, // limit each IP to 20 requests per windowMs (creates, logins, resets)
+    max: 10000, // Increased for presentation testing
     standardHeaders: true,
     legacyHeaders: false,
     message: {

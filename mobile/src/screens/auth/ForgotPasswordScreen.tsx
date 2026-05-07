@@ -39,11 +39,14 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
             await sendResetOTP(trimmed);
             navigation.navigate('ForgotPasswordOTP', { email: trimmed });
         } catch (err: any) {
+            console.error('Forgot password click error:', err);
             const status = err.response?.status;
             if (status === 429) {
                 setError(err.response?.data?.message || 'Too many requests. Please wait before trying again.');
+            } else if (err.message === 'Network Error') {
+                setError('Network Error: Cannot reach the server. Please check your connection.');
             } else {
-                setError('Failed to send reset code. Please try again.');
+                setError(err.response?.data?.message || 'Failed to send reset code. Please try again.');
             }
         } finally {
             setLoading(false);
@@ -69,10 +72,10 @@ const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
                     <Text style={styles.title}>Forgot password</Text>
                     <Text style={styles.subtitle}>Please enter your email to reset the password</Text>
 
-                    <Text style={styles.label}>Email or phone number</Text>
+                    <Text style={styles.label}>Email Address</Text>
                     <TextInput
                         style={[styles.input, !!error && styles.inputError]}
-                        placeholder="Enter your email or phone number"
+                        placeholder="Enter your email address"
                         placeholderTextColor="#C0C8D8"
                         value={email}
                         onChangeText={t => { setEmail(t); setError(null); }}

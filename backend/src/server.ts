@@ -38,16 +38,8 @@ app.use(express.urlencoded({ limit: '5mb', extended: true })); // Parse URL-enco
 app.use(mongoSanitize()); // Prevent NoSQL query injection
 app.use(xssSanitizer); // Prevent XSS script injection
 
-// CORS configuration
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL || 'https://insight.qcu.ph'] // Replace with actual production domain
-    : true; // Allow all in dev
-
-// Mobile clients (like React Native/Expo) often send requests without an Origin header.
-// To support both web and mobile on production, you can allow any origin for now 
-// or implement a custom origin validation that permits requests without origins.
 app.use(cors({
-    origin: true, // Allows all origins temporarily to fix Mobile App CORS block
+    origin: '*', // Allow all origins for mobile compatibility
     credentials: true,
 }));
 

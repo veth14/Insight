@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../config/firebase';
 
 // Public axios instance (no auth token)
-const PUBLIC_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://insight-production-77f2.up.railway.app/api';
+const PUBLIC_API_BASE_URL = 'https://insight-production-77f2.up.railway.app/api';
 
 console.log('[AuthContext] Public API URL:', PUBLIC_API_BASE_URL);
 
@@ -283,7 +283,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // ── Forgot Password ───────────────────────────────────────────────────────
     const sendResetOTP = async (email: string): Promise<void> => {
-        await publicApi.post('/auth/forgot-password', { email });
+        console.log(`[AuthContext] Sending Reset OTP to: ${email}`);
+        console.log(`[AuthContext] Using Base URL: ${publicApi.defaults.baseURL}`);
+        try {
+            const response = await publicApi.post('/auth/forgot-password', { email });
+            console.log(`[AuthContext] Reset OTP Success:`, response.data);
+        } catch (error: any) {
+            console.error(`[AuthContext] Reset OTP Error:`, error.message);
+            if (error.response) {
+                console.error(`[AuthContext] Error Data:`, error.response.data);
+                console.error(`[AuthContext] Error Status:`, error.response.status);
+            }
+            throw error;
+        }
     };
 
     const verifyResetOTP = async (email: string, otp: string): Promise<string> => {
