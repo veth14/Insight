@@ -48,18 +48,21 @@ const sendViaBrevo = async (payload: SendEmailOptions): Promise<void> => {
         htmlContent: payload.html,
     });
 
+    console.log(`[EmailService] Attempting Brevo API call for ${Array.isArray(payload.to) ? payload.to[0] : payload.to}...`);
+
     await new Promise<void>((resolve, reject) => {
         const request = https.request(
             {
                 hostname: 'api.brevo.com',
                 path: '/v3/smtp/email',
                 method: 'POST',
+                family: 4, // Force IPv4 for the HTTPS request
                 headers: {
                     'api-key': process.env.BREVO_API_KEY as string,
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(body),
                 },
-                timeout: 15000,
+                timeout: 10000,
             },
             (response) => {
                 let responseBody = '';
@@ -71,7 +74,8 @@ const sendViaBrevo = async (payload: SendEmailOptions): Promise<void> => {
                         resolve();
                         return;
                     }
-                    reject(new Error(`Brevo API failed (${response.statusCode || 'unknown'}): ${responseBody}`));
+                    console.error(`[EmailService] Brevo API Error Detail: ${responseBody}`);
+                    reject(new Error(`Brevo API failed (${response.statusCode || 'unknown'})`));
                 });
             }
         );
@@ -80,7 +84,10 @@ const sendViaBrevo = async (payload: SendEmailOptions): Promise<void> => {
             request.destroy(new Error('Brevo API timeout'));
         });
 
-        request.on('error', (error) => reject(error));
+        request.on('error', (error) => {
+            console.error('[EmailService] Brevo HTTPS Request Error:', error);
+            reject(error);
+        });
         request.write(body);
         request.end();
     });
