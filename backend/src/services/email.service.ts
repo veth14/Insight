@@ -142,13 +142,10 @@ const wrapHtml = (title: string, content: string) => `
 
 export const sendApprovalEmail = async (to: string, title: string, status: 'approved' | 'rejected') => {
     try {
-        const transporter = createTransporter();
-        if (!transporter) return;
-
-        const subject = status === 'approved' 
+        const subject = status === 'approved'
             ? 'Your study has been approved on Insight!'
             : 'Update on your study submission';
-        
+
         let content = '';
         if (status === 'approved') {
             content = `<p>Congratulations!</p><p>Your study <b>"${title}"</b> has been successfully approved by the administration and is now live on Insight.</p><p>Thank you for contributing to our research community!</p>`;
@@ -157,13 +154,7 @@ export const sendApprovalEmail = async (to: string, title: string, status: 'appr
         }
 
         const html = wrapHtml(subject, content);
-
-        await transporter.sendMail({
-            from: `"Insight App" <${process.env.EMAIL_USER}>`,
-            to,
-            subject,
-            html,
-        });
+        await sendEmailWithFallback({ to, fromName: 'Insight App', subject, html });
         console.log(`[EmailService] Sent ${status} email to ${to}`);
     } catch (e) {
         console.error('[EmailService] error sending email: ', e);
@@ -172,19 +163,10 @@ export const sendApprovalEmail = async (to: string, title: string, status: 'appr
 
 export const sendResearchUpdateEmail = async (to: string, studiesCount: number) => {
     try {
-        const transporter = createTransporter();
-        if (!transporter) return;
-
         const subject = 'New Research is available on Insight!';
         const content = `<p>We thought you'd like to know that there are <b>${studiesCount} new studies</b> this week.</p><p>Log into Insight to check out the latest research.</p>`;
         const html = wrapHtml('Insight Weekly Update', content);
-
-        await transporter.sendMail({
-            from: `"Insight App" <${process.env.EMAIL_USER}>`,
-            to,
-            subject,
-            html,
-        });
+        await sendEmailWithFallback({ to, fromName: 'Insight App', subject, html });
         console.log(`[EmailService] Sent weekly update email to ${to}`);
     } catch (e) {
         console.error('[EmailService] error sending weekly update: ', e);
@@ -194,9 +176,6 @@ export const sendResearchUpdateEmail = async (to: string, studiesCount: number) 
 export const sendAdminNewRegistrationEmail = async (adminEmails: string[], userEmail: string, role: string) => {
     try {
         if (!adminEmails || adminEmails.length === 0) return;
-        const transporter = createTransporter();
-        if (!transporter) return;
-
         const subject = 'New User Registration Pending Verification';
         const content = `<p>A new user has just registered an account and their documents are awaiting your verification.</p>
                          <div style="background: #fff; padding: 16px; border: 1px dashed #CDDDFF; border-radius: 8px; margin: 16px 0;">
@@ -205,13 +184,7 @@ export const sendAdminNewRegistrationEmail = async (adminEmails: string[], userE
                          </div>
                          <p>Please log in to the Insight Admin Dashboard to review and approve their request.</p>`;
         const html = wrapHtml('Admin Alert: Pending Registration', content);
-        
-        await transporter.sendMail({
-            from: `"Insight App" <${process.env.EMAIL_USER}>`,
-            to: adminEmails.join(','),
-            subject,
-            html,
-        });
+        await sendEmailWithFallback({ to: adminEmails, fromName: 'Insight App', subject, html });
         console.log(`[EmailService] Sent admin registration alert to ${adminEmails.length} admins.`);
     } catch (e) {
         console.error('[EmailService] error sending admin alert: ', e);
@@ -221,9 +194,6 @@ export const sendAdminNewRegistrationEmail = async (adminEmails: string[], userE
 export const sendAdminNewLiteratureEmail = async (adminEmails: string[], uploaderEmail: string, studyTitle: string) => {
     try {
         if (!adminEmails || adminEmails.length === 0) return;
-        const transporter = createTransporter();
-        if (!transporter) return;
-
         const subject = 'New Literature Uploaded for Review';
         const content = `<p>A new research document has just been uploaded and is awaiting your review.</p>
                          <div style="background: #fff; padding: 16px; border: 1px dashed #CDDDFF; border-radius: 8px; margin: 16px 0;">
@@ -232,13 +202,7 @@ export const sendAdminNewLiteratureEmail = async (adminEmails: string[], uploade
                          </div>
                          <p>Please log in to the Insight Admin Dashboard to review and approve this submission.</p>`;
         const html = wrapHtml('Admin Alert: Pending Literature', content);
-        
-        await transporter.sendMail({
-            from: `"Insight App" <${process.env.EMAIL_USER}>`,
-            to: adminEmails.join(','),
-            subject,
-            html,
-        });
+        await sendEmailWithFallback({ to: adminEmails, fromName: 'Insight App', subject, html });
         console.log(`[EmailService] Sent admin literature alert to ${adminEmails.length} admins.`);
     } catch (e) {
         console.error('[EmailService] error sending admin literature alert: ', e);
