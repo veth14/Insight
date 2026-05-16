@@ -5,15 +5,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import FileViewer from 'react-native-file-viewer';
-import * as Sharing from 'expo-sharing';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeStackParamList } from '../../types';
 import { ms, scale, vs } from '../../utils/responsive';
 import api from '../../services/api.service';
 import { usePreventScreenCapture } from 'expo-screen-capture';
-import { buildPdfViewerHtml, ensurePdfJsScript, fileUriToDataUrl } from '../../utils/pdfViewer';
+import * as FileSystem from 'expo-file-system/legacy';
+import { buildPdfViewerHtml, chunkBase64, ensurePdfJsScript } from '../../utils/pdfViewer';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'PDFReader'>;
 
@@ -26,7 +25,8 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
     const [error, setError] = useState<string | null>(null);
     const [lastPage, setLastPage] = useState(1);
     const [htmlSource, setHtmlSource] = useState<string | null>(null);
-    const [isOffline, setIsOffline] = useState(false);
+    const [offlinePdfBase64, setOfflinePdfBase64] = useState<string | null>(null);
+    const offlineInjectedRef = useRef(false);
     const webViewRef = useRef<WebView>(null);
     const progressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -92,35 +92,22 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
         if (!fileUrl) return;
 
         let cancelled = false;
+        offlineInjectedRef.current = false;
+        setHtmlSource(null);
+        setOfflinePdfBase64(null);
 
         (async () => {
             try {
-                // For offline files, use native viewer and exit early
                 if (fileUrl.startsWith('file://')) {
-                    console.log('[PDFReader] Opening offline file with native viewer:', fileUrl);
                     if (!cancelled) {
-                        setIsOffline(true);
-                        setLoading(false);
-                        try {
-                            if (FileViewer && typeof FileViewer.open === 'function') {
-                                await FileViewer.open(fileUrl);
-                                return;
-                            }
-
-                            // Fallback for Expo Go where native modules may not be linked
-                            console.warn('[PDFReader] FileViewer not available, falling back to expo-sharing');
-                            if (Sharing && typeof Sharing.shareAsync === 'function') {
-                                await Sharing.shareAsync(fileUrl, { mimeType: 'application/pdf' });
-                                return;
-                            }
-
-                            throw new Error('No native PDF viewer available');
-                        } catch (viewerError) {
-                            console.error('[PDFReader] Failed to open PDF:', viewerError);
-                            if (!cancelled) {
-                                setError('Failed to open PDF. Try downloading again.');
-                            }
+                        const base64 = await FileSystem.readAsStringAsync(fileUrl, { encoding: FileSystem.EncodingType.Base64 });
+                        setOfflinePdfBase64(base64);
+                        const pdfJsScript = await ensurePdfJsScript();
+                        if (!pdfJsScript) {
+                            setError('PDF viewer assets are unavailable. Reconnect once to cache them, then try again.');
+                            return;
                         }
+                        setHtmlSource(buildPdfViewerHtml('about:blank', pdfJsScript, lastPage));
                     }
                     return;
                 }
@@ -136,6 +123,7 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
 
                 console.log('[PDFReader] Building HTML viewer for online PDF');
                 if (!cancelled) {
+                    setOfflinePdfBase64(null);
                     setHtmlSource(buildPdfViewerHtml(fileUrl, pdfJsScript, lastPage));
                 }
             } catch (viewerError) {
@@ -187,11 +175,6 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
                         <Text style={styles.goBackText}>Go Back</Text>
                     </TouchableOpacity>
                 </View>
-            ) : isOffline ? (
-                <View style={styles.center}>
-                    <Ionicons name="document" size={52} color="#0E1F43" />
-                    <Text style={styles.loadingText}>Opening PDF…</Text>
-                </View>
             ) : htmlSource ? (
                 <WebView
                     ref={webViewRef}
@@ -210,6 +193,22 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
                     }}
                     onHttpError={(syntheticEvent) => {
                         console.error('[WebView] HTTP Error:', syntheticEvent.nativeEvent);
+                    }}
+                    onLoadEnd={() => {
+                        if (!offlinePdfBase64 || offlineInjectedRef.current) return;
+
+                        offlineInjectedRef.current = true;
+                        const chunks = chunkBase64(offlinePdfBase64, 100000);
+
+                        webViewRef.current?.injectJavaScript('window.beginOfflinePdfLoad(); true;');
+                        chunks.forEach((chunk, index) => {
+                            const script = `window.appendOfflinePdfChunk(${JSON.stringify(chunk)}); true;`;
+                            setTimeout(() => webViewRef.current?.injectJavaScript(script), index * 5);
+                        });
+
+                        setTimeout(() => {
+                            webViewRef.current?.injectJavaScript('window.finishOfflinePdfLoad(); true;');
+                        }, chunks.length * 5 + 50);
                     }}
                 />
             ) : null}

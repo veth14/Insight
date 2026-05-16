@@ -58,6 +58,14 @@ export const fileUriToDataUrl = async (uri: string): Promise<string> => {
     }
 };
 
+  export const chunkBase64 = (base64: string, chunkSize: number = 100000): string[] => {
+    const chunks: string[] = [];
+    for (let index = 0; index < base64.length; index += chunkSize) {
+      chunks.push(base64.slice(index, index + chunkSize));
+    }
+    return chunks;
+  };
+
 export const buildPdfViewerHtml = (pdfUrl: string, pdfJsScript: string, startPage: number = 1) => `<!DOCTYPE html>
 <html>
 <head>
@@ -106,8 +114,42 @@ ${pdfJsScript}
 </script>
 <script>
 console.log('[PDFViewer] Script loaded, pdfjsLib available:', typeof window.pdfjsLib !== 'undefined');
-window._pdfDataUrl = null;
+window._pdfBase64 = '';
 window._pdfError = null;
+
+window.beginOfflinePdfLoad = function() {
+  console.log('[PDFViewer] beginOfflinePdfLoad');
+  window._pdfBase64 = '';
+};
+
+window.appendOfflinePdfChunk = function(chunk) {
+  if (!chunk) return;
+  window._pdfBase64 += chunk;
+};
+
+window.finishOfflinePdfLoad = function() {
+  console.log('[PDFViewer] finishOfflinePdfLoad, length:', window._pdfBase64 ? window._pdfBase64.length : 0);
+  window.loadPdfFromBase64(window._pdfBase64);
+};
+
+window.loadPdfFromBase64 = function(base64) {
+  console.log('[PDFViewer] loadPdfFromBase64 called, length:', base64 ? base64.length : 0);
+  if (!window.pdfjsLib) {
+    console.error('[PDFViewer] pdf.js not loaded yet, retrying...');
+    setTimeout(() => window.loadPdfFromBase64(base64), 500);
+    return;
+  }
+  window.initPdfViewer({ data: window.base64ToUint8Array(base64) });
+};
+
+window.base64ToUint8Array = function(base64) {
+  const raw = atob(base64);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) {
+    bytes[i] = raw.charCodeAt(i);
+  }
+  return bytes;
+};
 
 window.loadPdfFromDataUrl = function(dataUrl) {
   console.log('[PDFViewer] loadPdfFromDataUrl called, URL length:', dataUrl ? dataUrl.length : 0);
@@ -119,8 +161,10 @@ window.loadPdfFromDataUrl = function(dataUrl) {
   window.initPdfViewer(dataUrl);
 };
 
-window.initPdfViewer = function(pdfUrl) {
-  console.log('[PDFViewer] initPdfViewer called with URL length:', pdfUrl ? pdfUrl.length : 0);
+window.initPdfViewer = function(pdfSource) {
+  const sourceType = pdfSource && pdfSource.data ? 'data' : 'url';
+  const sourceLength = sourceType === 'url' ? (pdfSource ? pdfSource.length : 0) : (pdfSource && pdfSource.data ? pdfSource.data.length : 0);
+  console.log('[PDFViewer] initPdfViewer called, sourceType:', sourceType, 'length:', sourceLength);
   const pdfjs = window.pdfjsLib;
   if (!pdfjs) {
     console.error('[PDFViewer] pdfjsLib is undefined');
@@ -195,10 +239,16 @@ window.initPdfViewer = function(pdfUrl) {
     });
   }
   
-  console.log('[PDFViewer] Loading PDF, URL length:', pdfUrl.length);
-  
-  const task=pdfjs.getDocument({
-    url:pdfUrl,
+  console.log('[PDFViewer] Loading PDF, sourceType:', sourceType);
+
+  const task=pdfjs.getDocument(sourceType === 'data' ? {
+    data: pdfSource.data,
+    disableWorker:true,
+    useWorkerFetch:false,
+    cMapPacked:false,
+    withCredentials:false
+  } : {
+    url:pdfSource,
     disableWorker:true,
     useWorkerFetch:false,
     cMapPacked:false,
@@ -219,8 +269,9 @@ window.initPdfViewer = function(pdfUrl) {
     const eb=document.getElementById('errorBox');
     eb.style.display='flex';
     const errorMsg = err && err.message ? err.message : 'Failed to load PDF';
-    document.getElementById('errorMsg').textContent = 'Error: ' + errorMsg + ' (URL length: ' + (pdfUrl ? pdfUrl.substring(0, 50) + '...' : 'null') + ')';
-    console.error('[PDFViewer] Error details:', {message: errorMsg, urlPreview: pdfUrl ? pdfUrl.substring(0, 50) : 'null'});
+    const preview = sourceType === 'url' ? (pdfSource ? pdfSource.substring(0, 50) : 'null') : 'base64 data';
+    document.getElementById('errorMsg').textContent = 'Error: ' + errorMsg + ' (' + preview + ')';
+    console.error('[PDFViewer] Error details:', {message: errorMsg, preview});
   });
 };
 
