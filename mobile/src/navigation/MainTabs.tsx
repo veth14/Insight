@@ -17,6 +17,7 @@ const MainTabs: React.FC = () => {
     const { user } = useAuth();
     const isGuest = user?.role === UserRole.GUEST;
     const is4thYear = user?.role === UserRole.STUDENT_4TH;
+    const canShowNotifications = user?.role !== UserRole.STUDENT_1ST_TO_3RD;
     const isApproved = user?.registrationStatus === 'approved';
     // 4th year: show Upload tab always, route to locked screen until approved
     const UploadComponent = (is4thYear && !isGuest) ? (isApproved ? UploadScreen : UploadLockedScreen) : null;
@@ -65,7 +66,7 @@ const MainTabs: React.FC = () => {
             {UploadComponent && (
                 <Tab.Screen name="Upload" component={UploadComponent} options={{ tabBarLabel: 'Upload' }} />
             )}
-            {!isGuest && (
+            {!isGuest && canShowNotifications && (
                 <Tab.Screen name="Notifications" component={NotificationsScreen} options={{ tabBarLabel: 'Alerts' }} />
             )}
         </Tab.Navigator>

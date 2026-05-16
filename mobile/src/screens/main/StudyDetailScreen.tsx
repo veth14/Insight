@@ -15,6 +15,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import CustomAlert, { AlertButton } from '../../components/CustomAlert';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePreventScreenCapture } from 'expo-screen-capture';
+import { ensurePdfJsScript } from '../../utils/pdfViewer';
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList>;
 type Route = RouteProp<HomeStackParamList, 'StudyDetail'>;
@@ -174,6 +175,9 @@ const StudyDetailScreen: React.FC = () => {
                 const downloadResult = await FileSystem.downloadAsync(study.fileUrl, fileUri);
                 
                 if (downloadResult.status !== 200) throw new Error('Download failed');
+
+                // Warm the local PDF viewer cache while the device is online.
+                await ensurePdfJsScript();
 
                 // Record download count on backend
                 try {

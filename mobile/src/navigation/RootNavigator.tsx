@@ -33,6 +33,7 @@ const RootNavigator: React.FC = () => {
     const { isLocked, isLoadingSecurity } = useSecurity(); // Get isLocked state
     const { isOffline } = useOffline();
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
+    const navigatorKey = user ? `app-${user.role}` : hasSeenOnboarding ? 'auth-login' : 'auth-onboarding';
 
     useEffect(() => {
         const checkOnboarding = async () => {
@@ -61,7 +62,7 @@ const RootNavigator: React.FC = () => {
 
     return (
         <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Navigator key={navigatorKey} screenOptions={{ headerShown: false }}>
                 {isOffline && !user ? (
                     <Stack.Screen name="Offline" component={OfflineStack} />
                 ) : user ? (

@@ -2,15 +2,11 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { ms } from '../utils/responsive';
-import AdminAnalyticsScreen from '../screens/admin/AdminAnalyticsScreen';
 import AdminAccountsScreen from '../screens/admin/AdminAccountsScreen';
-import AdminActivityLogsScreen from '../screens/admin/AdminActivityLogsScreen';
 import AdminLiteratureScreen from '../screens/admin/AdminLiteratureScreen';
 
 type AdminTabParamList = {
-    Analytics: undefined;
     Accounts: undefined;
-    'Activity Logs': undefined;
     Literature: undefined;
 };
 
@@ -37,20 +33,16 @@ const AdminTabs: React.FC = () => {
                 },
                 tabBarIcon: ({ focused, color }) => {
                     const icons: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
-                        Analytics:      { active: 'bar-chart',        inactive: 'bar-chart-outline' },
-                        Accounts:       { active: 'people',           inactive: 'people-outline' },
-                        'Activity Logs':{ active: 'pulse',            inactive: 'pulse-outline' },
-                        Literature:     { active: 'library',          inactive: 'library-outline' },
+                        Accounts:   { active: 'people',  inactive: 'people-outline' },
+                        Literature: { active: 'library', inactive: 'library-outline' },
                     };
-                    const icon = icons[route.name] ?? icons['Analytics'];
+                    const icon = icons[route.name] ?? icons['Accounts'];
                     return <Ionicons name={focused ? icon.active : icon.inactive} size={ms(22)} color={color} />;
                 },
             })}
         >
-            <Tab.Screen name="Analytics"      component={AdminAnalyticsScreen} />
-            <Tab.Screen name="Accounts"       component={AdminAccountsScreen} />
-            <Tab.Screen name="Activity Logs"  component={AdminActivityLogsScreen} />
-            <Tab.Screen name="Literature"     component={AdminLiteratureScreen} />
+            <Tab.Screen name="Accounts" component={AdminAccountsScreen} />
+            <Tab.Screen name="Literature" component={AdminLiteratureScreen} />
         </Tab.Navigator>
     );
 };

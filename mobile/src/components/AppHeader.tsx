@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../types';
 import api from '../services/api.service';
 
 const IMG_LOGO = require('../../assets/images/insightlogox128.png');
@@ -28,9 +29,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     const [localCount, setLocalCount] = useState(0);
 
     const isStudent = user?.role !== 'admin' && user?.role !== 'faculty';
+    const canShowNotifications = user?.role !== UserRole.GUEST
+        && user?.role !== UserRole.STUDENT_1ST_TO_3RD
+        && user?.role !== UserRole.STUDENT_4TH;
 
     useEffect(() => {
-        if (!onNotificationPress && isStudent && isFocused) {
+        if (!onNotificationPress && isStudent && canShowNotifications && isFocused) {
             const fetchCount = async () => {
                 try {
                     const res = await api.get('/studies/my');
@@ -43,7 +47,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             };
             fetchCount();
         }
-    }, [isStudent, onNotificationPress, isFocused]);
+    }, [isStudent, onNotificationPress, isFocused, canShowNotifications]);
 
     const activeCount = onNotificationPress ? propsNotificationCount : localCount;
 
@@ -73,7 +77,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     </View>
                 </View>
                 <View style={styles.headerRight}>
-                    {user?.role !== 'guest' && (
+                    {canShowNotifications && (
                         <TouchableOpacity style={styles.notifBtn} onPress={handleNotifPress} activeOpacity={0.8}>
                             <Ionicons name="notifications-outline" size={22} color="#0E1F43" />
                             {activeCount > 0 && (
