@@ -12,7 +12,7 @@ import { ms, scale, vs } from '../../utils/responsive';
 import api from '../../services/api.service';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import * as FileSystem from 'expo-file-system/legacy';
-import { buildPdfViewerHtml, chunkBase64, ensurePdfJsScript } from '../../utils/pdfViewer';
+import { buildPdfViewerHtml, chunkBase64, ensurePdfJsScript, ensurePdfJsWorkerScript } from '../../utils/pdfViewer';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'PDFReader'>;
 
@@ -102,19 +102,25 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
                     if (!cancelled) {
                         const base64 = await FileSystem.readAsStringAsync(fileUrl, { encoding: FileSystem.EncodingType.Base64 });
                         setOfflinePdfBase64(base64);
-                        const pdfJsScript = await ensurePdfJsScript();
-                        if (!pdfJsScript) {
+                        const [pdfJsScript, pdfJsWorkerScript] = await Promise.all([
+                            ensurePdfJsScript(),
+                            ensurePdfJsWorkerScript(),
+                        ]);
+                        if (!pdfJsScript || !pdfJsWorkerScript) {
                             setError('PDF viewer assets are unavailable. Reconnect once to cache them, then try again.');
                             return;
                         }
-                        setHtmlSource(buildPdfViewerHtml('about:blank', pdfJsScript, lastPage));
+                        setHtmlSource(buildPdfViewerHtml('about:blank', pdfJsScript, pdfJsWorkerScript, lastPage));
                     }
                     return;
                 }
 
                 // For online files, use WebView with pdf.js
-                const pdfJsScript = await ensurePdfJsScript();
-                if (!pdfJsScript) {
+                const [pdfJsScript, pdfJsWorkerScript] = await Promise.all([
+                    ensurePdfJsScript(),
+                    ensurePdfJsWorkerScript(),
+                ]);
+                if (!pdfJsScript || !pdfJsWorkerScript) {
                     if (!cancelled) {
                         setError('PDF viewer assets are unavailable. Reconnect once to cache them, then try again.');
                     }
@@ -124,7 +130,7 @@ const PDFReaderScreen: React.FC<Props> = ({ route, navigation }) => {
                 console.log('[PDFReader] Building HTML viewer for online PDF');
                 if (!cancelled) {
                     setOfflinePdfBase64(null);
-                    setHtmlSource(buildPdfViewerHtml(fileUrl, pdfJsScript, lastPage));
+                    setHtmlSource(buildPdfViewerHtml(fileUrl, pdfJsScript, pdfJsWorkerScript, lastPage));
                 }
             } catch (viewerError) {
                 console.error('Error preparing PDF viewer:', viewerError);

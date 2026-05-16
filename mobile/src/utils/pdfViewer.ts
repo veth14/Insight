@@ -1,8 +1,10 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
 const PDF_JS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+const PDF_JS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const PDF_JS_CACHE_DIR = `${FileSystem.cacheDirectory}pdfjs/`;
 const PDF_JS_CACHE_FILE = `${PDF_JS_CACHE_DIR}pdf.min.js`;
+const PDF_JS_WORKER_CACHE_FILE = `${PDF_JS_CACHE_DIR}pdf.worker.min.js`;
 
 export const ensurePdfJsScript = async (): Promise<string | null> => {
     try {
@@ -15,7 +17,7 @@ export const ensurePdfJsScript = async (): Promise<string | null> => {
             }
         }
 
-        return await FileSystem.readAsStringAsync(PDF_JS_CACHE_FILE);
+    return PDF_JS_CACHE_FILE;
     } catch (cacheError) {
         try {
             const response = await fetch(PDF_JS_URL);
@@ -26,12 +28,42 @@ export const ensurePdfJsScript = async (): Promise<string | null> => {
             const script = await response.text();
             await FileSystem.makeDirectoryAsync(PDF_JS_CACHE_DIR, { intermediates: true }).catch(() => {});
             await FileSystem.writeAsStringAsync(PDF_JS_CACHE_FILE, script);
-            return script;
+      return PDF_JS_CACHE_FILE;
         } catch (networkError) {
             console.error('[pdfViewer] Unable to load pdf.js script:', cacheError, networkError);
             return null;
         }
     }
+};
+
+export const ensurePdfJsWorkerScript = async (): Promise<string | null> => {
+  try {
+    const info = await FileSystem.getInfoAsync(PDF_JS_WORKER_CACHE_FILE);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(PDF_JS_CACHE_DIR, { intermediates: true });
+      const result = await FileSystem.downloadAsync(PDF_JS_WORKER_URL, PDF_JS_WORKER_CACHE_FILE);
+      if (result.status !== 200) {
+        throw new Error(`Failed to cache pdf.js worker (${result.status})`);
+      }
+    }
+
+    return await FileSystem.readAsStringAsync(PDF_JS_WORKER_CACHE_FILE);
+  } catch (cacheError) {
+    try {
+      const response = await fetch(PDF_JS_WORKER_URL);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch pdf.js worker (${response.status})`);
+      }
+
+      const script = await response.text();
+      await FileSystem.makeDirectoryAsync(PDF_JS_CACHE_DIR, { intermediates: true }).catch(() => {});
+      await FileSystem.writeAsStringAsync(PDF_JS_WORKER_CACHE_FILE, script);
+      return script;
+    } catch (networkError) {
+      console.error('[pdfViewer] Unable to load pdf.js worker script:', cacheError, networkError);
+      return null;
+    }
+  }
 };
 
 export const fileUriToDataUrl = async (uri: string): Promise<string> => {
@@ -66,7 +98,7 @@ export const fileUriToDataUrl = async (uri: string): Promise<string> => {
     return chunks;
   };
 
-export const buildPdfViewerHtml = (pdfUrl: string, pdfJsScript: string, startPage: number = 1) => `<!DOCTYPE html>
+export const buildPdfViewerHtml = (pdfUrl: string, pdfJsScriptUri: string, pdfJsWorkerScript: string, startPage: number = 1) => `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=4.0, user-scalable=yes">
@@ -109,13 +141,21 @@ body{min-height:100%;background:#e8ecf2;font-family:-apple-system,BlinkMacSystem
 </div>
 <div id="badge">1 / 1</div>
 <div id="pages"></div>
-<script>
-${pdfJsScript}
-</script>
+<script src="${pdfJsScriptUri}"></script>
 <script>
 console.log('[PDFViewer] Script loaded, pdfjsLib available:', typeof window.pdfjsLib !== 'undefined');
+window._pdfWorkerCode = ${JSON.stringify(pdfJsWorkerScript)};
 window._pdfBase64 = '';
 window._pdfError = null;
+
+window.ensureWorker = function() {
+  if (!window.pdfjsLib) return;
+  if (window._pdfWorkerBlobUrl) return;
+  const blob = new Blob([window._pdfWorkerCode], { type: 'text/javascript' });
+  window._pdfWorkerBlobUrl = URL.createObjectURL(blob);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = window._pdfWorkerBlobUrl;
+  console.log('[PDFViewer] Worker blob URL set');
+};
 
 window.beginOfflinePdfLoad = function() {
   console.log('[PDFViewer] beginOfflinePdfLoad');
@@ -139,6 +179,7 @@ window.loadPdfFromBase64 = function(base64) {
     setTimeout(() => window.loadPdfFromBase64(base64), 500);
     return;
   }
+  window.ensureWorker();
   window.initPdfViewer({ data: window.base64ToUint8Array(base64) });
 };
 
@@ -158,6 +199,7 @@ window.loadPdfFromDataUrl = function(dataUrl) {
     setTimeout(() => window.loadPdfFromDataUrl(dataUrl), 500);
     return;
   }
+  window.ensureWorker();
   window.initPdfViewer(dataUrl);
 };
 
@@ -173,6 +215,7 @@ window.initPdfViewer = function(pdfSource) {
     document.getElementById('errorMsg').textContent='PDF viewer not initialized.';
     return;
   }
+  window.ensureWorker();
   
   const START_PAGE=${startPage};
   const DPR=Math.min(window.devicePixelRatio||1, 1.5);
@@ -243,13 +286,11 @@ window.initPdfViewer = function(pdfSource) {
 
   const task=pdfjs.getDocument(sourceType === 'data' ? {
     data: pdfSource.data,
-    disableWorker:true,
     useWorkerFetch:false,
     cMapPacked:false,
     withCredentials:false
   } : {
     url:pdfSource,
-    disableWorker:true,
     useWorkerFetch:false,
     cMapPacked:false,
     withCredentials:false
